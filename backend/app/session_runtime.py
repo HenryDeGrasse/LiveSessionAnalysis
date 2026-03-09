@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 
@@ -187,15 +188,36 @@ async def emit_metrics_snapshot(
             recorder.record_metrics_snapshot(snapshot)
 
     tutor = room.participants[Role.TUTOR]
-    if tutor.connected and tutor.websocket:
+    metrics_sent = False
+
+    # Prefer LiveKit data packets when the worker is connected
+    try:
+        from .livekit_worker import get_active_worker, TOPIC_METRICS
+
+        worker = get_active_worker(room.session_id)
+        if worker is not None:
+            payload = json.dumps(
+                {"type": "metrics", "data": snapshot.model_dump(mode="json")}
+            ).encode()
+            metrics_sent = await worker.publish_data_to_tutor(
+                payload, topic=TOPIC_METRICS, reliable=False
+            )
+    except ImportError:
+        pass
+
+    # Fallback to websocket if data packet wasn't sent
+    if not metrics_sent and tutor.connected and tutor.websocket:
         try:
             await tutor.websocket.send_json({
                 "type": "metrics",
                 "data": snapshot.model_dump(mode="json"),
             })
-            room._last_metrics_emit_at = now
+            metrics_sent = True
         except Exception as exc:
             logger.error(f"Failed to send metrics to tutor: {exc}")
+
+    if metrics_sent:
+        room._last_metrics_emit_at = now
 
     if not allow_coaching:
         return snapshot
@@ -222,7 +244,23 @@ async def emit_metrics_snapshot(
             room.nudges_sent.append(nudge)
             if recorder is not None:
                 recorder.record_nudge(nudge)
-            if tutor.connected and tutor.websocket:
+
+            nudge_sent = False
+            try:
+                from .livekit_worker import get_active_worker, TOPIC_NUDGE
+
+                worker = get_active_worker(room.session_id)
+                if worker is not None:
+                    payload = json.dumps(
+                        {"type": "nudge", "data": nudge.model_dump(mode="json")}
+                    ).encode()
+                    nudge_sent = await worker.publish_data_to_tutor(
+                        payload, topic=TOPIC_NUDGE, reliable=True
+                    )
+            except ImportError:
+                pass
+
+            if not nudge_sent and tutor.connected and tutor.websocket:
                 try:
                     await tutor.websocket.send_json({
                         "type": "nudge",

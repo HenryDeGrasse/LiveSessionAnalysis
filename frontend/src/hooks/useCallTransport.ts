@@ -17,6 +17,7 @@ interface UseCallTransportOptions {
     payload: Record<string, unknown>
   }) => void
   onDebugEvent?: (message: string) => void
+  onDataPacket?: (topic: string, payload: Uint8Array) => void
 }
 
 /**
@@ -34,6 +35,7 @@ export function useCallTransport({
   sessionId,
   sessionToken,
   onDebugEvent,
+  onDataPacket,
 }: UseCallTransportOptions) {
   return useLiveKitTransport({
     enabled,
@@ -42,5 +44,6 @@ export function useCallTransport({
     sessionId,
     sessionToken,
     onDebugEvent,
+    onDataPacket,
   })
 }

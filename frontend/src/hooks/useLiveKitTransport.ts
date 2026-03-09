@@ -1,7 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ConnectionState, Room, RoomEvent, Track } from 'livekit-client'
+import {
+  ConnectionState,
+  DataPacket_Kind,
+  Room,
+  RoomEvent,
+  Track,
+} from 'livekit-client'
 import { API_URL, LIVEKIT_URL } from '@/lib/constants'
 import { buildLiveKitConfig } from '@/lib/call/livekit-config'
 import type { WebRTCSignalData } from '@/lib/types'
@@ -22,6 +28,7 @@ interface UseLiveKitTransportOptions {
   sessionId: string
   sessionToken: string
   onDebugEvent?: (message: string) => void
+  onDataPacket?: (topic: string, payload: Uint8Array) => void
 }
 
 function mapConnectionStateToPeerState(
@@ -48,6 +55,7 @@ export function useLiveKitTransport({
   sessionId,
   sessionToken,
   onDebugEvent,
+  onDataPacket,
 }: UseLiveKitTransportOptions) {
   const roomRef = useRef<Room | null>(null)
   const publishedTrackIdsRef = useRef<Set<string>>(new Set())
@@ -279,6 +287,11 @@ export function useLiveKitTransport({
         room.on(RoomEvent.ConnectionStateChanged, (state) => {
           log(`connection state=${state}`)
           applyRoomState(room)
+        })
+        room.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
+          if (onDataPacket && topic) {
+            onDataPacket(topic, payload)
+          }
         })
 
         const url = join.url || LIVEKIT_URL

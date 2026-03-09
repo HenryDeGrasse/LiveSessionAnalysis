@@ -432,6 +432,39 @@ export default function SessionPage() {
     onMessage,
   })
 
+  const handleDataPacket = useCallback(
+    (topic: string, payload: Uint8Array) => {
+      try {
+        const text = new TextDecoder().decode(payload)
+        const message = JSON.parse(text) as { type: string; data: unknown }
+
+        if (message.type === 'metrics') {
+          setRole('tutor')
+          const metrics = message.data as MetricsSnapshot
+          handleMetrics(metrics)
+          appendDebugEvent(
+            `[data-pkt] metrics: attention=${metrics.student.attention_state}`
+          )
+          const newFps = metrics.target_fps
+          if (newFps && newFps !== targetFpsRef.current && newFps >= 1 && newFps <= 10) {
+            targetFpsRef.current = newFps
+            if (frameIntervalRef.current) {
+              clearInterval(frameIntervalRef.current)
+              frameIntervalRef.current = null
+            }
+          }
+        } else if (message.type === 'nudge') {
+          setRole('tutor')
+          handleNudge(message.data as Nudge)
+          appendDebugEvent(`[data-pkt] nudge: ${(message.data as Nudge).nudge_type}`)
+        }
+      } catch {
+        // ignore malformed data packets
+      }
+    },
+    [appendDebugEvent, handleMetrics, handleNudge]
+  )
+
   const mediaProvider = resolveMediaProvider(sessionInfo)
   const analyticsIngestMode = sessionInfo?.analytics_ingest_mode ?? 'browser_upload'
   const browserAnalyticsUploadEnabled = analyticsIngestMode !== 'livekit_worker'
@@ -460,6 +493,7 @@ export default function SessionPage() {
     sessionToken: token,
     sendSignal: () => {},
     onDebugEvent: appendDebugEvent,
+    onDataPacket: handleDataPacket,
   })
 
   useEffect(() => {

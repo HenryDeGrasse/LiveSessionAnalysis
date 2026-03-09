@@ -368,18 +368,34 @@ class TestSessionTracing:
             with client.websocket_connect(
                 f"/ws/session/{data['session_id']}?token={data['student_token']}"
             ) as student_ws:
-                tutor_ready = tutor_ws.receive_json()
-                student_ready = student_ws.receive_json()
-                assert tutor_ready["type"] == "participant_ready"
-                assert student_ready["type"] == "participant_ready"
+                # Drain all participant_ready messages (broadcast on both_connected)
+                import time as _time
+                _time.sleep(0.05)  # let broadcasts settle
+
+                def _drain_ready(ws):
+                    """Consume all participant_ready messages, return last."""
+                    last = ws.receive_json()
+                    assert last["type"] == "participant_ready"
+                    return last
+
+                _drain_ready(tutor_ws)
+                _drain_ready(student_ws)
 
                 end_resp = client.post(
                     f"/api/sessions/{data['session_id']}/end?token={data['tutor_token']}"
                 )
                 assert end_resp.status_code == 200
 
-                tutor_end = tutor_ws.receive_json()
-                student_end = student_ws.receive_json()
+                def _drain_until(ws, target_type):
+                    """Read messages until we get the target type."""
+                    for _ in range(10):
+                        msg = ws.receive_json()
+                        if msg["type"] == target_type:
+                            return msg
+                    raise AssertionError(f"Never received {target_type}")
+
+                tutor_end = _drain_until(tutor_ws, "session_end")
+                student_end = _drain_until(student_ws, "session_end")
                 assert tutor_end["type"] == "session_end"
                 assert student_end["type"] == "session_end"
 

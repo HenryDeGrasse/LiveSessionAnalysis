@@ -15,6 +15,7 @@ from .config import settings
 from .livekit import (
     build_livekit_worker_join_payload,
     livekit_analytics_worker_enabled,
+    livekit_identity,
     livekit_role_for_identity,
 )
 from .models import Role
@@ -33,6 +34,9 @@ async def _await_if_needed(result):
     return result
 
 
+TOPIC_METRICS = "lsa.metrics.v1"
+TOPIC_NUDGE = "lsa.nudge.v1"
+
 _workers: dict[str, "LiveKitAnalyticsWorker"] = {}
 
 
@@ -48,6 +52,36 @@ class LiveKitAnalyticsWorker:
         if self.task is None or self.task.done():
             self.task = asyncio.create_task(self.run())
         return self.task
+
+    async def publish_data_to_tutor(
+        self, payload: bytes, *, topic: str, reliable: bool = True
+    ) -> bool:
+        """Publish a data packet to the tutor participant only.
+
+        Returns True if the packet was sent, False if the worker isn't connected.
+        """
+        room = self.room
+        if room is None:
+            return False
+        try:
+            tutor_identity = livekit_identity(
+                self.session.session_id, Role.TUTOR
+            )
+            room.local_participant.publish_data(
+                payload,
+                reliable=reliable,
+                destination_identities=[tutor_identity],
+                topic=topic,
+            )
+            return True
+        except Exception as exc:
+            logger.debug(
+                "Session %s: failed to publish data packet (topic=%s): %s",
+                self.session.session_id,
+                topic,
+                exc,
+            )
+            return False
 
     def request_stop(self):
         self.stop_event.set()
@@ -296,6 +330,16 @@ def maybe_start_livekit_analytics_worker(room: SessionRoom) -> bool:
 
     task.add_done_callback(_cleanup)
     return True
+
+
+def get_active_worker(session_id: str) -> LiveKitAnalyticsWorker | None:
+    """Return the active, connected worker for a session, or None."""
+    worker = _workers.get(session_id)
+    if worker is None:
+        return None
+    if worker.room is None or worker.task is None or worker.task.done():
+        return None
+    return worker
 
 
 def stop_livekit_analytics_worker(session_id: str):
