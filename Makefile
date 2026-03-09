@@ -52,6 +52,11 @@ test-e2e:
 test-e2e-livekit:
 	cd frontend && npm run test:e2e:livekit
 
+# ── Accuracy report ──────────────────────────────────────────
+accuracy-report:
+	cd backend && uv run --python 3.11 --with-requirements requirements.txt \
+		python ../scripts/accuracy_report.py
+
 # ── Type checking / lint ─────────────────────────────────────
 lint:
 	cd frontend && npx tsc --noEmit
