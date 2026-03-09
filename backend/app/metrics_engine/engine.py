@@ -183,6 +183,9 @@ class MetricsEngine:
         degraded: bool = False,
         gaze_unavailable: bool = False,
         processing_ms: float = 0.0,
+        latency_p50_ms: float = 0.0,
+        latency_p95_ms: float = 0.0,
+        degradation_reason: str = "normal",
         target_fps: int = 3,
         current_time: float | None = None,
     ) -> MetricsSnapshot:
@@ -240,6 +243,8 @@ class MetricsEngine:
                 face_presence_score=tutor_face_presence,
                 visual_attention_score=tutor_visual_attention,
                 time_in_attention_state_seconds=tutor_time_in_state,
+                talk_time_pct_windowed=self.speaking_time.recent_tutor_ratio(now),
+                time_since_spoke_seconds=self.speaking_time.time_since_tutor_spoke(now),
             ),
             student=ParticipantMetrics(
                 eye_contact_score=student_eye,
@@ -252,6 +257,8 @@ class MetricsEngine:
                 face_presence_score=student_face_presence,
                 visual_attention_score=student_visual_attention,
                 time_in_attention_state_seconds=student_time_in_state,
+                talk_time_pct_windowed=self.speaking_time.recent_student_ratio(now),
+                time_since_spoke_seconds=self.speaking_time.time_since_student_spoke(now),
             ),
             session=SessionMetrics(
                 interruption_count=self.interruptions.total_count,
@@ -295,6 +302,9 @@ class MetricsEngine:
             degraded=degraded,
             gaze_unavailable=gaze_unavailable,
             server_processing_ms=processing_ms,
+            latency_p50_ms=latency_p50_ms,
+            latency_p95_ms=latency_p95_ms,
+            degradation_reason=degradation_reason,
             target_fps=target_fps,
         )
 

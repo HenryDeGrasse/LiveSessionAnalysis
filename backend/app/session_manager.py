@@ -76,6 +76,7 @@ class SessionRoom:
     metrics_history: list[MetricsSnapshot] = field(default_factory=list)
     # Latency tracking
     processing_times: list[float] = field(default_factory=list)
+    _latency_history: list[float] = field(default_factory=list, repr=False)
     decode_times: list[float] = field(default_factory=list)
     facemesh_times: list[float] = field(default_factory=list)
     gaze_times: list[float] = field(default_factory=list)
@@ -128,11 +129,38 @@ class SessionRoom:
         self.processing_times.append(ms)
         if len(self.processing_times) > 5:
             self.processing_times = self.processing_times[-5:]
+        self._latency_history.append(ms)
+        if len(self._latency_history) > 100:
+            self._latency_history = self._latency_history[-100:]
 
     def rolling_avg_processing_ms(self) -> float:
         if not self.processing_times:
             return 0.0
         return sum(self.processing_times) / len(self.processing_times)
+
+    def latency_percentiles(self) -> tuple[float, float]:
+        """Return (p50, p95) of recent processing times in ms."""
+        samples = self._latency_history
+        if len(samples) < 2:
+            avg = self.rolling_avg_processing_ms()
+            return (avg, avg)
+        sorted_times = sorted(samples)
+        n = len(sorted_times)
+        p50 = sorted_times[n // 2]
+        p95_idx = min(n - 1, int(n * 0.95))
+        p95 = sorted_times[p95_idx]
+        return (p50, p95)
+
+    def degradation_reason(self) -> str:
+        """Human-readable degradation state."""
+        if self.degradation_level == 0:
+            return "normal"
+        elif self.degradation_level == 1:
+            return "reduced_fps"
+        elif self.degradation_level == 2:
+            return "skip_expression"
+        else:
+            return "skip_gaze_and_expression"
 
     def _record_rolling_metric(
         self,

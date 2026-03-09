@@ -171,10 +171,14 @@ async def emit_metrics_snapshot(
     engine: MetricsEngine = resources["metrics_engine"]
 
     aggregation_start = time.time()
+    p50, p95 = room.latency_percentiles()
     snapshot = engine.compute_snapshot(
         degraded=room.degradation_level > 0,
         gaze_unavailable=room.degradation_level >= 3,
         processing_ms=room.rolling_avg_processing_ms(),
+        latency_p50_ms=p50,
+        latency_p95_ms=p95,
+        degradation_reason=room.degradation_reason(),
         target_fps=room.current_fps,
     )
     room.record_aggregation_time((time.time() - aggregation_start) * 1000)
@@ -230,6 +234,16 @@ async def emit_metrics_snapshot(
             coach = Coach(session_type=room.session_type)
             resources["coach"] = coach
         evaluation = coach.evaluate(snapshot, room.elapsed_seconds())
+
+        # Attach coaching decision to snapshot for debug panel
+        snapshot.coaching_decision = {
+            "candidate_nudges": evaluation.candidate_nudges,
+            "suppressed_reasons": evaluation.suppressed_reasons,
+            "emitted_nudge": evaluation.emitted_nudge_type,
+            "trigger_features": evaluation.trigger_features,
+            "session_type": coach.session_type,
+        }
+
         recorder = trace_recorder(room)
         if recorder is not None:
             recorder.record_coaching_decision(

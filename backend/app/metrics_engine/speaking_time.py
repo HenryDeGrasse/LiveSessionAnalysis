@@ -210,6 +210,20 @@ class SpeakingTimeTracker:
         """Alias with clearer semantics for tutoring/coaching logic."""
         return self.student_silence_duration(current_time)
 
+    def tutor_silence_duration(self, current_time: float) -> float:
+        """Estimate how long the tutor has been silent."""
+        if self._tutor_speaking:
+            return 0.0
+        if self._last_tutor_speech_end is not None:
+            return max(0.0, current_time - self._last_tutor_speech_end)
+        if self._first_update is None:
+            return 0.0
+        return max(0.0, current_time - self._first_update)
+
+    def time_since_tutor_spoke(self, current_time: float) -> float:
+        """How long since the tutor last spoke."""
+        return self.tutor_silence_duration(current_time)
+
     def mutual_silence_duration(self, current_time: float) -> float:
         """How long both participants have been silent simultaneously."""
         if self._tutor_speaking or self._student_speaking:

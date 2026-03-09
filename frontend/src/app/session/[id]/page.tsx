@@ -987,9 +987,9 @@ export default function SessionPage() {
           <div className="flex items-center gap-2 self-end md:self-auto">
             {showCoachDebug && currentMetrics && (
               <div className="text-xs text-gray-400">
-                Processing: {currentMetrics.server_processing_ms.toFixed(0)}ms
+                p50: {currentMetrics.latency_p50_ms.toFixed(0)}ms · p95: {currentMetrics.latency_p95_ms.toFixed(0)}ms
                 {currentMetrics.degraded && (
-                  <span className="ml-2 text-yellow-400">DEGRADED</span>
+                  <span className="ml-2 text-yellow-400">DEGRADED ({currentMetrics.degradation_reason})</span>
                 )}
               </div>
             )}
@@ -1415,6 +1415,14 @@ export default function SessionPage() {
                     <p>Engagement score: {currentMetrics.session.engagement_score.toFixed(1)}</p>
                     <p>Target FPS: {currentMetrics.target_fps}</p>
                     <p>Processing ms: {currentMetrics.server_processing_ms.toFixed(1)}</p>
+                    <p>Latency p50: {currentMetrics.latency_p50_ms.toFixed(1)}ms</p>
+                    <p>Latency p95: {currentMetrics.latency_p95_ms.toFixed(1)}ms</p>
+                    <p>Degradation: {currentMetrics.degradation_reason}</p>
+                    <p>Student time in state: {currentMetrics.student.time_in_attention_state_seconds.toFixed(0)}s</p>
+                    <p>Student talk (windowed): {(currentMetrics.student.talk_time_pct_windowed * 100).toFixed(1)}%</p>
+                    <p>Tutor talk (windowed): {(currentMetrics.tutor.talk_time_pct_windowed * 100).toFixed(1)}%</p>
+                    <p>Student time since spoke: {currentMetrics.student.time_since_spoke_seconds.toFixed(1)}s</p>
+                    <p>Tutor time since spoke: {currentMetrics.tutor.time_since_spoke_seconds.toFixed(1)}s</p>
                   </div>
                 ) : (
                   <p data-testid="debug-no-live-metrics" className="text-gray-400">No live metrics yet.</p>
@@ -1449,6 +1457,52 @@ export default function SessionPage() {
                     <p className="text-gray-500">No nudges yet.</p>
                   )}
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-semibold text-white">Coaching decisions</h3>
+                {currentMetrics?.coaching_decision ? (
+                  <div data-testid="debug-coaching-decision" className="space-y-2 rounded bg-gray-900 p-3 text-xs text-gray-300">
+                    <p>
+                      <span className="text-gray-500">Session type:</span>{' '}
+                      {currentMetrics.coaching_decision.session_type}
+                    </p>
+                    {currentMetrics.coaching_decision.emitted_nudge ? (
+                      <p>
+                        <span className="text-green-400">▶ Fired:</span>{' '}
+                        {currentMetrics.coaching_decision.emitted_nudge}
+                      </p>
+                    ) : (
+                      <p className="text-gray-500">No nudge fired this cycle</p>
+                    )}
+                    {currentMetrics.coaching_decision.candidate_nudges.length > 0 && (
+                      <p>
+                        <span className="text-yellow-400">Candidates:</span>{' '}
+                        {currentMetrics.coaching_decision.candidate_nudges.join(', ')}
+                      </p>
+                    )}
+                    {currentMetrics.coaching_decision.suppressed_reasons.length > 0 && (
+                      <div>
+                        <span className="text-gray-400">Suppressed:</span>
+                        <ul className="ml-4 list-disc">
+                          {currentMetrics.coaching_decision.suppressed_reasons.map((r, i) => (
+                            <li key={i}>{r}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {Object.keys(currentMetrics.coaching_decision.trigger_features).length > 0 && (
+                      <details className="cursor-pointer">
+                        <summary className="text-gray-400">Trigger features</summary>
+                        <pre className="mt-1 whitespace-pre-wrap break-words text-gray-500">
+                          {JSON.stringify(currentMetrics.coaching_decision.trigger_features, null, 2)}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-xs">No coaching decisions yet (waiting for warmup).</p>
+                )}
               </div>
 
               <div className="space-y-2">

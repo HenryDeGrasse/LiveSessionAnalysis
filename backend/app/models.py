@@ -36,6 +36,8 @@ class ParticipantMetrics(BaseModel):
     face_presence_score: float = 0.0
     visual_attention_score: float = 0.5
     time_in_attention_state_seconds: float = 0.0
+    talk_time_pct_windowed: float = 0.0
+    time_since_spoke_seconds: float = 0.0
 
 
 class SessionMetrics(BaseModel):
@@ -74,7 +76,11 @@ class MetricsSnapshot(BaseModel):
     degraded: bool = False
     gaze_unavailable: bool = False
     server_processing_ms: float = 0.0
+    latency_p50_ms: float = 0.0
+    latency_p95_ms: float = 0.0
+    degradation_reason: str = "normal"
     target_fps: int = 3
+    coaching_decision: Optional[dict] = None
 
 
 class NudgePriority(str, Enum):

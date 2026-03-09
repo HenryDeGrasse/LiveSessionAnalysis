@@ -17,6 +17,8 @@ export interface ParticipantMetrics {
   face_presence_score: number
   visual_attention_score: number
   time_in_attention_state_seconds: number
+  talk_time_pct_windowed: number
+  time_since_spoke_seconds: number
 }
 
 export interface SessionMetrics {
@@ -59,7 +61,17 @@ export interface MetricsSnapshot {
   degraded: boolean
   gaze_unavailable: boolean
   server_processing_ms: number
+  latency_p50_ms: number
+  latency_p95_ms: number
+  degradation_reason: string
   target_fps: number
+  coaching_decision?: {
+    candidate_nudges: string[]
+    suppressed_reasons: string[]
+    emitted_nudge: string | null
+    trigger_features: Record<string, unknown>
+    session_type: string
+  } | null
 }
 
 export interface Nudge {
