@@ -15,6 +15,7 @@ from .livekit import (
     apply_livekit_webhook_event,
     build_livekit_join_payload,
     default_media_provider,
+    livekit_analytics_worker_enabled,
     verify_livekit_webhook,
 )
 from .models import MediaProvider, SessionCreateRequest, SessionCreateResponse
@@ -108,6 +109,11 @@ async def session_info(session_id: str, token: str = ""):
         "elapsed_seconds": room.elapsed_seconds(),
         "role": resolved_role.value if resolved_role else None,
         "media_provider": room.media_provider.value,
+        "analytics_ingest_mode": (
+            "livekit_worker"
+            if livekit_analytics_worker_enabled(room)
+            else "browser_upload"
+        ),
         "livekit_room_name": room.livekit_room_name or None,
         "livekit": {
             "room_started": room.livekit_room_started_at is not None,
@@ -115,6 +121,9 @@ async def session_info(session_id: str, token: str = ""):
             "last_event": room.livekit_last_webhook_event,
             "tutor_joined": room.participants[Role.TUTOR].livekit_connected,
             "student_joined": room.participants[Role.STUDENT].livekit_connected,
+            "worker_started": room.livekit_worker_started_at is not None,
+            "worker_connected": room.livekit_worker_connected_at is not None,
+            "worker_last_error": room.livekit_worker_last_error,
         },
     }
 

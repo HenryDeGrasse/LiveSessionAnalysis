@@ -92,6 +92,7 @@ class Settings(BaseSettings):
     # Media provider / LiveKit
     default_media_provider: str = "custom_webrtc"
     enable_livekit: bool = False
+    enable_livekit_analytics_worker: bool = False
     livekit_url: str = ""
     livekit_api_key: str = ""
     livekit_api_secret: str = ""

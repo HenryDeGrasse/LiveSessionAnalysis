@@ -63,6 +63,9 @@ class SessionRoom:
     livekit_last_webhook_event: str | None = None
     livekit_last_webhook_at: float | None = None
     livekit_webhook_event_ids: set[str] = field(default_factory=set, repr=False)
+    livekit_worker_started_at: float | None = None
+    livekit_worker_connected_at: float | None = None
+    livekit_worker_last_error: str | None = None
     created_at: float = field(default_factory=time.time)
     started_at: float | None = None
     ended_at: float | None = None

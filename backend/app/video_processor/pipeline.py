@@ -49,7 +49,6 @@ class VideoProcessor:
         """
         total_start = time.time()
 
-        # Decode
         decode_start = time.time()
         frame = decode_frame(frame_bytes)
         decode_ms = (time.time() - decode_start) * 1000
@@ -66,11 +65,42 @@ class VideoProcessor:
                 total_ms=(time.time() - total_start) * 1000,
             )
 
-        # Resize and convert
+        return self._process_decoded_frame(
+            frame,
+            total_start=total_start,
+            decode_ms=decode_ms,
+            skip_expression=skip_expression,
+            skip_gaze=skip_gaze,
+        )
+
+    def process_frame_array(
+        self,
+        frame: np.ndarray,
+        skip_expression: bool = False,
+        skip_gaze: bool = False,
+    ) -> FrameProcessingResult:
+        """Process an already-decoded BGR frame through the full pipeline."""
+        total_start = time.time()
+        return self._process_decoded_frame(
+            frame,
+            total_start=total_start,
+            decode_ms=0.0,
+            skip_expression=skip_expression,
+            skip_gaze=skip_gaze,
+        )
+
+    def _process_decoded_frame(
+        self,
+        frame: np.ndarray,
+        *,
+        total_start: float,
+        decode_ms: float,
+        skip_expression: bool,
+        skip_gaze: bool,
+    ) -> FrameProcessingResult:
         frame = resize_frame(frame)
         rgb = to_rgb(frame)
 
-        # Face detection
         facemesh_start = time.time()
         detection = self._detector.detect(rgb)
         facemesh_ms = (time.time() - facemesh_start) * 1000
@@ -87,7 +117,6 @@ class VideoProcessor:
                 total_ms=(time.time() - total_start) * 1000,
             )
 
-        # Gaze estimation
         gaze = None
         gaze_ms = 0.0
         if not skip_gaze:
@@ -95,7 +124,6 @@ class VideoProcessor:
             gaze = estimate_gaze(detection.landmarks)
             gaze_ms = (time.time() - gaze_start) * 1000
 
-        # Expression analysis
         expression = None
         expression_ms = 0.0
         if not skip_expression and not skip_gaze:

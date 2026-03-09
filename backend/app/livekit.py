@@ -43,6 +43,15 @@ def livekit_enabled() -> bool:
 
 
 
+def livekit_analytics_worker_enabled(room: SessionRoom | None = None) -> bool:
+    if not livekit_enabled() or not settings.enable_livekit_analytics_worker:
+        return False
+    if room is not None and room.media_provider != MediaProvider.LIVEKIT:
+        return False
+    return True
+
+
+
 def livekit_room_name_for_session(session_id: str) -> str:
     return f"{settings.livekit_room_prefix}-{session_id}"
 
@@ -50,6 +59,11 @@ def livekit_room_name_for_session(session_id: str) -> str:
 
 def livekit_identity(session_id: str, role: Role) -> str:
     return f"{session_id}:{role.value}"
+
+
+
+def livekit_worker_identity(session_id: str) -> str:
+    return f"worker:{session_id}"
 
 
 
@@ -109,6 +123,57 @@ def build_livekit_join_payload(room: SessionRoom, role: Role) -> dict[str, Any]:
         "url": settings.livekit_url,
         "room_name": room_name,
         "identity": livekit_identity(room.session_id, role),
+        "token": token,
+        "expires_at": exp,
+    }
+
+
+
+def build_livekit_worker_join_payload(room: SessionRoom) -> dict[str, Any]:
+    if room.media_provider != MediaProvider.LIVEKIT:
+        raise LiveKitConfigError("Session is not configured for LiveKit")
+
+    if not livekit_analytics_worker_enabled(room):
+        raise LiveKitConfigError("LiveKit analytics worker is not configured")
+
+    room_name = room.livekit_room_name or livekit_room_name_for_session(room.session_id)
+    identity = livekit_worker_identity(room.session_id)
+    now = int(time.time())
+    exp = now + settings.livekit_token_ttl_seconds
+
+    token = jwt.encode(
+        {
+            "iss": settings.livekit_api_key,
+            "sub": identity,
+            "nbf": now - 5,
+            "exp": exp,
+            "name": "analytics-worker",
+            "metadata": json.dumps(
+                {
+                    "session_id": room.session_id,
+                    "role": "worker",
+                    "tutor_id": room.tutor_id,
+                    "session_type": room.session_type,
+                }
+            ),
+            "video": {
+                "roomJoin": True,
+                "room": room_name,
+                "canPublish": False,
+                "canSubscribe": True,
+                "canPublishData": True,
+                "hidden": True,
+                "agent": True,
+            },
+        },
+        settings.livekit_api_secret,
+        algorithm="HS256",
+    )
+
+    return {
+        "url": settings.livekit_url,
+        "room_name": room_name,
+        "identity": identity,
         "token": token,
         "expires_at": exp,
     }
@@ -283,6 +348,14 @@ def apply_livekit_webhook_event(payload: dict[str, Any]) -> dict[str, Any]:
                 "track_sid": _track_sid(payload) or None,
             },
         )
+
+    if event_name in {"participant_joined", "track_published", "room_started"}:
+        try:
+            from .livekit_worker import maybe_start_livekit_analytics_worker
+
+            maybe_start_livekit_analytics_worker(room)
+        except Exception:
+            pass
 
     return {
         "status": "processed",

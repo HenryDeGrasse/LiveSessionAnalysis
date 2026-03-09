@@ -106,6 +106,7 @@ export interface SessionInfo {
   elapsed_seconds: number
   role: 'tutor' | 'student' | null
   media_provider: MediaProvider
+  analytics_ingest_mode?: 'browser_upload' | 'livekit_worker'
   livekit_room_name?: string | null
 }
 

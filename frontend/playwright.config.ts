@@ -20,6 +20,7 @@ const backendServerEnv: Record<string, string> = {
   LSA_CORS_ORIGINS: '["http://127.0.0.1:3100"]',
   LSA_SESSION_DATA_DIR: 'data/playwright-sessions',
   LSA_ENABLE_LIVEKIT: MEDIA_PROVIDER === 'livekit' ? 'true' : 'false',
+  LSA_ENABLE_LIVEKIT_ANALYTICS_WORKER: MEDIA_PROVIDER === 'livekit' ? 'true' : 'false',
   LSA_LIVEKIT_URL: LIVEKIT_URL,
   LSA_LIVEKIT_API_KEY: 'devkey',
   LSA_LIVEKIT_API_SECRET: 'secret',

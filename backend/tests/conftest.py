@@ -4,6 +4,8 @@ from httpx import AsyncClient, ASGITransport
 
 from app.main import app
 from app.session_manager import session_manager
+from app.livekit_worker import reset_livekit_analytics_workers
+from app.session_runtime import reset_session_resources
 
 
 @pytest.fixture
@@ -22,5 +24,7 @@ async def async_client():
 def cleanup_sessions():
     """Clean up any sessions created during tests."""
     yield
+    reset_livekit_analytics_workers()
+    reset_session_resources()
     for sid in list(session_manager._sessions.keys()):
         session_manager.remove_session(sid)

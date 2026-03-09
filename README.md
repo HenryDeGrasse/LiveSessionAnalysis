@@ -28,6 +28,7 @@ Current verified implementation state:
 - session UI renders a large remote participant view with a small local self-view
 - tutor live coaching stays minimal by default; detailed metrics remain behind the debug toggle
 - analytics-only fallback still exists behind `NEXT_PUBLIC_ENABLE_WEBRTC_CALL_UI=false`
+- LiveKit sessions can optionally run analytics/coaching from a hidden backend room subscriber via `LSA_ENABLE_LIVEKIT_ANALYTICS_WORKER=true`
 
 Important caveat:
 - browser build/tests and backend signaling tests pass, but broad network reliability still depends on proper ICE/TURN configuration and manual two-browser validation
@@ -74,6 +75,7 @@ NEXT_PUBLIC_LIVEKIT_URL=ws://127.0.0.1:7880
 Optional backend envs for LiveKit sessions:
 ```bash
 LSA_ENABLE_LIVEKIT=true
+LSA_ENABLE_LIVEKIT_ANALYTICS_WORKER=true
 LSA_LIVEKIT_URL=ws://127.0.0.1:7880
 LSA_LIVEKIT_API_KEY=devkey
 LSA_LIVEKIT_API_SECRET=secret
@@ -111,7 +113,7 @@ npm run test:e2e
 npm run test:e2e:livekit
 ```
 
-`npm run test:e2e:livekit` automatically enables LiveKit in the backend, requests `media_provider=livekit`, and starts a local LiveKit dev server for the browser smoke suite using either:
+`npm run test:e2e:livekit` automatically enables LiveKit in the backend, enables the server-side LiveKit analytics worker, requests `media_provider=livekit`, and starts a local LiveKit dev server for the browser smoke suite using either:
 - a local `livekit-server` binary, or
 - Docker (`livekit/livekit-server`) if the daemon is running
 
@@ -121,6 +123,8 @@ The Playwright suite covers the live browser call path with fake media devices, 
 - tutor-only analytics visibility
 - reconnect recovery within the grace period
 - session end -> analytics availability
+
+When `LSA_ENABLE_LIVEKIT_ANALYTICS_WORKER=true`, LiveKit sessions stop using browser binary uploads for analytics and instead run the existing metrics/coaching pipeline from a hidden backend worker subscribed to LiveKit room tracks.
 
 ## Usage
 
