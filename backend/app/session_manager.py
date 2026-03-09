@@ -237,8 +237,10 @@ class SessionManager:
         self,
         tutor_id: str = "",
         session_type: str = "general",
-        media_provider: MediaProvider = MediaProvider.CUSTOM_WEBRTC,
+        media_provider: MediaProvider | None = None,
     ) -> SessionCreateResponse:
+        if media_provider is None:
+            media_provider = MediaProvider(settings.default_media_provider)
         session_id = secrets.token_urlsafe(8)
         tutor_token = secrets.token_urlsafe(16)
         student_token = secrets.token_urlsafe(16)

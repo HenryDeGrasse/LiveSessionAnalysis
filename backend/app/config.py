@@ -90,9 +90,9 @@ class Settings(BaseSettings):
     reconnect_grace_seconds: float = 10.0  # Wait before finalizing session on disconnect
 
     # Media provider / LiveKit
-    default_media_provider: str = "custom_webrtc"
-    enable_livekit: bool = False
-    enable_livekit_analytics_worker: bool = False
+    default_media_provider: str = "livekit"
+    enable_livekit: bool = True
+    enable_livekit_analytics_worker: bool = True
     livekit_url: str = ""
     livekit_api_key: str = ""
     livekit_api_secret: str = ""

@@ -108,36 +108,7 @@ async def _handle_text_message(room: SessionRoom, role: Role, text: str):
             participant.tab_hidden = bool(data["tab_hidden"])
         return
 
-    if message_type != "webrtc_signal":
-        return
-
-    signal_type = data.get("signal_type")
-    if signal_type not in {"offer", "answer", "ice_candidate"}:
-        return
-
-    payload = data.get("payload")
-    if not isinstance(payload, dict):
-        return
-
-    recorder = _trace_recorder(room)
-    if recorder is not None:
-        recorder.record_webrtc_signal(
-            role=role.value,
-            signal_type=signal_type,
-            payload=payload,
-        )
-
-    await _send_json_to_other_participant(
-        room,
-        role,
-        "webrtc_signal",
-        {
-            "session_id": room.session_id,
-            "from_role": role.value,
-            "signal_type": signal_type,
-            "payload": payload,
-        },
-    )
+    # webrtc_signal relay removed — LiveKit handles all media transport.
 
 
 @router.websocket("/ws/session/{session_id}")

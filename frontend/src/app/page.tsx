@@ -8,8 +8,8 @@ export default function Home() {
   const router = useRouter()
   const [tutorName, setTutorName] = useState('')
   const [sessionType, setSessionType] = useState('general')
-  const [mediaProvider, setMediaProvider] = useState<'custom_webrtc' | 'livekit'>(
-    'custom_webrtc'
+  const [mediaProvider] = useState<'custom_webrtc' | 'livekit'>(
+    'livekit'
   )
   const [joinToken, setJoinToken] = useState('')
   const [joinSessionId, setJoinSessionId] = useState('')
@@ -100,17 +100,8 @@ export default function Home() {
                 <option value="practice">Practice / problem solving</option>
                 <option value="discussion">Discussion / Socratic</option>
               </select>
-              <select
-                data-testid="media-provider-select"
-                value={mediaProvider}
-                onChange={(e) =>
-                  setMediaProvider(e.target.value as 'custom_webrtc' | 'livekit')
-                }
-                className="w-full border rounded-lg px-4 py-2 text-sm bg-white"
-              >
-                <option value="custom_webrtc">Built-in WebRTC transport</option>
-                <option value="livekit">LiveKit transport</option>
-              </select>
+              {/* Media provider is always LiveKit */}
+              <input type="hidden" data-testid="media-provider-select" value={mediaProvider} />
               <button
                 data-testid="create-session-button"
                 onClick={createSession}

@@ -44,9 +44,9 @@ class TestSessionCreation:
         assert room is not None
         assert room.tutor_id == "alice"
         assert room.session_type == "practice"
-        assert room.media_provider.value == "custom_webrtc"
-        assert data["media_provider"] == "custom_webrtc"
-        assert data["livekit_room_name"] is None
+        assert room.media_provider.value == "livekit"
+        assert data["media_provider"] == "livekit"
+        assert data["livekit_room_name"] is not None
 
     def test_create_session_accepts_livekit_provider(self, monkeypatch):
         monkeypatch.setattr(settings, "enable_livekit", True)
@@ -90,8 +90,8 @@ class TestSessionCreation:
         assert info["student_connected"] is False
         assert info["ended"] is False
         assert info["role"] == "tutor"
-        assert info["media_provider"] == "custom_webrtc"
-        assert info["livekit_room_name"] is None
+        assert info["media_provider"] == "livekit"
+        assert info["livekit_room_name"] is not None
 
     def test_end_session_with_valid_token(self):
         client = TestClient(app)
@@ -128,7 +128,7 @@ class TestSessionCreation:
         monkeypatch.setattr(settings, "livekit_api_secret", "secret")
 
         client = TestClient(app)
-        resp = client.post("/api/sessions")
+        resp = client.post("/api/sessions", json={"media_provider": "custom_webrtc"})
         data = resp.json()
 
         token_resp = client.post(
@@ -181,7 +181,7 @@ class TestSessionCreation:
         detail = detail_resp.json()
         assert detail["tutor_id"] == "alice"
         assert detail["session_type"] == "practice"
-        assert detail["media_provider"] == "custom_webrtc"
+        assert detail["media_provider"] == "livekit"
         assert detail["duration_seconds"] == 0
 
     def test_session_info_not_found(self):
@@ -281,80 +281,8 @@ class TestWebSocketConnection:
         finally:
             settings.metrics_emit_interval_seconds = original_interval
 
-    def test_webrtc_signaling_relay_between_roles(self):
-        client = TestClient(app)
-        resp = client.post("/api/sessions")
-        data = resp.json()
-
-        from app.config import settings
-        original_interval = settings.metrics_emit_interval_seconds
-        settings.metrics_emit_interval_seconds = 30.0
-
-        try:
-            with client.websocket_connect(
-                f"/ws/session/{data['session_id']}?token={data['tutor_token']}"
-            ) as tutor_ws:
-                with client.websocket_connect(
-                    f"/ws/session/{data['session_id']}?token={data['student_token']}"
-                ) as student_ws:
-                    tutor_ready = tutor_ws.receive_json()
-                    student_ready = student_ws.receive_json()
-                    assert tutor_ready["type"] == "participant_ready"
-                    assert student_ready["type"] == "participant_ready"
-
-                    tutor_ws.send_text(
-                        '{"type":"webrtc_signal","data":{"signal_type":"offer","payload":{"type":"offer","sdp":"fake-offer-sdp"}}}'
-                    )
-                    offer = student_ws.receive_json()
-                    assert offer == {
-                        "type": "webrtc_signal",
-                        "data": {
-                            "session_id": data["session_id"],
-                            "from_role": "tutor",
-                            "signal_type": "offer",
-                            "payload": {
-                                "type": "offer",
-                                "sdp": "fake-offer-sdp",
-                            },
-                        },
-                    }
-
-                    student_ws.send_text(
-                        '{"type":"webrtc_signal","data":{"signal_type":"answer","payload":{"type":"answer","sdp":"fake-answer-sdp"}}}'
-                    )
-                    answer = tutor_ws.receive_json()
-                    assert answer == {
-                        "type": "webrtc_signal",
-                        "data": {
-                            "session_id": data["session_id"],
-                            "from_role": "student",
-                            "signal_type": "answer",
-                            "payload": {
-                                "type": "answer",
-                                "sdp": "fake-answer-sdp",
-                            },
-                        },
-                    }
-
-                    tutor_ws.send_text(
-                        '{"type":"webrtc_signal","data":{"signal_type":"ice_candidate","payload":{"candidate":"candidate:1 1 udp 1 127.0.0.1 9999 typ host","sdpMid":"0","sdpMLineIndex":0}}}'
-                    )
-                    candidate = student_ws.receive_json()
-                    assert candidate == {
-                        "type": "webrtc_signal",
-                        "data": {
-                            "session_id": data["session_id"],
-                            "from_role": "tutor",
-                            "signal_type": "ice_candidate",
-                            "payload": {
-                                "candidate": "candidate:1 1 udp 1 127.0.0.1 9999 typ host",
-                                "sdpMid": "0",
-                                "sdpMLineIndex": 0,
-                            },
-                        },
-                    }
-        finally:
-            settings.metrics_emit_interval_seconds = original_interval
+    # test_webrtc_signaling_relay_between_roles removed —
+    # WebRTC signal relay was deleted; LiveKit handles all media transport.
 
 
 class TestHealthEndpoint:
@@ -445,19 +373,6 @@ class TestSessionTracing:
                 assert tutor_ready["type"] == "participant_ready"
                 assert student_ready["type"] == "participant_ready"
 
-                tutor_ws.send_text(
-                    '{"type":"webrtc_signal","data":{"signal_type":"offer","payload":{"type":"offer","sdp":"very-secret-sdp"}}}'
-                )
-
-                relayed = None
-                for _ in range(3):
-                    candidate = student_ws.receive_json()
-                    if candidate["type"] == "webrtc_signal":
-                        relayed = candidate
-                        break
-                assert relayed is not None
-                assert relayed["type"] == "webrtc_signal"
-
                 end_resp = client.post(
                     f"/api/sessions/{data['session_id']}/end?token={data['tutor_token']}"
                 )
@@ -481,9 +396,5 @@ class TestSessionTracing:
         assert "tutor_connected" in event_types
         assert "student_connected" in event_types
         assert "participant_ready" in event_types
-        assert "webrtc_signal_relayed" in event_types
         assert "session_end_requested" in event_types
         assert "session_end" in event_types
-
-        serialized = trace.model_dump_json()
-        assert "very-secret-sdp" not in serialized

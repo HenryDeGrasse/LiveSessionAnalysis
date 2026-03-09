@@ -2,10 +2,15 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient, ASGITransport
 
+from app.config import settings
 from app.main import app
 from app.session_manager import session_manager
 from app.livekit_worker import reset_livekit_analytics_workers
 from app.session_runtime import reset_session_resources
+
+# Disable LiveKit worker for unit tests — no LiveKit server is available.
+# Individual test files can re-enable if they mock the connection.
+settings.enable_livekit_analytics_worker = False
 
 
 @pytest.fixture

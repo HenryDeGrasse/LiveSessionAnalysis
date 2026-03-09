@@ -15,7 +15,6 @@ import type {
   Nudge,
   SessionInfo,
   WSMessage,
-  WebRTCSignalData,
 } from '@/lib/types'
 
 type SessionRole = 'tutor' | 'student'
@@ -239,12 +238,10 @@ export default function SessionPage() {
       | { type: 'participant_ready' }
       | { type: 'participant_disconnected' }
       | { type: 'participant_reconnected' }
-      | { type: 'webrtc_signal'; data: WebRTCSignalData }
       | { type: 'session_end' }
     >
   >([])
   const peerHandlersRef = useRef({
-    handleSignal: async (_signal: WebRTCSignalData) => {},
     handleParticipantReady: async () => {},
     handleParticipantDisconnected: () => {},
     handleParticipantReconnected: async () => {},
@@ -283,7 +280,6 @@ export default function SessionPage() {
         | { type: 'participant_ready' }
         | { type: 'participant_disconnected' }
         | { type: 'participant_reconnected' }
-        | { type: 'webrtc_signal'; data: WebRTCSignalData }
         | { type: 'session_end' }
     ) => {
       pendingPeerEventsRef.current.push(event)
@@ -309,9 +305,6 @@ export default function SessionPage() {
           break
         case 'participant_reconnected':
           await peerHandlersRef.current.handleParticipantReconnected()
-          break
-        case 'webrtc_signal':
-          await peerHandlersRef.current.handleSignal(event.data)
           break
         case 'session_end':
           peerHandlersRef.current.closeConnection('session ended')
@@ -427,19 +420,7 @@ export default function SessionPage() {
           }
           appendDebugEvent('participant_reconnected received')
           break
-        case 'webrtc_signal':
-          if (peerHandlersReadyRef.current) {
-            void peerHandlersRef.current.handleSignal(message.data as WebRTCSignalData)
-          } else {
-            queuePeerEvent({
-              type: 'webrtc_signal',
-              data: message.data as WebRTCSignalData,
-            })
-          }
-          appendDebugEvent(
-            `webrtc_signal: ${(message.data as WebRTCSignalData).signal_type} from ${(message.data as WebRTCSignalData).from_role}`
-          )
-          break
+        // webrtc_signal messages are no longer used (LiveKit handles media transport)
       }
     },
     [appendDebugEvent, handleMetrics, handleNudge, queuePeerEvent]
@@ -450,19 +431,6 @@ export default function SessionPage() {
     token,
     onMessage,
   })
-
-  const sendWebRTCSignal = useCallback(
-    (signal: {
-      signal_type: 'offer' | 'answer' | 'ice_candidate'
-      payload: Record<string, unknown>
-    }) => {
-      sendJson({
-        type: 'webrtc_signal',
-        data: signal,
-      })
-    },
-    [sendJson]
-  )
 
   const mediaProvider = resolveMediaProvider(sessionInfo)
   const analyticsIngestMode = sessionInfo?.analytics_ingest_mode ?? 'browser_upload'
@@ -479,7 +447,6 @@ export default function SessionPage() {
     iceGatheringState,
     signalingState,
     error: peerError,
-    handleSignal,
     handleParticipantReady,
     handleParticipantDisconnected,
     handleParticipantReconnected,
@@ -491,13 +458,12 @@ export default function SessionPage() {
     localStream: stream,
     sessionId,
     sessionToken: token,
-    sendSignal: sendWebRTCSignal,
+    sendSignal: () => {},
     onDebugEvent: appendDebugEvent,
   })
 
   useEffect(() => {
     peerHandlersRef.current = {
-      handleSignal,
       handleParticipantReady,
       handleParticipantDisconnected,
       handleParticipantReconnected,
@@ -515,7 +481,6 @@ export default function SessionPage() {
     handleParticipantDisconnected,
     handleParticipantReady,
     handleParticipantReconnected,
-    handleSignal,
   ])
 
   useEffect(() => {

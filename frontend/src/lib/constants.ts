@@ -59,24 +59,4 @@ export const LIVEKIT_VIDEO_MAX_BITRATE = parseNumberEnv(
   0
 )
 
-const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
-  { urls: 'stun:stun.l.google.com:19302' },
-]
-
-function parseIceServers(): RTCIceServer[] {
-  const raw = process.env.NEXT_PUBLIC_ICE_SERVERS
-  if (!raw) return DEFAULT_ICE_SERVERS
-
-  try {
-    const parsed = JSON.parse(raw)
-    if (Array.isArray(parsed)) {
-      return parsed as RTCIceServer[]
-    }
-  } catch (error) {
-    console.warn('Failed to parse NEXT_PUBLIC_ICE_SERVERS, using default STUN', error)
-  }
-
-  return DEFAULT_ICE_SERVERS
-}
-
-export const WEBRTC_ICE_SERVERS = parseIceServers()
+// Legacy WEBRTC_ICE_SERVERS removed — LiveKit handles all media transport.

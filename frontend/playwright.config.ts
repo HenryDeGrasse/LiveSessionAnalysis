@@ -8,7 +8,7 @@ const FRONTEND_URL = `http://127.0.0.1:${FRONTEND_PORT}`
 const BACKEND_URL = `http://127.0.0.1:${BACKEND_PORT}`
 const LIVEKIT_URL = process.env.PW_LIVEKIT_URL || `ws://127.0.0.1:${LIVEKIT_PORT}`
 const MEDIA_PROVIDER =
-  process.env.PW_MEDIA_PROVIDER === 'livekit' ? 'livekit' : 'custom_webrtc'
+  process.env.PW_MEDIA_PROVIDER === 'custom_webrtc' ? 'custom_webrtc' : 'livekit'
 
 const livekitServerEnv: Record<string, string> = {
   PW_LIVEKIT_HOST: '127.0.0.1',
@@ -19,8 +19,8 @@ const livekitServerEnv: Record<string, string> = {
 const backendServerEnv: Record<string, string> = {
   LSA_CORS_ORIGINS: '["http://127.0.0.1:3100"]',
   LSA_SESSION_DATA_DIR: 'data/playwright-sessions',
-  LSA_ENABLE_LIVEKIT: MEDIA_PROVIDER === 'livekit' ? 'true' : 'false',
-  LSA_ENABLE_LIVEKIT_ANALYTICS_WORKER: MEDIA_PROVIDER === 'livekit' ? 'true' : 'false',
+  LSA_ENABLE_LIVEKIT: 'true',
+  LSA_ENABLE_LIVEKIT_ANALYTICS_WORKER: 'true',
   LSA_LIVEKIT_URL: LIVEKIT_URL,
   LSA_LIVEKIT_API_KEY: 'devkey',
   LSA_LIVEKIT_API_SECRET: 'secret',
@@ -44,17 +44,14 @@ const frontendServerEnv: Record<string, string> = {
 }
 
 const webServers = [
-  ...(MEDIA_PROVIDER === 'livekit'
-    ? [
-        {
-          command: 'node ../scripts/start-livekit-for-playwright.mjs',
-          url: `http://127.0.0.1:${LIVEKIT_READY_PORT}`,
-          reuseExistingServer: false,
-          timeout: 180_000,
-          env: livekitServerEnv,
-        },
-      ]
-    : []),
+  // LiveKit server is always required (LiveKit is the default transport)
+  {
+    command: 'node ../scripts/start-livekit-for-playwright.mjs',
+    url: `http://127.0.0.1:${LIVEKIT_READY_PORT}`,
+    reuseExistingServer: false,
+    timeout: 180_000,
+    env: livekitServerEnv,
+  },
   {
     command:
       'cd ../backend && uv run --python 3.11 --with-requirements requirements.txt uvicorn app.main:app --host 127.0.0.1 --port 8100',

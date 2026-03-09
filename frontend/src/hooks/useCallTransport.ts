@@ -1,7 +1,5 @@
 'use client'
 
-import { useMemo } from 'react'
-import { usePeerConnection } from '@/hooks/usePeerConnection'
 import { useLiveKitTransport } from '@/hooks/useLiveKitTransport'
 import type { MediaProvider } from '@/lib/types'
 
@@ -21,34 +19,28 @@ interface UseCallTransportOptions {
   onDebugEvent?: (message: string) => void
 }
 
+/**
+ * Unified call transport hook.
+ *
+ * The legacy custom_webrtc transport has been removed.  All sessions now use
+ * LiveKit for media transport.  The `provider` and `sendSignal` parameters
+ * are kept for backward compatibility with the session page interface but
+ * are no longer used to select a transport implementation.
+ */
 export function useCallTransport({
-  provider,
   enabled,
   role,
   localStream,
   sessionId,
   sessionToken,
-  sendSignal,
   onDebugEvent,
 }: UseCallTransportOptions) {
-  const peerTransport = usePeerConnection({
-    enabled: enabled && provider === 'custom_webrtc',
-    role,
-    localStream,
-    sendSignal,
-    onDebugEvent,
-  })
-
-  const liveKitTransport = useLiveKitTransport({
-    enabled: enabled && provider === 'livekit',
+  return useLiveKitTransport({
+    enabled,
     role,
     localStream,
     sessionId,
     sessionToken,
     onDebugEvent,
   })
-
-  return useMemo(() => {
-    return provider === 'livekit' ? liveKitTransport : peerTransport
-  }, [provider, liveKitTransport, peerTransport])
 }

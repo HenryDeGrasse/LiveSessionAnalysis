@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { resolveMediaProvider } from '@/lib/call/provider'
+import { resolveMediaProvider } from './provider'
 
 describe('resolveMediaProvider', () => {
-  it('defaults to custom_webrtc when session info is absent', () => {
-    expect(resolveMediaProvider(null)).toBe('custom_webrtc')
+  it('defaults to livekit when no override or session info', () => {
+    expect(resolveMediaProvider(null)).toBe('livekit')
   })
 
-  it('uses the provider from session info when present', () => {
-    expect(resolveMediaProvider({ media_provider: 'livekit' })).toBe('livekit')
-    expect(resolveMediaProvider({ media_provider: 'custom_webrtc' })).toBe(
-      'custom_webrtc'
+  it('returns the session media_provider when set', () => {
+    expect(
+      resolveMediaProvider({ media_provider: 'custom_webrtc' })
+    ).toBe('custom_webrtc')
+    expect(resolveMediaProvider({ media_provider: 'livekit' })).toBe(
+      'livekit'
     )
   })
 })

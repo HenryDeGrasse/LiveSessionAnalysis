@@ -12,5 +12,5 @@ export function resolveMediaProvider(
     return 'custom_webrtc'
   }
 
-  return sessionInfo?.media_provider ?? 'custom_webrtc'
+  return sessionInfo?.media_provider ?? 'livekit'
 }

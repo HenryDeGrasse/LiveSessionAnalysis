@@ -6,7 +6,7 @@ const BACKEND_ORIGIN = 'http://127.0.0.1:8100'
 export type MediaProvider = 'custom_webrtc' | 'livekit'
 
 export const DEFAULT_MEDIA_PROVIDER: MediaProvider =
-  process.env.PW_MEDIA_PROVIDER === 'livekit' ? 'livekit' : 'custom_webrtc'
+  process.env.PW_MEDIA_PROVIDER === 'custom_webrtc' ? 'custom_webrtc' : 'livekit'
 
 export interface SessionUrls {
   sessionId: string
@@ -80,7 +80,7 @@ export async function createSessionFromHome(
   await page.goto('/')
   await page.getByTestId('tutor-name-input').fill(options.tutorName)
   await page.getByTestId('session-type-select').selectOption(options.sessionType)
-  await page.getByTestId('media-provider-select').selectOption(mediaProvider)
+  // Media provider selector removed — always LiveKit
   await page.getByTestId('create-session-button').click()
 
   await expect(page.getByTestId('session-created-card')).toBeVisible()

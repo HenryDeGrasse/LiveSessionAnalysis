@@ -193,8 +193,8 @@ class TestTutorIdentity:
         mgr = SessionManager()
         resp = mgr.create_session()
         room = mgr.get_session(resp.session_id)
-        assert room.media_provider.value == "custom_webrtc"
-        assert resp.media_provider.value == "custom_webrtc"
+        assert room.media_provider.value == "livekit"
+        assert resp.media_provider.value == "livekit"
 
     def test_create_session_with_livekit_provider(self):
         from app.models import MediaProvider
