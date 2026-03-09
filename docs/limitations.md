@@ -2,16 +2,15 @@
 
 ## Core Session Experience
 
-### In-App Peer Media Exists, but Production Call Reliability Still Needs Hardening
-The current product **does** provide an in-app tutoring call surface: tutor and student can see and hear each other in the session page via WebRTC while backend analytics continue in parallel.
+### LiveKit-Based Peer Media with Local Dev Dependency
+The in-app tutoring call now uses **LiveKit** as the sole media transport (custom WebRTC removed). Tutor and student connect via LiveKit rooms with HD video (H.264, up to 4.5 Mbps at 1080p).
 
-The main remaining limitation is **production-grade network reliability**, not the absence of peer media itself:
-- localhost and fake-media browser coverage are in place
-- real cross-device / cross-network validation is still needed
-- TURN-backed ICE configuration is required for dependable production connectivity
-- longer-duration soak testing is still needed to build confidence around reconnects and resource cleanup
-
-See `docs/real-tutoring-session-experience-plan.md` and `docs/testing-audit-2026-03-09.md` for the current live-call status.
+**Remaining limitations**:
+- Requires a LiveKit server (local `livekit-server` binary or cloud deployment)
+- `livekit==0.18.3` is pinned due to protobuf<4 requirement from mediapipe; upgrading to `livekit>=0.19` requires resolving the mediapipe/protobuf conflict
+- Cross-network (TURN) configuration not yet validated in production
+- Soak testing for long sessions (>1hr) still needed
+- The server-side analytics worker subscribes to tracks with `hidden=True` — participants don't see it, but it consumes server resources for each active room
 
 ## Eye Contact Detection
 
@@ -63,9 +62,14 @@ The composite engagement score (`student_eye * 40 + min_energy * 30 + talk_balan
 - Different session types (lecture vs discussion) may need different weighting
 
 ## Coaching Nudges
-- Nudges are rule-based, not ML-driven; they cannot adapt to individual tutor styles
+- Nudges are rule-based with session-type profiles, not ML-driven; they cannot adapt to individual tutor styles beyond the session-type preset
+- 4 live rules (`check_for_understanding`, `student_off_task`, `let_them_finish`, `tech_check`) — sparse by design (precision > recall)
+- `energy_drop` was removed as a live nudge due to false positives in lectures (quiet-but-attentive students). Energy is now post-session only.
+- Persistence-based off-task detection reduces false positives but may miss short disengagement episodes (< profile threshold)
+- Visual-confidence suppression only gates visual rules — if gaze data is unreliable, off-task nudges are suppressed but audio-based nudges still fire
 - Cooldown timers prevent nudge fatigue but may miss recurring issues
 - No feedback loop: the system doesn't learn which nudges tutors find helpful
+- Session type must be set at session creation; mid-session type changes are not supported
 
 ## Scale
 - Designed for one session at a time per server instance

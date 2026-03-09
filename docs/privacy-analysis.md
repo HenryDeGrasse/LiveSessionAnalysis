@@ -34,16 +34,25 @@ Both tutor and student see a consent modal before camera/mic activation. The mod
 Camera and microphone access is only requested after explicit consent.
 
 ## Data Visibility
-- **Tutor sees**: Live call UI, minimal live coaching overlay, coaching nudges, optional debug-only live metrics, and post-session analytics
-- **Student sees**: Live call UI and their own local/remote media, but no tutor metrics or nudges
-- **Coaching nudges**: Sent only to the tutor's WebSocket connection, never to the student
+- **Tutor sees**: Live call UI, minimal live coaching overlay, coaching nudges, optional debug panel with coaching decisions (candidates, suppressed reasons, trigger features), and post-session analytics
+- **Student sees**: Live call UI and their own local/remote media, but no tutor metrics, nudges, or coaching decisions
+- **Coaching nudges**: Sent only to the tutor via targeted LiveKit data packets (`destination_identities`), with WebSocket fallback — never to the student
+- **Coaching decisions**: The debug panel shows which rules were evaluated, which were suppressed and why, and what metric values triggered the evaluation. This is tutor-only and off by default.
 
 ## Deployment Considerations
-- **Local deployment** (docker-compose on tutor's machine): analytics media stays on that machine; peer-call media may stay local/direct when both participants are on the same network/browser environment.
-- **Remote server deployment**: analytics video/audio traverse the network to the backend and are never stored. Peer-call media is negotiated with WebRTC and may flow directly between participants or through TURN infrastructure depending on ICE configuration. Document this distinction clearly for users.
+- **Local deployment** (docker-compose on tutor's machine): analytics media stays on that machine. LiveKit server runs locally; all media flows through localhost.
+- **Remote server deployment**: video/audio traverse the network to the LiveKit SFU and backend analytics worker. Raw media frames are processed in memory and never stored. The analytics worker joins the LiveKit room with `hidden=True` — participants cannot see it in the room roster. Metrics and nudges are sent back via LiveKit data packets (targeted to the tutor only).
+
+### LiveKit Worker Privacy
+The server-side analytics worker:
+- Subscribes to **both** participant tracks (video + audio) for metrics computation
+- Processes frames in memory and discards them immediately
+- Publishes metrics to the **tutor only** via `destination_identities` — the student never receives coaching data
+- Joins with `hidden=True, agent=True` — invisible to participants
+- Does not record, store, or forward raw media
 
 ## No Third-Party APIs
-All ML inference runs locally via MediaPipe and webrtcvad. The app does not send analytics data to third-party ML APIs. However, WebRTC ICE configuration may rely on external STUN/TURN servers in production, which is a separate network dependency and should be disclosed accurately.
+All ML inference runs locally via MediaPipe and webrtcvad. The app does not send analytics data to third-party ML APIs. LiveKit can run locally (via `livekit-server` binary) or via LiveKit Cloud — the choice affects where media is routed and should be disclosed to users.
 
 ## Data Retention
 Session JSON files have a configurable retention period (default 90 days). Files are stored in `data/sessions/` and can be manually deleted at any time.

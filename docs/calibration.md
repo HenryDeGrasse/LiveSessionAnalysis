@@ -103,11 +103,44 @@ Components:
 
 ## Degradation Thresholds
 
-| Level | Rolling Avg (ms) | Action |
-|-------|-----------------|--------|
-| 0 (Normal) | < 250 | 3 FPS, full analysis |
-| 1 (Mild) | 250-350 | 2 FPS, full analysis |
-| 2 (Moderate) | 350-450 | 1 FPS, skip expression |
-| 3 (Severe) | > 450 | 1 FPS, skip gaze + expression |
+| Level | Rolling Avg (ms) | Action | `degradation_reason` |
+|-------|-----------------|--------|---------------------|
+| 0 (Normal) | < 250 | 3 FPS, full analysis | `normal` |
+| 1 (Mild) | 250-350 | 2 FPS, full analysis | `reduced_fps` |
+| 2 (Moderate) | 350-450 | 1 FPS, skip expression | `skip_expression` |
+| 3 (Severe) | > 450 | 1 FPS, skip gaze + expression | `skip_gaze_and_expression` |
 
 Recovery: In the current implementation, the system steps back up when the rolling average of the recent processing-time samples drops back below the threshold.
+
+### Latency Monitoring
+The system tracks processing latency percentiles across a 100-sample sliding window:
+- `latency_p50_ms` — median processing time
+- `latency_p95_ms` — 95th percentile processing time
+- `degradation_reason` — human-readable string for the current degradation state
+
+These are exposed in `MetricsSnapshot` and shown in the tutor debug panel.
+
+## Coaching Profile Thresholds
+
+Each session type has calibrated thresholds for live nudge rules:
+
+| Profile | Overtalk Ceiling | Silence Threshold | Off-Task Seconds | Talk Check After |
+|---------|-----------------|-------------------|-----------------|-----------------|
+| `lecture` | 0.92 | 300s | 120s | 120s |
+| `practice` | 0.55 | 60s | 45s | 60s |
+| `socratic` | 0.65 | 45s | 60s | 60s |
+| `general` | 0.80 | 180s | 75s | 90s |
+| `discussion` | 0.60 | 90s | 60s | 90s |
+
+### How to Calibrate Session-Type Profiles
+1. Run a session with `session_type=<type>` set at creation
+2. Enable the debug panel (tutor only) to see coaching decisions in real-time
+3. The "Coaching decisions" section shows:
+   - **Candidates**: which rules considered firing
+   - **Suppressed**: which were blocked and why (cooldown, confidence, threshold)
+   - **Trigger features**: the metric values that triggered or nearly triggered the rule
+4. Adjust profile thresholds in `backend/app/coaching_system/profiles.py`
+5. Re-run `make eval` and `make accuracy-report` to verify no regressions
+
+### Visual Confidence Gate
+Only rules marked `requires_visual_confidence=True` (currently `student_off_task`) are suppressed when face confidence < 0.4. Audio-based rules always run regardless of visual data quality.

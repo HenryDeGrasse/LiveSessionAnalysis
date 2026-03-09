@@ -75,3 +75,54 @@
 **Decision**: Capture and process video at 3 FPS, adaptive down to 1 FPS.
 
 **Rationale**: Sufficient for engagement metrics (eye contact, expression). Higher FPS would consume more CPU without meaningful accuracy improvement. Stays within latency budget with degradation path.
+
+### LiveKit as Default Media Plane (Supersedes Custom WebRTC)
+**Decision**: Replace the custom WebRTC signaling implementation with LiveKit as the sole media transport. The legacy `usePeerConnection.ts` hook has been deleted and WebRTC signal relay removed from the backend websocket handler.
+
+**Rationale**: LiveKit provides production-grade SFU infrastructure (TURN, bandwidth estimation, reconnect, codec negotiation) that would take months to build in-house. For 1:1 tutoring, we configure H.264 with simulcast disabled and higher bitrate tiers (up to 4.5 Mbps at 1080p) since all bandwidth goes to a single layer.
+
+**Key configuration choices**:
+- H.264 default codec: hardware encode/decode gives better quality-per-bit
+- Simulcast disabled: no benefit for 1:1 — send one HD layer
+- Bitrate: 2.5 Mbps (720p), 4.5 Mbps (1080p), vs LiveKit's 3 Mbps default
+
+**Trade-offs**: Hard dependency on LiveKit infrastructure (local dev server or cloud). `livekit==0.18.3` pinned for protobuf<4 compatibility with mediapipe.
+
+### Server-Side LiveKit Analytics Worker
+**Decision**: Analytics processing (video frames, audio) is done by a server-side worker that subscribes to LiveKit room tracks, rather than the browser uploading analytics data via WebSocket.
+
+**Rationale**: Eliminates double-bandwidth (media to SFU + analytics upload to backend). The worker joins with `hidden=True`, `canPublish=False`, `canSubscribe=True` so participants don't see it. When connected, the frontend stops sending analytics uploads.
+
+**Data path**: Worker publishes metrics and nudges back to the tutor via LiveKit data packets (`lsa.metrics.v1` lossy, `lsa.nudge.v1` reliable), with WebSocket fallback if data packet send fails.
+
+### Energy Removed as Live Nudge (Post-Session Only)
+**Decision**: Remove `energy_drop` from the live coaching rules. Energy drops are now only surfaced as post-session flagged moments.
+
+**Rationale**: User reported a false energy nudge during a lecture where a quiet-but-attentive student scored low on vocal energy (RMS ~0, rate variance ~0). In lecture mode, silent listening is correct behavior. Energy is too ambiguous for live coaching — it conflates low participation with low engagement. Post-session, an energy drop can be contextualized with the full session arc.
+
+**Consensus**: Both GPT-4 and Claude agreed that energy is a supporting/post-session signal, not a standalone live nudge.
+
+### Session-Type Profiles for Live Coaching
+**Decision**: Coaching thresholds are parameterized by session type (`lecture`, `practice`, `socratic`, `general`, `discussion`). Each profile defines overtalk ceiling, silence threshold, off-task persistence, and applicable nudge rules.
+
+**Rationale**: A tutor at 85% talk time is normal in a lecture but problematic in practice. A student silent for 180s is fine in a lecture but concerning in discussion. The same absolute thresholds cannot work across session types.
+
+**Profile examples**:
+- `lecture`: overtalk ceiling 0.92, silence threshold 300s, off-task 120s
+- `practice`: overtalk ceiling 0.55, silence threshold 60s, off-task 45s
+- `socratic`: overtalk ceiling 0.65, silence threshold 45s, off-task 60s
+
+### Persistence-Based Off-Task Detection (Not Instantaneous)
+**Decision**: Replace instantaneous `low_eye_contact` check with persistence-based `student_off_task` rule. The student must be in `OFF_TASK_AWAY` or `FACE_MISSING` state for longer than the profile's `off_task_seconds` threshold before a nudge fires.
+
+**Rationale**: A momentary glance away is normal. Persistence-based detection (75s for general, 45s for practice) dramatically reduces false positives. The `AttentionStateTracker` tracks state transitions and durations with `time_in_current_state()`.
+
+### Selective Visual-Confidence Suppression
+**Decision**: Only rules that have `requires_visual_confidence=True` are gated by the visual confidence threshold (< 0.4). Audio-based rules (interruptions, tech check) are never suppressed by poor visual data.
+
+**Rationale**: A blanket global suppress on all rules when camera confidence is low would disable the entire coaching system whenever the student covers their camera. Audio rules like `let_them_finish` and `tech_check` don't depend on visual data and should always run.
+
+### Composite Check-for-Understanding Rule
+**Decision**: Replace separate `tutor_overtalk` and `student_silence` rules with a single `check_for_understanding` rule that fires when the tutor's recent talk percentage exceeds the profile's overtalk ceiling.
+
+**Rationale**: The profile-aware overtalk ceiling already encodes session-type norms, making the rule both simpler and more precise. One well-tuned rule is better than two overlapping ones.
