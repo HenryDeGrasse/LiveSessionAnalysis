@@ -39,6 +39,25 @@ export const LIVEKIT_DYNACAST = parseBooleanEnv(
   'NEXT_PUBLIC_LIVEKIT_DYNACAST',
   true
 )
+/** Disable simulcast for 1:1 calls — all bitrate goes to a single high-quality layer. */
+export const LIVEKIT_SIMULCAST = parseBooleanEnv(
+  'NEXT_PUBLIC_LIVEKIT_SIMULCAST',
+  false
+)
+/**
+ * Video codec: 'h264' uses hardware encode/decode on most devices for better
+ * quality-per-bit and higher sustained FPS.  'vp8' is the safest fallback.
+ */
+export const LIVEKIT_VIDEO_CODEC =
+  process.env.NEXT_PUBLIC_LIVEKIT_VIDEO_CODEC || 'h264'
+/**
+ * Max video bitrate override in bps. 0 means use the resolution-based default.
+ * For 1080p, 4_500_000 (4.5 Mbps) gives Zoom/Meet-class quality.
+ */
+export const LIVEKIT_VIDEO_MAX_BITRATE = parseNumberEnv(
+  'NEXT_PUBLIC_LIVEKIT_VIDEO_MAX_BITRATE',
+  0
+)
 
 const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },

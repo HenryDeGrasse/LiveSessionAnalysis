@@ -1,27 +1,54 @@
-import { VideoPresets, type RoomOptions, type TrackPublishOptions } from 'livekit-client'
+import { VideoPresets, type RoomOptions, type TrackPublishOptions, type VideoCodec } from 'livekit-client'
 import {
   LIVEKIT_ADAPTIVE_STREAM,
   LIVEKIT_DYNACAST,
+  LIVEKIT_SIMULCAST,
+  LIVEKIT_VIDEO_CODEC,
+  LIVEKIT_VIDEO_MAX_BITRATE,
   LOCAL_VIDEO_FRAME_RATE,
   LOCAL_VIDEO_HEIGHT,
   LOCAL_VIDEO_WIDTH,
 } from '@/lib/constants'
 
+// ── Bitrate tiers (bps) ────────────────────────────────────────────────
+// These are higher than LiveKit's built-in presets to match Zoom/Meet
+// quality for a 1:1 tutoring call.
+const BITRATE_1080 = 4_500_000 // 4.5 Mbps  (LK default: 3 Mbps)
+const BITRATE_720 = 2_500_000 // 2.5 Mbps  (LK default: 1.7 Mbps)
+const BITRATE_540 = 1_200_000 // 1.2 Mbps  (LK default: 800 Kbps)
+const BITRATE_360 = 600_000 //   600 Kbps (LK default: 450 Kbps)
+
 /**
- * Pick the best matching VideoPreset encoding for the configured capture resolution.
- * Falls through from highest to lowest; defaults to h720 if nothing matches.
+ * Pick a high-quality video encoding for the configured capture resolution.
+ * If LIVEKIT_VIDEO_MAX_BITRATE is set, it overrides the tier-based default.
  */
-function videoEncodingForResolution(width: number, height: number) {
-  if (height >= 1080 && width >= 1920) return VideoPresets.h1080.encoding
-  if (height >= 720 && width >= 1280) return VideoPresets.h720.encoding
-  if (height >= 540 && width >= 960) return VideoPresets.h540.encoding
-  if (height >= 360 && width >= 640) return VideoPresets.h360.encoding
-  return VideoPresets.h720.encoding
+function videoEncodingForResolution(
+  width: number,
+  height: number,
+  frameRate: number,
+  bitrateOverride: number
+) {
+  let maxBitrate: number
+  if (bitrateOverride > 0) {
+    maxBitrate = bitrateOverride
+  } else if (height >= 1080 && width >= 1920) {
+    maxBitrate = BITRATE_1080
+  } else if (height >= 720 && width >= 1280) {
+    maxBitrate = BITRATE_720
+  } else if (height >= 540 && width >= 960) {
+    maxBitrate = BITRATE_540
+  } else if (height >= 360 && width >= 640) {
+    maxBitrate = BITRATE_360
+  } else {
+    maxBitrate = BITRATE_720
+  }
+
+  return { maxBitrate, maxFramerate: frameRate }
 }
 
 /**
  * Simulcast layers below the primary encoding.
- * For 1080p primary we add h540 + h216; for 720p we add h360 + h180.
+ * Only used when simulcast is enabled (typically for 1:N scenarios).
  */
 function simulcastLayersForResolution(height: number) {
   if (height >= 1080) return [VideoPresets.h540, VideoPresets.h216]
@@ -41,17 +68,21 @@ export function buildLiveKitConfig(overrides?: {
   frameRate?: number
   adaptiveStream?: boolean
   dynacast?: boolean
+  simulcast?: boolean
+  videoCodec?: string
+  maxBitrate?: number
 }): LiveKitRoomConfig {
   const width = overrides?.width ?? LOCAL_VIDEO_WIDTH
   const height = overrides?.height ?? LOCAL_VIDEO_HEIGHT
   const frameRate = overrides?.frameRate ?? LOCAL_VIDEO_FRAME_RATE
   const adaptiveStream = overrides?.adaptiveStream ?? LIVEKIT_ADAPTIVE_STREAM
   const dynacast = overrides?.dynacast ?? LIVEKIT_DYNACAST
+  const simulcast = overrides?.simulcast ?? LIVEKIT_SIMULCAST
+  const videoCodec = (overrides?.videoCodec ?? LIVEKIT_VIDEO_CODEC) as VideoCodec
+  const bitrateOverride = overrides?.maxBitrate ?? LIVEKIT_VIDEO_MAX_BITRATE
 
-  const encoding = videoEncodingForResolution(width, height)
-  // Override maxFramerate to match capture
-  const videoEncoding = { ...encoding, maxFramerate: frameRate }
-  const simulcastLayers = simulcastLayersForResolution(height)
+  const videoEncoding = videoEncodingForResolution(width, height, frameRate, bitrateOverride)
+  const simulcastLayers = simulcast ? simulcastLayersForResolution(height) : []
 
   const roomOptions: RoomOptions = {
     adaptiveStream,
@@ -61,8 +92,9 @@ export function buildLiveKitConfig(overrides?: {
     },
     publishDefaults: {
       videoEncoding,
-      videoSimulcastLayers: simulcastLayers,
-      simulcast: true,
+      videoCodec,
+      simulcast,
+      ...(simulcast ? { videoSimulcastLayers: simulcastLayers } : {}),
       // High-quality audio for tutoring
       dtx: true,
       red: true,
@@ -71,8 +103,9 @@ export function buildLiveKitConfig(overrides?: {
 
   const videoPublishOptions: TrackPublishOptions = {
     videoEncoding,
-    videoSimulcastLayers: simulcastLayers,
-    simulcast: true,
+    videoCodec,
+    simulcast,
+    ...(simulcast ? { videoSimulcastLayers: simulcastLayers } : {}),
     source: 'camera' as any,
   }
 

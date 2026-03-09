@@ -75,6 +75,9 @@ NEXT_PUBLIC_VIDEO_HEIGHT=1080
 NEXT_PUBLIC_VIDEO_FRAME_RATE=30
 NEXT_PUBLIC_LIVEKIT_ADAPTIVE_STREAM=false
 NEXT_PUBLIC_LIVEKIT_DYNACAST=false
+NEXT_PUBLIC_LIVEKIT_SIMULCAST=false
+NEXT_PUBLIC_LIVEKIT_VIDEO_CODEC=h264
+NEXT_PUBLIC_LIVEKIT_VIDEO_MAX_BITRATE=4500000
 ```
 
 Optional backend envs for LiveKit sessions:
@@ -90,7 +93,7 @@ Notes:
 - set `NEXT_PUBLIC_ENABLE_WEBRTC_CALL_UI=false` to force the older analytics-only session UI
 - for real deployment, add TURN-capable ICE servers instead of relying only on public STUN
 - `livekit-server --dev` uses the `devkey` / `secret` pair expected by the current local setup and Playwright harness
-- for local high-quality LiveKit testing on a stable connection, keep `NEXT_PUBLIC_VIDEO_WIDTH/HEIGHT` at `1920x1080` (or higher if your camera supports it) and set `NEXT_PUBLIC_LIVEKIT_ADAPTIVE_STREAM=false` plus `NEXT_PUBLIC_LIVEKIT_DYNACAST=false`
+- for local high-quality LiveKit testing on a stable connection, the defaults should give Zoom/Meet-class quality: 1080p capture, H.264 codec, 4.5 Mbps, no simulcast. Set `NEXT_PUBLIC_LIVEKIT_ADAPTIVE_STREAM=false` and `NEXT_PUBLIC_LIVEKIT_DYNACAST=false` to prevent adaptive downscaling. For 1:N scenarios, re-enable simulcast with `NEXT_PUBLIC_LIVEKIT_SIMULCAST=true`
 
 ### Running Tests
 ```bash
