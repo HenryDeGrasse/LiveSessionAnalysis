@@ -1,12 +1,25 @@
 services:
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --dev --bind 0.0.0.0
+    ports:
+      - "7880:7880"
+      - "7881:7881/udp"
+
   backend:
     build: ./backend
     ports:
       - "8000:8000"
     environment:
       - LSA_CORS_ORIGINS=["http://localhost:3000"]
+      - LSA_ENABLE_LIVEKIT=true
+      - LSA_LIVEKIT_URL=ws://localhost:7880
+      - LSA_LIVEKIT_API_KEY=devkey
+      - LSA_LIVEKIT_API_SECRET=secret
     volumes:
       - session-data:/app/data
+    depends_on:
+      - livekit
 
   frontend:
     build: ./frontend
@@ -15,8 +28,10 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
       - NEXT_PUBLIC_WS_URL=ws://localhost:8000
+      - NEXT_PUBLIC_LIVEKIT_URL=ws://localhost:7880
     depends_on:
       - backend
+      - livekit
 
 volumes:
   session-data:

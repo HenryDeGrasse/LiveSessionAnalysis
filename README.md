@@ -44,10 +44,13 @@ See `docs/real-tutoring-session-experience-plan.md` for the rollout plan and rem
 
 ### Using Docker
 ```bash
-docker-compose up
+docker compose up
 ```
 - Frontend: http://localhost:3000
 - Backend: http://localhost:8000
+- LiveKit dev server: ws://localhost:7880
+
+The compose stack now includes a local `livekit-server --dev` instance, so sessions created with the LiveKit provider can connect without extra setup.
 
 ### Local Development
 ```bash
@@ -65,11 +68,21 @@ Optional frontend envs:
 ```bash
 NEXT_PUBLIC_ENABLE_WEBRTC_CALL_UI=true
 NEXT_PUBLIC_ICE_SERVERS='[{"urls":"stun:stun.l.google.com:19302"}]'
+NEXT_PUBLIC_LIVEKIT_URL=ws://127.0.0.1:7880
+```
+
+Optional backend envs for LiveKit sessions:
+```bash
+LSA_ENABLE_LIVEKIT=true
+LSA_LIVEKIT_URL=ws://127.0.0.1:7880
+LSA_LIVEKIT_API_KEY=devkey
+LSA_LIVEKIT_API_SECRET=secret
 ```
 
 Notes:
 - set `NEXT_PUBLIC_ENABLE_WEBRTC_CALL_UI=false` to force the older analytics-only session UI
 - for real deployment, add TURN-capable ICE servers instead of relying only on public STUN
+- `livekit-server --dev` uses the `devkey` / `secret` pair expected by the current local setup and Playwright harness
 
 ### Running Tests
 ```bash
@@ -93,7 +106,14 @@ npm run build
 # Browser E2E (starts isolated frontend/backend servers on test-only ports)
 npm run playwright:install   # first time only
 npm run test:e2e
+
+# Same smoke path against the LiveKit provider
+npm run test:e2e:livekit
 ```
+
+`npm run test:e2e:livekit` automatically enables LiveKit in the backend, requests `media_provider=livekit`, and starts a local LiveKit dev server for the browser smoke suite using either:
+- a local `livekit-server` binary, or
+- Docker (`livekit/livekit-server`) if the daemon is running
 
 The Playwright suite covers the live browser call path with fake media devices, including:
 - tutor + student joining in separate browser contexts

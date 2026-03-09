@@ -3,6 +3,8 @@ import {
   closeParticipant,
   consentToMedia,
   createSession,
+  DEFAULT_MEDIA_PROVIDER,
+  expectMediaProvider,
   expectStudentNoTutorMetrics,
   openParticipant,
   waitForAnalyticsSummary,
@@ -10,7 +12,7 @@ import {
   waitForTutorMetrics,
 } from './helpers/session'
 
-test.describe('live tutoring call', () => {
+test.describe(`${DEFAULT_MEDIA_PROVIDER} live tutoring call`, () => {
   test('shows role-specific join copy, lets the student leave cleanly, and preserves tutor/student perspective', async ({
     browser,
     request,
@@ -38,6 +40,8 @@ test.describe('live tutoring call', () => {
 
       await waitForConnectedCall(tutor.page)
       await waitForConnectedCall(student.page)
+      await expectMediaProvider(tutor.page)
+      await expectMediaProvider(student.page)
 
       await expect(tutor.page.getByTestId('end-session-button')).toContainText(
         'End for everyone'

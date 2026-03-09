@@ -2,8 +2,66 @@ import { defineConfig, devices } from '@playwright/test'
 
 const FRONTEND_PORT = 3100
 const BACKEND_PORT = 8100
+const LIVEKIT_PORT = Number(process.env.PW_LIVEKIT_PORT || '7880')
+const LIVEKIT_READY_PORT = Number(process.env.PW_LIVEKIT_READY_PORT || '8788')
 const FRONTEND_URL = `http://127.0.0.1:${FRONTEND_PORT}`
 const BACKEND_URL = `http://127.0.0.1:${BACKEND_PORT}`
+const LIVEKIT_URL = process.env.PW_LIVEKIT_URL || `ws://127.0.0.1:${LIVEKIT_PORT}`
+const MEDIA_PROVIDER =
+  process.env.PW_MEDIA_PROVIDER === 'livekit' ? 'livekit' : 'custom_webrtc'
+
+const livekitServerEnv: Record<string, string> = {
+  PW_LIVEKIT_HOST: '127.0.0.1',
+  PW_LIVEKIT_PORT: String(LIVEKIT_PORT),
+  PW_LIVEKIT_READY_PORT: String(LIVEKIT_READY_PORT),
+}
+
+const backendServerEnv: Record<string, string> = {
+  LSA_CORS_ORIGINS: '["http://127.0.0.1:3100"]',
+  LSA_SESSION_DATA_DIR: 'data/playwright-sessions',
+  LSA_ENABLE_LIVEKIT: MEDIA_PROVIDER === 'livekit' ? 'true' : 'false',
+  LSA_LIVEKIT_URL: LIVEKIT_URL,
+  LSA_LIVEKIT_API_KEY: 'devkey',
+  LSA_LIVEKIT_API_SECRET: 'secret',
+}
+
+const frontendServerEnv: Record<string, string> = {
+  NEXT_PUBLIC_API_URL: BACKEND_URL,
+  NEXT_PUBLIC_WS_URL: `ws://127.0.0.1:${BACKEND_PORT}`,
+  NEXT_PUBLIC_ENABLE_WEBRTC_CALL_UI: 'true',
+  NEXT_PUBLIC_LIVEKIT_URL: LIVEKIT_URL,
+  NEXT_PUBLIC_MEDIA_PROVIDER_OVERRIDE: MEDIA_PROVIDER,
+  NEXT_TELEMETRY_DISABLED: '1',
+}
+
+const webServers = [
+  ...(MEDIA_PROVIDER === 'livekit'
+    ? [
+        {
+          command: 'node ../scripts/start-livekit-for-playwright.mjs',
+          url: `http://127.0.0.1:${LIVEKIT_READY_PORT}`,
+          reuseExistingServer: false,
+          timeout: 180_000,
+          env: livekitServerEnv,
+        },
+      ]
+    : []),
+  {
+    command:
+      'cd ../backend && uv run --python 3.11 --with-requirements requirements.txt uvicorn app.main:app --host 127.0.0.1 --port 8100',
+    url: `${BACKEND_URL}/health`,
+    reuseExistingServer: false,
+    timeout: 180_000,
+    env: backendServerEnv,
+  },
+  {
+    command: 'npm run build && npm run start -- --hostname 127.0.0.1 --port 3100',
+    url: FRONTEND_URL,
+    reuseExistingServer: false,
+    timeout: 240_000,
+    env: frontendServerEnv,
+  },
+]
 
 export default defineConfig({
   testDir: './e2e',
@@ -39,29 +97,5 @@ export default defineConfig({
       },
     },
   ],
-  webServer: [
-    {
-      command:
-        'cd ../backend && uv run --python 3.11 --with-requirements requirements.txt uvicorn app.main:app --host 127.0.0.1 --port 8100',
-      url: `${BACKEND_URL}/health`,
-      reuseExistingServer: false,
-      timeout: 180_000,
-      env: {
-        LSA_CORS_ORIGINS: '["http://127.0.0.1:3100"]',
-        LSA_SESSION_DATA_DIR: 'data/playwright-sessions',
-      },
-    },
-    {
-      command: 'npm run build && npm run start -- --hostname 127.0.0.1 --port 3100',
-      url: FRONTEND_URL,
-      reuseExistingServer: false,
-      timeout: 240_000,
-      env: {
-        NEXT_PUBLIC_API_URL: BACKEND_URL,
-        NEXT_PUBLIC_WS_URL: `ws://127.0.0.1:${BACKEND_PORT}`,
-        NEXT_PUBLIC_ENABLE_WEBRTC_CALL_UI: 'true',
-        NEXT_TELEMETRY_DISABLED: '1',
-      },
-    },
-  ],
+  webServer: webServers,
 })

@@ -1,4 +1,4 @@
-.PHONY: setup run test dev dev-backend dev-frontend clean
+.PHONY: setup run test test-e2e test-e2e-livekit dev dev-backend dev-frontend clean
 
 setup:
 	docker compose build
@@ -8,6 +8,12 @@ run:
 
 test:
 	cd backend && uv run --python 3.11 --with-requirements requirements.txt pytest tests/ -v
+
+test-e2e:
+	cd frontend && npm run test:e2e
+
+test-e2e-livekit:
+	cd frontend && npm run test:e2e:livekit
 
 dev: dev-backend dev-frontend
 

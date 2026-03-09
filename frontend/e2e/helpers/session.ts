@@ -3,10 +3,16 @@ import { expect, type APIRequestContext, type Browser, type BrowserContext, type
 const FRONTEND_ORIGIN = 'http://127.0.0.1:3100'
 const BACKEND_ORIGIN = 'http://127.0.0.1:8100'
 
+export type MediaProvider = 'custom_webrtc' | 'livekit'
+
+export const DEFAULT_MEDIA_PROVIDER: MediaProvider =
+  process.env.PW_MEDIA_PROVIDER === 'livekit' ? 'livekit' : 'custom_webrtc'
+
 export interface SessionUrls {
   sessionId: string
   tutorUrl: string
   studentUrl: string
+  mediaProvider: MediaProvider
 }
 
 export interface ParticipantHandle {
@@ -35,12 +41,14 @@ export async function grantMediaPermissions(context: BrowserContext) {
 
 export async function createSession(
   request: APIRequestContext,
-  sessionType = 'practice'
+  sessionType = 'practice',
+  mediaProvider: MediaProvider = DEFAULT_MEDIA_PROVIDER
 ): Promise<SessionUrls> {
   const response = await request.post(`${BACKEND_ORIGIN}/api/sessions`, {
     data: {
       tutor_id: 'playwright-tutor',
       session_type: sessionType,
+      media_provider: mediaProvider,
     },
   })
   expect(response.ok()).toBeTruthy()
@@ -55,6 +63,7 @@ export async function createSession(
     sessionId: body.session_id,
     tutorUrl: `${FRONTEND_ORIGIN}/session/${body.session_id}?token=${body.tutor_token}&debug=1`,
     studentUrl: `${FRONTEND_ORIGIN}/session/${body.session_id}?token=${body.student_token}&debug=1`,
+    mediaProvider,
   }
 }
 
@@ -63,11 +72,15 @@ export async function createSessionFromHome(
   options: {
     tutorName: string
     sessionType: 'general' | 'lecture' | 'practice' | 'discussion'
+    mediaProvider?: MediaProvider
   }
 ): Promise<SessionUrls> {
+  const mediaProvider = options.mediaProvider ?? DEFAULT_MEDIA_PROVIDER
+
   await page.goto('/')
   await page.getByTestId('tutor-name-input').fill(options.tutorName)
   await page.getByTestId('session-type-select').selectOption(options.sessionType)
+  await page.getByTestId('media-provider-select').selectOption(mediaProvider)
   await page.getByTestId('create-session-button').click()
 
   await expect(page.getByTestId('session-created-card')).toBeVisible()
@@ -98,6 +111,7 @@ export async function createSessionFromHome(
     sessionId,
     tutorUrl,
     studentUrl: `${studentUrl}&debug=1`,
+    mediaProvider,
   }
 }
 
@@ -119,8 +133,21 @@ export async function consentToMedia(page: Page) {
   await expect(page.getByTestId('call-surface')).toBeVisible()
 }
 
-export async function waitForConnectedCall(page: Page) {
+export async function expectMediaProvider(
+  page: Page,
+  mediaProvider: MediaProvider = DEFAULT_MEDIA_PROVIDER
+) {
   await ensureDebugPanel(page)
+  await expect(page.getByTestId('debug-media-provider')).toContainText(mediaProvider)
+}
+
+export async function waitForConnectedCall(
+  page: Page,
+  mediaProvider: MediaProvider = DEFAULT_MEDIA_PROVIDER
+) {
+  await ensureDebugPanel(page)
+  await expect(page.getByTestId('debug-media-provider')).toContainText(mediaProvider)
+
   await expect.poll(async () => {
     return (await page.getByTestId('debug-call-status').textContent()) ?? ''
   }).toContain('Connected')
