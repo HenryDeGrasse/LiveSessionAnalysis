@@ -1,6 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  LOCAL_VIDEO_FRAME_RATE,
+  LOCAL_VIDEO_HEIGHT,
+  LOCAL_VIDEO_WIDTH,
+} from '@/lib/constants'
 
 interface UseMediaStreamOptions {
   video?: boolean
@@ -21,7 +26,11 @@ export function useMediaStream(
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: options.video
-          ? { width: 640, height: 480, frameRate: 30 }
+          ? {
+              width: { ideal: LOCAL_VIDEO_WIDTH },
+              height: { ideal: LOCAL_VIDEO_HEIGHT },
+              frameRate: { ideal: LOCAL_VIDEO_FRAME_RATE, max: LOCAL_VIDEO_FRAME_RATE },
+            }
           : false,
         audio: options.audio
           ? { sampleRate: 16000, channelCount: 1, echoCancellation: true }

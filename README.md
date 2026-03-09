@@ -70,6 +70,11 @@ Optional frontend envs:
 NEXT_PUBLIC_ENABLE_WEBRTC_CALL_UI=true
 NEXT_PUBLIC_ICE_SERVERS='[{"urls":"stun:stun.l.google.com:19302"}]'
 NEXT_PUBLIC_LIVEKIT_URL=ws://127.0.0.1:7880
+NEXT_PUBLIC_VIDEO_WIDTH=1920
+NEXT_PUBLIC_VIDEO_HEIGHT=1080
+NEXT_PUBLIC_VIDEO_FRAME_RATE=30
+NEXT_PUBLIC_LIVEKIT_ADAPTIVE_STREAM=false
+NEXT_PUBLIC_LIVEKIT_DYNACAST=false
 ```
 
 Optional backend envs for LiveKit sessions:
@@ -85,6 +90,7 @@ Notes:
 - set `NEXT_PUBLIC_ENABLE_WEBRTC_CALL_UI=false` to force the older analytics-only session UI
 - for real deployment, add TURN-capable ICE servers instead of relying only on public STUN
 - `livekit-server --dev` uses the `devkey` / `secret` pair expected by the current local setup and Playwright harness
+- for local high-quality LiveKit testing on a stable connection, keep `NEXT_PUBLIC_VIDEO_WIDTH/HEIGHT` at `1920x1080` (or higher if your camera supports it) and set `NEXT_PUBLIC_LIVEKIT_ADAPTIVE_STREAM=false` plus `NEXT_PUBLIC_LIVEKIT_DYNACAST=false`
 
 ### Running Tests
 ```bash

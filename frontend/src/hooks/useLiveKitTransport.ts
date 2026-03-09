@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ConnectionState, Room, RoomEvent, Track } from 'livekit-client'
-import { API_URL, LIVEKIT_URL } from '@/lib/constants'
+import {
+  API_URL,
+  LIVEKIT_ADAPTIVE_STREAM,
+  LIVEKIT_DYNACAST,
+  LIVEKIT_URL,
+} from '@/lib/constants'
 import type { WebRTCSignalData } from '@/lib/types'
 
 type SessionRole = 'tutor' | 'student'
@@ -214,8 +219,8 @@ export function useLiveKitTransport({
         if (cancelled) return
 
         const room = new Room({
-          adaptiveStream: true,
-          dynacast: true,
+          adaptiveStream: LIVEKIT_ADAPTIVE_STREAM,
+          dynacast: LIVEKIT_DYNACAST,
         })
         roomRef.current = room
 
