@@ -3,7 +3,6 @@
   "contains_event_types": [
     "participant_disconnected",
     "participant_reconnected",
-    "webrtc_signal_relayed",
     "session_end"
   ],
   "replay_matches_trace": [

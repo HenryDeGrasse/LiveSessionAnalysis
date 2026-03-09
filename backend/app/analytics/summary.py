@@ -103,6 +103,11 @@ def generate_summary(
     )
 
 
+STUDENT_ENERGY_LOW = 0.15
+STUDENT_OFF_TASK_SECONDS = 60.0
+MUTUAL_SILENCE_SECONDS = 45.0
+
+
 def _detect_flagged_moments(
     snapshots: list[MetricsSnapshot],
     start_time,
@@ -111,6 +116,9 @@ def _detect_flagged_moments(
     prev_engagement_ok = True
     prev_student_talk_ok = True
     prev_interruption_ok = True
+    prev_student_energy_ok = True
+    prev_attention_ok = True
+    prev_mutual_silence_ok = True
 
     for s in snapshots:
         elapsed = (s.timestamp - start_time).total_seconds()
@@ -150,5 +158,53 @@ def _detect_flagged_moments(
                 description=f"Interruption count reached {s.session.interruption_count}",
             ))
         prev_interruption_ok = int_ok
+
+        # Student energy drop (post-session signal — moved out of live nudges)
+        energy_ok = s.student.energy_score >= STUDENT_ENERGY_LOW
+        if not energy_ok and prev_student_energy_ok:
+            flagged.append(FlaggedMoment(
+                timestamp=elapsed,
+                metric_name="student_energy",
+                value=s.student.energy_score,
+                direction="below",
+                description=f"Student energy dropped to {s.student.energy_score:.2f}",
+            ))
+        prev_student_energy_ok = energy_ok
+
+        # Sustained off-task / face missing
+        attention_ok = not (
+            s.student.attention_state in ("OFF_TASK_AWAY", "FACE_MISSING")
+            and s.student.time_in_attention_state_seconds >= STUDENT_OFF_TASK_SECONDS
+            and s.student.attention_state_confidence >= 0.5
+        )
+        if not attention_ok and prev_attention_ok:
+            flagged.append(FlaggedMoment(
+                timestamp=elapsed,
+                metric_name="student_attention",
+                value=s.student.time_in_attention_state_seconds,
+                direction="above",
+                description=(
+                    f"Student has been {s.student.attention_state} for "
+                    f"{s.student.time_in_attention_state_seconds:.0f}s"
+                ),
+            ))
+        prev_attention_ok = attention_ok
+
+        # Prolonged mutual silence
+        silence_ok = (
+            s.session.mutual_silence_duration_current < MUTUAL_SILENCE_SECONDS
+        )
+        if not silence_ok and prev_mutual_silence_ok:
+            flagged.append(FlaggedMoment(
+                timestamp=elapsed,
+                metric_name="mutual_silence",
+                value=s.session.mutual_silence_duration_current,
+                direction="above",
+                description=(
+                    f"Mutual silence reached "
+                    f"{s.session.mutual_silence_duration_current:.0f}s"
+                ),
+            ))
+        prev_mutual_silence_ok = silence_ok
 
     return flagged

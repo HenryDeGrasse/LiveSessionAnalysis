@@ -202,11 +202,13 @@ class MetricsEngine:
         tutor_attention_confidence = self.tutor_attention_state.confidence(now)
         tutor_face_presence = self.tutor_attention_state.face_presence_score(now)
         tutor_visual_attention = self.tutor_attention_state.visual_attention_score(now)
+        tutor_time_in_state = self.tutor_attention_state.time_in_current_state(now)
 
         student_attention_state = self.student_attention_state.state(now)
         student_attention_confidence = self.student_attention_state.confidence(now)
         student_face_presence = self.student_attention_state.face_presence_score(now)
         student_visual_attention = self.student_attention_state.visual_attention_score(now)
+        student_time_in_state = self.student_attention_state.time_in_current_state(now)
 
         # Compute engagement composite
         engagement = self._compute_engagement(
@@ -237,6 +239,7 @@ class MetricsEngine:
                 attention_state_confidence=tutor_attention_confidence,
                 face_presence_score=tutor_face_presence,
                 visual_attention_score=tutor_visual_attention,
+                time_in_attention_state_seconds=tutor_time_in_state,
             ),
             student=ParticipantMetrics(
                 eye_contact_score=student_eye,
@@ -248,6 +251,7 @@ class MetricsEngine:
                 attention_state_confidence=student_attention_confidence,
                 face_presence_score=student_face_presence,
                 visual_attention_score=student_visual_attention,
+                time_in_attention_state_seconds=student_time_in_state,
             ),
             session=SessionMetrics(
                 interruption_count=self.interruptions.total_count,

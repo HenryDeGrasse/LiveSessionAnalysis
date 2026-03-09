@@ -35,6 +35,7 @@ class ParticipantMetrics(BaseModel):
     attention_state_confidence: float = 0.0
     face_presence_score: float = 0.0
     visual_attention_score: float = 0.5
+    time_in_attention_state_seconds: float = 0.0
 
 
 class SessionMetrics(BaseModel):

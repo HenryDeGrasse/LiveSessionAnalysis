@@ -111,8 +111,8 @@
     {
       "id": "nudge-1",
       "timestamp": "2025-01-01T12:03:00",
-      "nudge_type": "tutor_overtalk",
-      "message": "You've been talking for a while. Try asking the student a question.",
+      "nudge_type": "check_for_understanding",
+      "message": "You've been talking for a while and the student has been quiet. Consider asking a question to check understanding.",
       "priority": "low",
       "trigger_metrics": {
         "tutor_talk": 0.9
@@ -124,8 +124,10 @@
       "seq": 4,
       "t_ms": 180000,
       "timestamp": "2025-01-01T12:03:00",
-      "emitted_nudge": "tutor_overtalk",
-      "candidate_nudges": ["tutor_overtalk"],
+      "emitted_nudge": "check_for_understanding",
+      "candidate_nudges": [
+        "check_for_understanding"
+      ],
       "suppressed_reasons": [],
       "metrics_index": 0,
       "trigger_features": {
@@ -156,7 +158,9 @@
     "engagement_score": 62.0,
     "flagged_moments": [],
     "timeline": {
-      "engagement": [62.0]
+      "engagement": [
+        62.0
+      ]
     },
     "recommendations": [],
     "nudges_sent": 1,

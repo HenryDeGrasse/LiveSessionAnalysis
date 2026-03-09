@@ -98,7 +98,8 @@ def replay_trace_signals_via_livekit_worker(trace: SessionTrace) -> WorkerReplay
         )
 
     snapshot = engine.compute_snapshot(current_time=final_time_s)
-    coach = Coach()
+    session_type = trace.summary.session_type if trace.summary else "general"
+    coach = Coach(session_type=session_type)
     coach_evaluation = coach.evaluate(
         snapshot,
         elapsed_seconds=trace.duration_seconds,

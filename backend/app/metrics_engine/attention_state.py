@@ -46,6 +46,9 @@ class AttentionStateTracker:
         self._window = window_seconds or settings.attention_state_window_seconds
         self._min_samples = min_samples or settings.attention_state_min_samples
         self._observations: deque[VisualObservation] = deque()
+        # Time-in-state tracking
+        self._current_state: AttentionState = "LOW_CONFIDENCE"
+        self._state_entered_at: float | None = None
 
     def update(
         self,
@@ -82,7 +85,28 @@ class AttentionStateTracker:
 
     def state(self, now: float | None = None) -> AttentionState:
         state, _, _, _ = self._classify(now)
+        self._track_state_transition(state, now)
         return state
+
+    def time_in_current_state(self, now: float | None = None) -> float:
+        """Seconds the tracker has been in its current classified state."""
+        state = self.state(now)  # also updates tracking
+        if self._state_entered_at is None:
+            return 0.0
+        effective_now = now if now is not None else (
+            self._observations[-1].timestamp if self._observations else 0.0
+        )
+        return max(0.0, effective_now - self._state_entered_at)
+
+    def _track_state_transition(self, new_state: AttentionState, now: float | None):
+        if new_state != self._current_state:
+            self._current_state = new_state
+            if now is not None:
+                self._state_entered_at = now
+            elif self._observations:
+                self._state_entered_at = self._observations[-1].timestamp
+            else:
+                self._state_entered_at = None
 
     def visual_attention_score(self, now: float | None = None) -> float:
         _, _, _, score = self._classify(now)

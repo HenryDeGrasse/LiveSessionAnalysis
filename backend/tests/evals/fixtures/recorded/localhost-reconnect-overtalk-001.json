@@ -1157,7 +1157,7 @@
     {
       "id": "e39874ce-91db-45c3-a561-99ff0e048130",
       "timestamp": "2026-03-09T15:17:14.871055",
-      "nudge_type": "tutor_overtalk",
+      "nudge_type": "check_for_understanding",
       "message": "You've been talking for a while. Try asking the student a question.",
       "priority": "low",
       "trigger_metrics": {
@@ -1184,9 +1184,9 @@
       "seq": 117,
       "t_ms": 286000,
       "timestamp": "2025-01-02T15:04:46",
-      "emitted_nudge": "tutor_overtalk",
+      "emitted_nudge": "check_for_understanding",
       "candidate_nudges": [
-        "tutor_overtalk",
+        "check_for_understanding",
         "interruption_spike"
       ],
       "suppressed_reasons": [],

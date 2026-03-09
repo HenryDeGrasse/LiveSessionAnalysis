@@ -1,5 +1,5 @@
 {
-  "required_nudges": ["low_eye_contact"],
+  "forbidden_nudges": ["energy_drop"],
   "value_assertions": [
     {
       "path": "snapshot.student.attention_state",

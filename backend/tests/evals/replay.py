@@ -105,7 +105,8 @@ def replay_trace_signals(trace: SessionTrace) -> ReplayResult:
         )
 
     snapshot = engine.compute_snapshot(current_time=final_time_s)
-    coach = Coach()
+    session_type = trace.summary.session_type if trace.summary else "general"
+    coach = Coach(session_type=session_type)
     elapsed_seconds = max(trace.duration_seconds, settings.global_nudge_warmup_seconds + 1)
     coach_evaluation = coach.evaluate(
         snapshot,

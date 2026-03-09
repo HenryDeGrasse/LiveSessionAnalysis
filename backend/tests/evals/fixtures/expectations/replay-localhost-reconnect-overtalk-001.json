@@ -1,10 +1,9 @@
 {
-  "required_nudges": ["tutor_overtalk"],
-  "forbidden_nudges": ["low_eye_contact"],
+  "required_nudges": ["check_for_understanding"],
+  "forbidden_nudges": ["energy_drop"],
   "contains_event_types": [
     "participant_disconnected",
     "participant_reconnected",
-    "webrtc_signal_relayed",
     "session_end_requested",
     "session_end"
   ],

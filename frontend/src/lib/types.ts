@@ -16,6 +16,7 @@ export interface ParticipantMetrics {
   attention_state_confidence: number
   face_presence_score: number
   visual_attention_score: number
+  time_in_attention_state_seconds: number
 }
 
 export interface SessionMetrics {

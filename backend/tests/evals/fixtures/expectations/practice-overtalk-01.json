@@ -1,6 +1,6 @@
 {
-  "required_nudges": ["tutor_overtalk"],
-  "forbidden_nudges": ["low_eye_contact"],
+  "required_nudges": ["check_for_understanding"],
+  "forbidden_nudges": ["energy_drop", "student_off_task"],
   "max_nudges": 1,
   "summary_fields": {
     "session_type": {

@@ -31,7 +31,7 @@ def _always_true_rule(name: str = "test_rule", cooldown: int = 60) -> CoachingRu
     return CoachingRule(
         name=name,
         nudge_type=name,
-        condition=lambda s, e: True,
+        condition=lambda s, e, p: True,
         message_template="Test nudge",
         priority=NudgePriority.MEDIUM,
         cooldown_seconds=cooldown,
@@ -121,7 +121,7 @@ def test_condition_false_does_not_trigger_or_set_cooldown():
     """A rule whose condition is False should not fire or start cooldown."""
     rule = CoachingRule(
         name="conditional", nudge_type="cond",
-        condition=lambda s, e: False,
+        condition=lambda s, e, p: False,
         message_template="Never", priority=NudgePriority.LOW,
         cooldown_seconds=1, min_session_elapsed=0,
     )
@@ -137,7 +137,7 @@ def test_min_elapsed_respected():
     """Rule should not fire before min_session_elapsed."""
     rule = CoachingRule(
         name="delayed", nudge_type="delayed",
-        condition=lambda s, e: True,
+        condition=lambda s, e, p: True,
         message_template="Delayed", priority=NudgePriority.LOW,
         cooldown_seconds=0, min_session_elapsed=300,
     )

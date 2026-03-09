@@ -47,7 +47,7 @@ def test_evaluate_returns_candidate_and_emitted_nudge_metadata():
     rule = CoachingRule(
         name="traceable_rule",
         nudge_type="traceable_rule",
-        condition=lambda snapshot, elapsed: True,
+        condition=lambda snapshot, elapsed, profile: True,
         message_template="Trace me",
         priority=NudgePriority.LOW,
         cooldown_seconds=60,
@@ -61,13 +61,14 @@ def test_evaluate_returns_candidate_and_emitted_nudge_metadata():
     assert evaluation.emitted_nudge_type == "traceable_rule"
     assert evaluation.candidate_nudges == ["traceable_rule"]
     assert evaluation.trigger_features["tutor_talk"] == pytest.approx(0.9)
+    assert "session_type" in evaluation.trigger_features
 
 
 def test_evaluate_records_global_interval_suppression_after_first_nudge():
     rule = CoachingRule(
         name="traceable_rule",
         nudge_type="traceable_rule",
-        condition=lambda snapshot, elapsed: True,
+        condition=lambda snapshot, elapsed, profile: True,
         message_template="Trace me",
         priority=NudgePriority.LOW,
         cooldown_seconds=60,

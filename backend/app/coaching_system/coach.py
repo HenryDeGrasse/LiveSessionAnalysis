@@ -6,6 +6,7 @@ from typing import Optional
 
 from ..config import settings
 from ..models import MetricsSnapshot, Nudge
+from .profiles import SessionProfile, get_profile
 from .rules import CoachingRule, DEFAULT_RULES
 
 
@@ -21,14 +22,29 @@ class CoachingEvaluation:
 class Coach:
     """Rule engine that converts MetricsSnapshots into coaching Nudges.
 
-    Respects cooldowns and minimum session elapsed time.
+    Respects cooldowns, minimum session elapsed time, global budget,
+    session-type profiles, and selective suppression gates.
     """
 
-    def __init__(self, rules: list[CoachingRule] | None = None):
+    def __init__(
+        self,
+        rules: list[CoachingRule] | None = None,
+        session_type: str = "general",
+    ):
         self._rules = rules or DEFAULT_RULES
+        self._session_type = session_type
+        self._profile = get_profile(session_type)
         self._last_fired: dict[str, float] = {}  # rule name -> timestamp
         self._last_nudge_at: float | None = None
         self._session_nudges_sent: int = 0
+
+    @property
+    def profile(self) -> SessionProfile:
+        return self._profile
+
+    @property
+    def session_type(self) -> str:
+        return self._session_type
 
     def _trigger_features(self, snapshot: MetricsSnapshot) -> dict:
         return {
@@ -47,6 +63,9 @@ class Coach:
             "echo_suspected": float(snapshot.session.echo_suspected),
             "tutor_cutoffs": snapshot.session.tutor_cutoffs,
             "student_cutoffs": snapshot.session.student_cutoffs,
+            "student_attention_state": snapshot.student.attention_state,
+            "student_time_in_state": snapshot.student.time_in_attention_state_seconds,
+            "session_type": self._session_type,
         }
 
     def evaluate(
@@ -88,7 +107,17 @@ class Coach:
                 evaluation.suppressed_reasons.append(f"rule_cooldown:{rule.name}")
                 continue
 
-            if rule.condition(snapshot, elapsed_seconds):
+            # Selective visual-confidence gate: only suppress visual rules
+            # when confidence is low. Audio-based rules (interruptions, tech
+            # check) should still fire even with poor visual data.
+            if rule.requires_visual_confidence:
+                if snapshot.student.attention_state_confidence < 0.4:
+                    evaluation.suppressed_reasons.append(
+                        f"low_visual_confidence:{rule.name}"
+                    )
+                    continue
+
+            if rule.condition(snapshot, elapsed_seconds, self._profile):
                 evaluation.candidate_nudges.append(rule.nudge_type)
                 matched_rules.append(rule)
 

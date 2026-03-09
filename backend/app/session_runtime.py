@@ -227,7 +227,7 @@ async def emit_metrics_snapshot(
 
         coach = resources.get("coach")
         if coach is None:
-            coach = Coach()
+            coach = Coach(session_type=room.session_type)
             resources["coach"] = coach
         evaluation = coach.evaluate(snapshot, room.elapsed_seconds())
         recorder = trace_recorder(room)
