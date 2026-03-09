@@ -338,7 +338,7 @@ export default function SessionPage() {
         if (data.role === 'tutor' || data.role === 'student') {
           setRole(data.role)
           appendDebugEvent(
-            `session info loaded (${data.role}, provider=${data.media_provider})`
+            `session info loaded (${data.role}, provider=${data.media_provider}, analytics=${data.analytics_ingest_mode ?? 'browser_upload'})`
           )
 
           const remoteConnected =
@@ -465,6 +465,8 @@ export default function SessionPage() {
   )
 
   const mediaProvider = resolveMediaProvider(sessionInfo)
+  const analyticsIngestMode = sessionInfo?.analytics_ingest_mode ?? 'browser_upload'
+  const browserAnalyticsUploadEnabled = analyticsIngestMode !== 'livekit_worker'
 
   const {
     remoteStream,
@@ -591,7 +593,13 @@ export default function SessionPage() {
 
   // Send video frames at adaptive FPS (adjusted by backend target_fps)
   useEffect(() => {
-    if (!connected || !stream || !canvasRef.current || !videoRef.current) return
+    if (
+      !connected ||
+      !browserAnalyticsUploadEnabled ||
+      !stream ||
+      !canvasRef.current ||
+      !videoRef.current
+    ) return
 
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
@@ -632,11 +640,16 @@ export default function SessionPage() {
       if (frameIntervalRef.current) clearInterval(frameIntervalRef.current)
       clearInterval(fpsCheckInterval)
     }
-  }, [connected, isVideoEnabled, stream, sendBinary])
+  }, [browserAnalyticsUploadEnabled, connected, isVideoEnabled, stream, sendBinary])
 
   // Stream microphone audio as 16kHz mono PCM in 30ms chunks.
   useEffect(() => {
-    if (!connected || !stream || stream.getAudioTracks().length === 0) return
+    if (
+      !connected ||
+      !browserAnalyticsUploadEnabled ||
+      !stream ||
+      stream.getAudioTracks().length === 0
+    ) return
 
     const AudioContextClass =
       window.AudioContext || window.webkitAudioContext
@@ -702,7 +715,7 @@ export default function SessionPage() {
       audioSourceRef.current = null
       audioProcessorRef.current = null
     }
-  }, [connected, stream, sendBinary])
+  }, [browserAnalyticsUploadEnabled, connected, stream, sendBinary])
 
   const isTutor = role === 'tutor' || currentMetrics !== null
   const hasAudioTrack = Boolean(stream?.getAudioTracks().length)
@@ -1357,6 +1370,7 @@ export default function SessionPage() {
                   <p>Session ended: {sessionEnded ? 'yes' : 'no'}</p>
                   <p>Live nudges enabled: {nudgesEnabled ? 'yes' : 'no'}</p>
                   <p data-testid="debug-media-provider">Media provider: {mediaProvider}</p>
+                  <p data-testid="debug-analytics-ingest-mode">Analytics ingest: {analyticsIngestMode}</p>
                   <p data-testid="debug-webrtc-enabled">WebRTC enabled: {ENABLE_WEBRTC_CALL_UI ? 'yes' : 'no'}</p>
                   <p data-testid="debug-call-status">Call status: {callStatusLabel(callStatus)}</p>
                   <p data-testid="debug-peer-connection-state">Peer connection state: {connectionState}</p>
