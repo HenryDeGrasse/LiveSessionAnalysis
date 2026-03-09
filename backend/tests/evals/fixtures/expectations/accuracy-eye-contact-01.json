@@ -1,0 +1,10 @@
+{
+  "metric_bounds": [
+    {
+      "path": "snapshot.student.eye_contact_score",
+      "min": 0.65,
+      "max": 0.75
+    }
+  ],
+  "max_nudges": 1
+}

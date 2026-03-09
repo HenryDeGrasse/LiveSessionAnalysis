@@ -1,0 +1,10 @@
+[
+  {
+    "id": "practice-overtalk-fast",
+    "stage": "golden",
+    "category": "coaching",
+    "subcategory": "talk-balance",
+    "fixture": "traces/practice-overtalk-01.json",
+    "expectation": "expectations/practice-overtalk-01.json"
+  }
+]

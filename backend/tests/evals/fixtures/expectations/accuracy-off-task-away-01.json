@@ -1,0 +1,16 @@
+{
+  "required_nudges": ["low_eye_contact"],
+  "value_assertions": [
+    {
+      "path": "snapshot.student.attention_state",
+      "equals": "OFF_TASK_AWAY"
+    }
+  ],
+  "metric_bounds": [
+    {
+      "path": "attention_state_counts.student.OFF_TASK_AWAY",
+      "min": 6,
+      "max": 6
+    }
+  ]
+}

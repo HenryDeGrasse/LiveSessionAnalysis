@@ -1,0 +1,20 @@
+{
+  "max_nudges": 0,
+  "metric_bounds": [
+    {
+      "path": "snapshot.session.interruption_count",
+      "min": 1,
+      "max": 1
+    },
+    {
+      "path": "snapshot.session.hard_interruption_count",
+      "min": 1,
+      "max": 1
+    },
+    {
+      "path": "snapshot.session.backchannel_overlap_count",
+      "min": 0,
+      "max": 0
+    }
+  ]
+}

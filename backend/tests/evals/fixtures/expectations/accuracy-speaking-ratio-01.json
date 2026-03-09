@@ -1,0 +1,15 @@
+{
+  "metric_bounds": [
+    {
+      "path": "snapshot.tutor.talk_time_percent",
+      "min": 0.70,
+      "max": 0.80
+    },
+    {
+      "path": "snapshot.student.talk_time_percent",
+      "min": 0.20,
+      "max": 0.30
+    }
+  ],
+  "max_nudges": 1
+}

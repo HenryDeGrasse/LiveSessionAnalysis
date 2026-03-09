@@ -1,0 +1,21 @@
+{
+  "max_nudges": 0,
+  "value_assertions": [
+    {
+      "path": "snapshot.session.echo_suspected",
+      "equals": true
+    }
+  ],
+  "metric_bounds": [
+    {
+      "path": "snapshot.session.interruption_count",
+      "min": 0,
+      "max": 0
+    },
+    {
+      "path": "snapshot.session.hard_interruption_count",
+      "min": 0,
+      "max": 0
+    }
+  ]
+}

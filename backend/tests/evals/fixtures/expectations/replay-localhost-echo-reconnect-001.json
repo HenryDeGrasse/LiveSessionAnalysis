@@ -1,0 +1,27 @@
+{
+  "max_nudges": 0,
+  "contains_event_types": [
+    "participant_disconnected",
+    "participant_reconnected",
+    "webrtc_signal_relayed",
+    "session_end"
+  ],
+  "replay_matches_trace": [
+    {
+      "replay_path": "snapshot.session.echo_suspected",
+      "trace_path": "metrics_history.0.session.echo_suspected"
+    },
+    {
+      "replay_path": "snapshot.session.interruption_count",
+      "trace_path": "metrics_history.0.session.interruption_count"
+    },
+    {
+      "replay_path": "snapshot.session.hard_interruption_count",
+      "trace_path": "metrics_history.0.session.hard_interruption_count"
+    },
+    {
+      "replay_path": "snapshot.student.attention_state",
+      "trace_path": "metrics_history.0.student.attention_state"
+    }
+  ]
+}

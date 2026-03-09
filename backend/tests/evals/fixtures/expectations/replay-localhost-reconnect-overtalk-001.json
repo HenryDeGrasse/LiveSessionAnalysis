@@ -1,0 +1,32 @@
+{
+  "required_nudges": ["tutor_overtalk"],
+  "forbidden_nudges": ["low_eye_contact"],
+  "contains_event_types": [
+    "participant_disconnected",
+    "participant_reconnected",
+    "webrtc_signal_relayed",
+    "session_end_requested",
+    "session_end"
+  ],
+  "summary_fields": {
+    "session_type": {
+      "equals": "practice"
+    }
+  },
+  "replay_matches_trace": [
+    {
+      "replay_path": "snapshot.tutor.talk_time_percent",
+      "trace_path": "metrics_history.0.tutor.talk_time_percent",
+      "tolerance": 0.06
+    },
+    {
+      "replay_path": "snapshot.student.attention_state",
+      "trace_path": "metrics_history.0.student.attention_state"
+    },
+    {
+      "replay_path": "snapshot.session.recent_tutor_talk_percent",
+      "trace_path": "metrics_history.0.session.recent_tutor_talk_percent",
+      "tolerance": 0.08
+    }
+  ]
+}

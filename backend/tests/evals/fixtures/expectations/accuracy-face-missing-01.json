@@ -1,0 +1,16 @@
+{
+  "required_nudges": ["low_eye_contact"],
+  "value_assertions": [
+    {
+      "path": "snapshot.student.attention_state",
+      "equals": "FACE_MISSING"
+    }
+  ],
+  "metric_bounds": [
+    {
+      "path": "attention_state_counts.student.FACE_MISSING",
+      "min": 6,
+      "max": 6
+    }
+  ]
+}

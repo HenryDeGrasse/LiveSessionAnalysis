@@ -1,0 +1,32 @@
+# OS / editor
+.DS_Store
+.claude/
+.pi/
+
+# Environment / local config
+.env
+.env.*
+!.env.example
+
+# Python
+**/__pycache__/
+**/.pytest_cache/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# Node / Next / Playwright
+frontend/node_modules/
+frontend/.next/
+frontend/playwright-report/
+frontend/test-results/
+frontend/tsconfig.tsbuildinfo
+
+# Runtime outputs
+backend/data/sessions/
+backend/data/playwright-sessions/
+backend/data/traces/
+
+# Logs
+*.log

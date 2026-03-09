@@ -1,0 +1,257 @@
+{
+  "trace_version": 1,
+  "session_id": "accuracy-eye-contact-01",
+  "tutor_id": "alice",
+  "session_type": "practice",
+  "created_at": "2025-01-01T12:00:00",
+  "started_at": "2025-01-01T12:00:00",
+  "ended_at": "2025-01-01T12:00:10",
+  "duration_seconds": 10.0,
+  "build": {
+    "git_sha": "fixture",
+    "app_version": "1.0.0",
+    "models_version": "fixture"
+  },
+  "config_hash": "fixture-config",
+  "capture_mode": "eval",
+  "env": {},
+  "events": [],
+  "visual_signals": [
+    {
+      "seq": 1,
+      "t_ms": 0,
+      "timestamp": "2025-01-01T12:00:00",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 2,
+      "t_ms": 0,
+      "timestamp": "2025-01-01T12:00:00",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.9
+    },
+    {
+      "seq": 3,
+      "t_ms": 1000,
+      "timestamp": "2025-01-01T12:00:01",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 4,
+      "t_ms": 1000,
+      "timestamp": "2025-01-01T12:00:01",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.9
+    },
+    {
+      "seq": 5,
+      "t_ms": 2000,
+      "timestamp": "2025-01-01T12:00:02",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 6,
+      "t_ms": 2000,
+      "timestamp": "2025-01-01T12:00:02",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.9
+    },
+    {
+      "seq": 7,
+      "t_ms": 3000,
+      "timestamp": "2025-01-01T12:00:03",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 8,
+      "t_ms": 3000,
+      "timestamp": "2025-01-01T12:00:03",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.9
+    },
+    {
+      "seq": 9,
+      "t_ms": 4000,
+      "timestamp": "2025-01-01T12:00:04",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 10,
+      "t_ms": 4000,
+      "timestamp": "2025-01-01T12:00:04",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.9
+    },
+    {
+      "seq": 11,
+      "t_ms": 5000,
+      "timestamp": "2025-01-01T12:00:05",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 12,
+      "t_ms": 5000,
+      "timestamp": "2025-01-01T12:00:05",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.9
+    },
+    {
+      "seq": 13,
+      "t_ms": 6000,
+      "timestamp": "2025-01-01T12:00:06",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 14,
+      "t_ms": 6000,
+      "timestamp": "2025-01-01T12:00:06",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.9
+    },
+    {
+      "seq": 15,
+      "t_ms": 7000,
+      "timestamp": "2025-01-01T12:00:07",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 16,
+      "t_ms": 7000,
+      "timestamp": "2025-01-01T12:00:07",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 17,
+      "t_ms": 8000,
+      "timestamp": "2025-01-01T12:00:08",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 18,
+      "t_ms": 8000,
+      "timestamp": "2025-01-01T12:00:08",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 19,
+      "t_ms": 9000,
+      "timestamp": "2025-01-01T12:00:09",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 20,
+      "t_ms": 9000,
+      "timestamp": "2025-01-01T12:00:09",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    }
+  ],
+  "audio_signals": [],
+  "overlap_segments": [],
+  "metrics_history": [],
+  "nudges": [],
+  "coaching_decisions": [],
+  "summary": {
+    "session_id": "accuracy-eye-contact-01",
+    "tutor_id": "alice",
+    "start_time": "2025-01-01T12:00:00",
+    "end_time": "2025-01-01T12:00:10",
+    "duration_seconds": 10.0,
+    "session_type": "practice",
+    "talk_time_ratio": {
+      "tutor": 0.5,
+      "student": 0.5
+    },
+    "avg_eye_contact": {
+      "tutor": 0.8,
+      "student": 0.7
+    },
+    "avg_energy": {
+      "tutor": 0.5,
+      "student": 0.5
+    },
+    "total_interruptions": 0,
+    "engagement_score": 65.0,
+    "flagged_moments": [],
+    "timeline": {
+      "engagement": [
+        65.0
+      ]
+    },
+    "recommendations": [],
+    "nudges_sent": 0,
+    "degradation_events": 0
+  }
+}

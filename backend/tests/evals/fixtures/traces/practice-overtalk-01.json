@@ -1,0 +1,165 @@
+{
+  "trace_version": 1,
+  "session_id": "practice-overtalk-01",
+  "tutor_id": "alice",
+  "session_type": "practice",
+  "created_at": "2025-01-01T12:00:00",
+  "started_at": "2025-01-01T12:00:05",
+  "ended_at": "2025-01-01T12:05:05",
+  "duration_seconds": 300.0,
+  "build": {
+    "git_sha": "fixture",
+    "app_version": "1.0.0",
+    "models_version": "fixture"
+  },
+  "config_hash": "fixture-config",
+  "capture_mode": "eval",
+  "env": {},
+  "events": [
+    {
+      "seq": 1,
+      "t_ms": 0,
+      "timestamp": "2025-01-01T12:00:05",
+      "event_type": "participant_ready",
+      "role": "student",
+      "data": {
+        "reconnected": false
+      }
+    }
+  ],
+  "visual_signals": [
+    {
+      "seq": 2,
+      "t_ms": 1000,
+      "timestamp": "2025-01-01T12:00:06",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.84
+    }
+  ],
+  "audio_signals": [
+    {
+      "seq": 3,
+      "t_ms": 2000,
+      "timestamp": "2025-01-01T12:00:07",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -44.0
+    }
+  ],
+  "overlap_segments": [],
+  "metrics_history": [
+    {
+      "timestamp": "2025-01-01T12:03:00",
+      "session_id": "practice-overtalk-01",
+      "tutor": {
+        "eye_contact_score": 0.7,
+        "talk_time_percent": 0.9,
+        "energy_score": 0.6,
+        "energy_drop_from_baseline": 0.0,
+        "is_speaking": false,
+        "attention_state": "CAMERA_FACING",
+        "attention_state_confidence": 0.8,
+        "face_presence_score": 1.0,
+        "visual_attention_score": 1.0
+      },
+      "student": {
+        "eye_contact_score": 0.4,
+        "talk_time_percent": 0.1,
+        "energy_score": 0.5,
+        "energy_drop_from_baseline": 0.0,
+        "is_speaking": false,
+        "attention_state": "SCREEN_ENGAGED",
+        "attention_state_confidence": 0.8,
+        "face_presence_score": 1.0,
+        "visual_attention_score": 0.85
+      },
+      "session": {
+        "interruption_count": 0,
+        "recent_interruptions": 0,
+        "hard_interruption_count": 0,
+        "recent_hard_interruptions": 0,
+        "backchannel_overlap_count": 0,
+        "recent_backchannel_overlaps": 0,
+        "echo_suspected": false,
+        "active_overlap_duration_current": 0.0,
+        "active_overlap_state": "none",
+        "tutor_cutoffs": 0,
+        "student_cutoffs": 0,
+        "silence_duration_current": 0.0,
+        "time_since_student_spoke": 0.0,
+        "mutual_silence_duration_current": 0.0,
+        "tutor_monologue_duration_current": 0.0,
+        "tutor_turn_count": 4,
+        "student_turn_count": 1,
+        "student_response_latency_last_seconds": 0.0,
+        "tutor_response_latency_last_seconds": 0.0,
+        "recent_tutor_talk_percent": 0.9,
+        "engagement_trend": "stable",
+        "engagement_score": 62.0
+      },
+      "degraded": false,
+      "gaze_unavailable": false,
+      "server_processing_ms": 140.0,
+      "target_fps": 3
+    }
+  ],
+  "nudges": [
+    {
+      "id": "nudge-1",
+      "timestamp": "2025-01-01T12:03:00",
+      "nudge_type": "tutor_overtalk",
+      "message": "You've been talking for a while. Try asking the student a question.",
+      "priority": "low",
+      "trigger_metrics": {
+        "tutor_talk": 0.9
+      }
+    }
+  ],
+  "coaching_decisions": [
+    {
+      "seq": 4,
+      "t_ms": 180000,
+      "timestamp": "2025-01-01T12:03:00",
+      "emitted_nudge": "tutor_overtalk",
+      "candidate_nudges": ["tutor_overtalk"],
+      "suppressed_reasons": [],
+      "metrics_index": 0,
+      "trigger_features": {
+        "recent_tutor_talk_percent": 0.9
+      }
+    }
+  ],
+  "summary": {
+    "session_id": "practice-overtalk-01",
+    "tutor_id": "alice",
+    "start_time": "2025-01-01T12:00:05",
+    "end_time": "2025-01-01T12:05:05",
+    "duration_seconds": 300.0,
+    "session_type": "practice",
+    "talk_time_ratio": {
+      "tutor": 0.9,
+      "student": 0.1
+    },
+    "avg_eye_contact": {
+      "tutor": 0.7,
+      "student": 0.4
+    },
+    "avg_energy": {
+      "tutor": 0.6,
+      "student": 0.5
+    },
+    "total_interruptions": 0,
+    "engagement_score": 62.0,
+    "flagged_moments": [],
+    "timeline": {
+      "engagement": [62.0]
+    },
+    "recommendations": [],
+    "nudges_sent": 1,
+    "degradation_events": 0
+  }
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "accuracy-speaking-ratio-01",
+    "stage": "golden",
+    "category": "accuracy",
+    "subcategory": "speaking-time",
+    "fixture": "traces/accuracy-speaking-ratio-01.json",
+    "expectation": "expectations/accuracy-speaking-ratio-01.json"
+  },
+  {
+    "id": "accuracy-eye-contact-01",
+    "stage": "golden",
+    "category": "accuracy",
+    "subcategory": "eye-contact",
+    "fixture": "traces/accuracy-eye-contact-01.json",
+    "expectation": "expectations/accuracy-eye-contact-01.json"
+  },
+  {
+    "id": "accuracy-backchannel-01",
+    "stage": "golden",
+    "category": "accuracy",
+    "subcategory": "interruptions",
+    "fixture": "traces/accuracy-backchannel-01.json",
+    "expectation": "expectations/accuracy-backchannel-01.json"
+  },
+  {
+    "id": "accuracy-down-engaged-01",
+    "stage": "golden",
+    "category": "accuracy",
+    "subcategory": "attention-state",
+    "fixture": "traces/accuracy-down-engaged-01.json",
+    "expectation": "expectations/accuracy-down-engaged-01.json"
+  },
+  {
+    "id": "accuracy-off-task-away-01",
+    "stage": "golden",
+    "category": "accuracy",
+    "subcategory": "attention-state",
+    "fixture": "traces/accuracy-off-task-away-01.json",
+    "expectation": "expectations/accuracy-off-task-away-01.json"
+  },
+  {
+    "id": "accuracy-screen-engaged-01",
+    "stage": "golden",
+    "category": "accuracy",
+    "subcategory": "attention-state",
+    "fixture": "traces/accuracy-screen-engaged-01.json",
+    "expectation": "expectations/accuracy-screen-engaged-01.json"
+  },
+  {
+    "id": "accuracy-face-missing-01",
+    "stage": "golden",
+    "category": "accuracy",
+    "subcategory": "attention-state",
+    "fixture": "traces/accuracy-face-missing-01.json",
+    "expectation": "expectations/accuracy-face-missing-01.json"
+  },
+  {
+    "id": "accuracy-hard-interruption-01",
+    "stage": "golden",
+    "category": "accuracy",
+    "subcategory": "interruptions",
+    "fixture": "traces/accuracy-hard-interruption-01.json",
+    "expectation": "expectations/accuracy-hard-interruption-01.json"
+  },
+  {
+    "id": "accuracy-echo-suspected-01",
+    "stage": "golden",
+    "category": "accuracy",
+    "subcategory": "interruptions",
+    "fixture": "traces/accuracy-echo-suspected-01.json",
+    "expectation": "expectations/accuracy-echo-suspected-01.json"
+  }
+]

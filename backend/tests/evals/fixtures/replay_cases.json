@@ -1,0 +1,18 @@
+[
+  {
+    "id": "replay-localhost-reconnect-overtalk-001",
+    "stage": "replay",
+    "category": "session-trace",
+    "subcategory": "reconnect-overtalk",
+    "fixture": "recorded/localhost-reconnect-overtalk-001.json",
+    "expectation": "expectations/replay-localhost-reconnect-overtalk-001.json"
+  },
+  {
+    "id": "replay-localhost-echo-reconnect-001",
+    "stage": "replay",
+    "category": "session-trace",
+    "subcategory": "echo-reconnect",
+    "fixture": "recorded/localhost-echo-reconnect-001.json",
+    "expectation": "expectations/replay-localhost-echo-reconnect-001.json"
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "required_nudges": ["tutor_overtalk"],
+  "forbidden_nudges": ["low_eye_contact"],
+  "max_nudges": 1,
+  "summary_fields": {
+    "session_type": {
+      "equals": "practice"
+    }
+  },
+  "metric_bounds": [
+    {
+      "path": "summary.talk_time_ratio.tutor",
+      "min": 0.85,
+      "max": 0.95
+    },
+    {
+      "path": "metrics_history.0.session.recent_tutor_talk_percent",
+      "min": 0.85,
+      "max": 0.95
+    }
+  ]
+}
