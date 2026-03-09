@@ -50,7 +50,9 @@ export function useLiveKitTransport({
 }: UseLiveKitTransportOptions) {
   const roomRef = useRef<Room | null>(null)
   const publishedTrackIdsRef = useRef<Set<string>>(new Set())
+  const publishingTrackIdsRef = useRef<Set<string>>(new Set())
   const remoteStreamRef = useRef<MediaStream | null>(null)
+  const remoteParticipantDisconnectedRef = useRef(false)
 
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
   const [callStatus, setCallStatus] = useState<CallStatus>(
@@ -98,10 +100,17 @@ export function useLiveKitTransport({
     setIceGatheringState(room.state === ConnectionState.Connecting ? 'gathering' : 'complete')
     setSignalingState(room.state === ConnectionState.Disconnected ? 'closed' : 'stable')
 
+    const hasRemoteTracks = Boolean(
+      remoteStreamRef.current?.getTracks().some((track) => track.readyState === 'live')
+    )
+    const hasRemoteParticipant = room.remoteParticipants.size > 0 || hasRemoteTracks
+
     if (room.state === ConnectionState.Connected) {
-      setCallStatus(
-        room.remoteParticipants.size > 0 ? 'connected' : 'waiting_for_participant'
-      )
+      if (remoteParticipantDisconnectedRef.current) {
+        setCallStatus('reconnecting')
+      } else {
+        setCallStatus(hasRemoteParticipant ? 'connected' : 'waiting_for_participant')
+      }
     } else if (room.state === ConnectionState.Connecting) {
       setCallStatus('connecting')
     } else if (
@@ -123,6 +132,8 @@ export function useLiveKitTransport({
       }
       roomRef.current = null
       publishedTrackIdsRef.current.clear()
+      publishingTrackIdsRef.current.clear()
+      remoteParticipantDisconnectedRef.current = false
       resetRemoteState()
       setConnectionState('closed')
       setIceConnectionState('closed')
@@ -137,10 +148,26 @@ export function useLiveKitTransport({
     if (!localStream) return
 
     for (const track of localStream.getTracks()) {
-      if (publishedTrackIdsRef.current.has(track.id)) continue
-      await room.localParticipant.publishTrack(track)
-      publishedTrackIdsRef.current.add(track.id)
-      log(`published local ${track.kind} track`)
+      if (
+        publishedTrackIdsRef.current.has(track.id)
+        || publishingTrackIdsRef.current.has(track.id)
+      ) {
+        continue
+      }
+
+      publishingTrackIdsRef.current.add(track.id)
+      try {
+        await room.localParticipant.publishTrack(track)
+        publishedTrackIdsRef.current.add(track.id)
+        log(`published local ${track.kind} track`)
+      } catch (publishError) {
+        log(
+          `failed to publish local ${track.kind} track: ${publishError instanceof Error ? publishError.message : 'unknown error'}`
+        )
+        throw publishError
+      } finally {
+        publishingTrackIdsRef.current.delete(track.id)
+      }
     }
   }, [localStream, log])
 
@@ -192,10 +219,9 @@ export function useLiveKitTransport({
         })
         roomRef.current = room
 
-        room.on(RoomEvent.Connected, async () => {
+        room.on(RoomEvent.Connected, () => {
           log('connected')
           applyRoomState(room)
-          await publishLocalTracks(room)
         })
         room.on(RoomEvent.Reconnected, () => {
           log('reconnected')
@@ -207,17 +233,20 @@ export function useLiveKitTransport({
         })
         room.on(RoomEvent.ParticipantConnected, (participant) => {
           log(`participant connected: ${participant.identity}`)
+          remoteParticipantDisconnectedRef.current = false
           setCallStatus('connecting')
           applyRoomState(room)
         })
         room.on(RoomEvent.ParticipantDisconnected, (participant) => {
           log(`participant disconnected: ${participant.identity}`)
+          remoteParticipantDisconnectedRef.current = true
           resetRemoteState()
           setCallStatus('reconnecting')
           applyRoomState(room)
         })
         room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
           const stream = ensureRemoteStream()
+          remoteParticipantDisconnectedRef.current = false
           if (!stream.getTracks().find((candidate) => candidate.id === track.mediaStreamTrack.id)) {
             stream.addTrack(track.mediaStreamTrack)
           }
@@ -230,6 +259,9 @@ export function useLiveKitTransport({
             remoteStreamRef.current.removeTrack(track.mediaStreamTrack)
           }
           syncRemoteTrackCount()
+          if (remoteParticipantDisconnectedRef.current) {
+            setCallStatus('reconnecting')
+          }
           log(`unsubscribed remote ${track.kind} from ${participant.identity}`)
         })
         room.on(RoomEvent.ConnectionStateChanged, (state) => {
@@ -296,16 +328,29 @@ export function useLiveKitTransport({
   }, [])
 
   const handleParticipantReady = useCallback(async () => {
-    // Presence is driven by room events in LiveKit.
-  }, [])
+    remoteParticipantDisconnectedRef.current = false
+    const room = roomRef.current
+    if (room) {
+      applyRoomState(room)
+    }
+  }, [applyRoomState])
 
   const handleParticipantDisconnected = useCallback(() => {
-    // UI banners still come from the app backend; transport reconnect is handled by LiveKit.
-  }, [])
+    remoteParticipantDisconnectedRef.current = true
+    resetRemoteState()
+    setCallStatus((current) => (current === 'disabled' ? current : 'reconnecting'))
+    log('participant disconnected (app presence)')
+  }, [log, resetRemoteState])
 
   const handleParticipantReconnected = useCallback(async () => {
-    // UI banners still come from the app backend; transport reconnect is handled by LiveKit.
-  }, [])
+    remoteParticipantDisconnectedRef.current = false
+    const room = roomRef.current
+    if (room) {
+      setCallStatus('connecting')
+      applyRoomState(room)
+    }
+    log('participant reconnected (app presence)')
+  }, [applyRoomState, log])
 
   const hasRemoteVideo = useMemo(
     () =>
