@@ -168,6 +168,82 @@ export async function waitForConnectedCall(
   await expect(page.getByTestId('local-video')).toBeVisible()
 }
 
+/**
+ * Get video element dimensions, returning them in landscape-normalized order
+ * (larger dimension first) so assertions are orientation-agnostic.
+ * Chrome's fake device can report portrait (480x640) instead of landscape.
+ */
+async function getVideoElementDims(
+  page: Page,
+  testId: string
+): Promise<{ long: number; short: number }> {
+  const raw = await page.evaluate((tid) => {
+    const el = document.querySelector<HTMLVideoElement>(
+      `[data-testid="${tid}"]`
+    )
+    if (!el) return { width: 0, height: 0 }
+    return { width: el.videoWidth, height: el.videoHeight }
+  }, testId)
+  return {
+    long: Math.max(raw.width, raw.height),
+    short: Math.min(raw.width, raw.height),
+  }
+}
+
+/**
+ * Assert that the local video track is capturing at or above a minimum
+ * resolution (orientation-agnostic: compares max dimension to max threshold).
+ */
+export async function expectMinimumLocalVideoResolution(
+  page: Page,
+  minWidth: number,
+  minHeight: number
+) {
+  const minLong = Math.max(minWidth, minHeight)
+  const minShort = Math.min(minWidth, minHeight)
+
+  await expect
+    .poll(
+      async () => {
+        const dims = await getVideoElementDims(page, 'local-video')
+        return dims.long > 0
+      },
+      { timeout: 15_000, message: `local video should be >= ${minLong}x${minShort}` }
+    )
+    .toBe(true)
+
+  const dims = await getVideoElementDims(page, 'local-video')
+  expect(dims.long, `local video long edge (${dims.long}) should be >= ${minLong}`).toBeGreaterThanOrEqual(minLong)
+  expect(dims.short, `local video short edge (${dims.short}) should be >= ${minShort}`).toBeGreaterThanOrEqual(minShort)
+}
+
+/**
+ * Assert that the remote video track received is at or above a minimum
+ * resolution (orientation-agnostic).
+ */
+export async function expectMinimumRemoteVideoResolution(
+  page: Page,
+  minWidth: number,
+  minHeight: number
+) {
+  const minLong = Math.max(minWidth, minHeight)
+  const minShort = Math.min(minWidth, minHeight)
+
+  await expect
+    .poll(
+      async () => {
+        const dims = await getVideoElementDims(page, 'remote-video')
+        return dims.long > 0
+      },
+      { timeout: 15_000, message: `remote video should be >= ${minLong}x${minShort}` }
+    )
+    .toBe(true)
+
+  const dims = await getVideoElementDims(page, 'remote-video')
+  expect(dims.long, `remote video long edge (${dims.long}) should be >= ${minLong}`).toBeGreaterThanOrEqual(minLong)
+  expect(dims.short, `remote video short edge (${dims.short}) should be >= ${minShort}`).toBeGreaterThanOrEqual(minShort)
+}
+
 export async function waitForTutorMetrics(page: Page) {
   await ensureDebugPanel(page)
   await expect(page.getByTestId('coach-overlay')).toBeVisible()

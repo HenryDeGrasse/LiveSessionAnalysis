@@ -2,12 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ConnectionState, Room, RoomEvent, Track } from 'livekit-client'
-import {
-  API_URL,
-  LIVEKIT_ADAPTIVE_STREAM,
-  LIVEKIT_DYNACAST,
-  LIVEKIT_URL,
-} from '@/lib/constants'
+import { API_URL, LIVEKIT_URL } from '@/lib/constants'
+import { buildLiveKitConfig } from '@/lib/call/livekit-config'
 import type { WebRTCSignalData } from '@/lib/types'
 
 type SessionRole = 'tutor' | 'student'
@@ -152,6 +148,7 @@ export function useLiveKitTransport({
   const publishLocalTracks = useCallback(async (room: Room) => {
     if (!localStream) return
 
+    const lkConfig = buildLiveKitConfig()
     for (const track of localStream.getTracks()) {
       if (
         publishedTrackIdsRef.current.has(track.id)
@@ -160,11 +157,23 @@ export function useLiveKitTransport({
         continue
       }
 
+      const publishOpts =
+        track.kind === 'video'
+          ? lkConfig.videoPublishOptions
+          : lkConfig.audioPublishOptions
+
       publishingTrackIdsRef.current.add(track.id)
       try {
-        await room.localParticipant.publishTrack(track)
+        await room.localParticipant.publishTrack(track, publishOpts)
         publishedTrackIdsRef.current.add(track.id)
-        log(`published local ${track.kind} track`)
+        const settings = track.getSettings?.() ?? {}
+        log(
+          `published local ${track.kind} track` +
+            (track.kind === 'video'
+              ? ` (${settings.width ?? '?'}x${settings.height ?? '?'}@${settings.frameRate ?? '?'}fps, ` +
+                `encoding=${publishOpts.videoEncoding?.maxBitrate ?? 'default'}bps)`
+              : '')
+        )
       } catch (publishError) {
         log(
           `failed to publish local ${track.kind} track: ${publishError instanceof Error ? publishError.message : 'unknown error'}`
@@ -218,10 +227,8 @@ export function useLiveKitTransport({
         const join = await fetchJoinConfig()
         if (cancelled) return
 
-        const room = new Room({
-          adaptiveStream: LIVEKIT_ADAPTIVE_STREAM,
-          dynacast: LIVEKIT_DYNACAST,
-        })
+        const lkConfig = buildLiveKitConfig()
+        const room = new Room(lkConfig.roomOptions)
         roomRef.current = room
 
         room.on(RoomEvent.Connected, () => {

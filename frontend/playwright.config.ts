@@ -33,6 +33,14 @@ const frontendServerEnv: Record<string, string> = {
   NEXT_PUBLIC_LIVEKIT_URL: LIVEKIT_URL,
   NEXT_PUBLIC_MEDIA_PROVIDER_OVERRIDE: MEDIA_PROVIDER,
   NEXT_TELEMETRY_DISABLED: '1',
+  // Disable adaptive stream/dynacast in CI so headless Chrome's small
+  // viewport doesn't cause LiveKit to subscribe at a very low layer.
+  ...(MEDIA_PROVIDER === 'livekit'
+    ? {
+        NEXT_PUBLIC_LIVEKIT_ADAPTIVE_STREAM: 'false',
+        NEXT_PUBLIC_LIVEKIT_DYNACAST: 'false',
+      }
+    : {}),
 }
 
 const webServers = [

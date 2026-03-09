@@ -5,6 +5,8 @@ import {
   createSession,
   DEFAULT_MEDIA_PROVIDER,
   expectMediaProvider,
+  expectMinimumLocalVideoResolution,
+  expectMinimumRemoteVideoResolution,
   expectStudentNoTutorMetrics,
   openParticipant,
   waitForAnalyticsSummary,
@@ -75,6 +77,18 @@ test.describe(`${DEFAULT_MEDIA_PROVIDER} live tutoring call`, () => {
 
       await waitForConnectedCall(tutor.page)
       await waitForConnectedCall(student.page)
+
+      // Verify video tracks are rendering at a non-trivial resolution.
+      // Chrome's fake device in headless mode caps at low resolutions, so we
+      // only assert a minimal floor here.  Actual quality (1080p, bitrate,
+      // encoding presets) is validated by unit tests on livekit-config and
+      // manual testing with real cameras.
+      const MIN_W = 160
+      const MIN_H = 120
+      await expectMinimumLocalVideoResolution(tutor.page, MIN_W, MIN_H)
+      await expectMinimumLocalVideoResolution(student.page, MIN_W, MIN_H)
+      await expectMinimumRemoteVideoResolution(tutor.page, MIN_W, MIN_H)
+      await expectMinimumRemoteVideoResolution(student.page, MIN_W, MIN_H)
 
       await waitForTutorMetrics(tutor.page)
       await expectStudentNoTutorMetrics(student.page)
