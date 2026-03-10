@@ -25,6 +25,7 @@ class SessionEvent(TracePoint):
         "session_end",
         "degradation_changed",
         "webrtc_signal_relayed",
+        "livekit_webhook",
     ]
     role: Optional[Literal["tutor", "student"]] = None
     data: Dict[str, Any] = Field(default_factory=dict)

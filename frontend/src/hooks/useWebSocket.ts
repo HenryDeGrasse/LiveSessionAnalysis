@@ -79,7 +79,7 @@ export function useWebSocket({
     ws.onerror = () => {
       setError('WebSocket error')
     }
-  }, [sessionId, token, onMessage, onOpen, onClose])
+  }, [sessionId, token, debug, onMessage, onOpen, onClose])
 
   useEffect(() => {
     if (!sessionId || !token) {

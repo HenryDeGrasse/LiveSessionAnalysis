@@ -214,7 +214,7 @@ export function useLiveKitTransport({
       room_name: string
       identity: string
     }
-  }, [sessionId, sessionToken])
+  }, [sessionId, sessionToken, debug])
 
   useEffect(() => {
     if (!enabled) {
