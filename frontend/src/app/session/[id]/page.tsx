@@ -429,6 +429,7 @@ export default function SessionPage() {
   const { connected, error: wsError, sendBinary, sendJson } = useWebSocket({
     sessionId,
     token,
+    debug: searchParams.get('debug') === '1',
     onMessage,
   })
 
@@ -491,6 +492,7 @@ export default function SessionPage() {
     localStream: stream,
     sessionId,
     sessionToken: token,
+    debug: searchParams.get('debug') === '1',
     sendSignal: () => {},
     onDebugEvent: appendDebugEvent,
     onDataPacket: handleDataPacket,

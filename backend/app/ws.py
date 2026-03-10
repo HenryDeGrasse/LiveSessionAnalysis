@@ -116,6 +116,7 @@ async def websocket_endpoint(
     websocket: WebSocket,
     session_id: str,
     token: str = Query(...),
+    debug: str = Query(""),
 ):
     room = session_manager.get_session(session_id)
     if room is None:
@@ -138,6 +139,10 @@ async def websocket_endpoint(
         return
 
     was_reconnecting = participant.disconnected_at is not None
+
+    # Enable debug mode when tutor connects with ?debug=1
+    if role == Role.TUTOR and debug == "1":
+        room.debug_mode = True
 
     await websocket.accept()
     participant.websocket = websocket

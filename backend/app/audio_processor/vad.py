@@ -30,14 +30,14 @@ class VoiceActivityDetector:
             True if the chunk contains speech.
         """
         if len(pcm_chunk) not in (320, 640, 960):
-            # Invalid chunk size - try to handle gracefully
-            # Pad or truncate to nearest valid size
-            if len(pcm_chunk) < 320:
+            # Invalid chunk size — pad up to the nearest valid frame size
+            # so we don't discard valid audio samples by truncating down.
+            if len(pcm_chunk) <= 320:
                 pcm_chunk = pcm_chunk + b'\x00' * (320 - len(pcm_chunk))
-            elif len(pcm_chunk) < 640:
-                pcm_chunk = pcm_chunk[:320]
-            elif len(pcm_chunk) < 960:
-                pcm_chunk = pcm_chunk[:640]
+            elif len(pcm_chunk) <= 640:
+                pcm_chunk = pcm_chunk + b'\x00' * (640 - len(pcm_chunk))
+            elif len(pcm_chunk) <= 960:
+                pcm_chunk = pcm_chunk + b'\x00' * (960 - len(pcm_chunk))
             else:
                 pcm_chunk = pcm_chunk[:960]
 

@@ -7,6 +7,7 @@ import type { WSMessage } from '@/lib/types'
 interface UseWebSocketOptions {
   sessionId: string
   token: string
+  debug?: boolean
   onMessage?: (message: WSMessage) => void
   onOpen?: () => void
   onClose?: () => void
@@ -15,6 +16,7 @@ interface UseWebSocketOptions {
 export function useWebSocket({
   sessionId,
   token,
+  debug,
   onMessage,
   onOpen,
   onClose,
@@ -34,7 +36,7 @@ export function useWebSocket({
       return
     }
 
-    const url = `${WS_URL}/ws/session/${sessionId}?token=${token}`
+    const url = `${WS_URL}/ws/session/${sessionId}?token=${token}${debug ? '&debug=1' : ''}`
     const ws = new WebSocket(url)
     ws.binaryType = 'arraybuffer'
     wsRef.current = ws

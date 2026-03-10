@@ -18,7 +18,7 @@ from .livekit import (
     livekit_analytics_worker_enabled,
     verify_livekit_webhook,
 )
-from .models import MediaProvider, SessionCreateRequest, SessionCreateResponse
+from .models import MediaProvider, Role, SessionCreateRequest, SessionCreateResponse
 from .session_manager import session_manager
 from .ws import router as ws_router
 from .analytics.router import router as analytics_router
@@ -97,8 +97,7 @@ async def create_session(body: Optional[SessionCreateRequest] = None):
 async def session_info(session_id: str, token: str = ""):
     room = session_manager.get_session(session_id)
     if room is None:
-        return {"error": "Session not found"}
-    from .models import Role
+        raise HTTPException(status_code=404, detail="Session not found")
     resolved_role = room.get_role_for_token(token) if token else None
     return {
         "session_id": room.session_id,
@@ -129,7 +128,7 @@ async def session_info(session_id: str, token: str = ""):
 
 
 @app.post("/api/sessions/{session_id}/livekit-token")
-async def create_livekit_token(session_id: str, token: str = ""):
+async def create_livekit_token(session_id: str, token: str = "", debug: str = ""):
     room = session_manager.get_session(session_id)
     if room is None:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -139,6 +138,10 @@ async def create_livekit_token(session_id: str, token: str = ""):
         raise HTTPException(status_code=403, detail="Invalid token")
     if room.ended_at is not None:
         raise HTTPException(status_code=409, detail="Session already ended")
+
+    # Enable debug mode when tutor requests token with ?debug=1
+    if role == Role.TUTOR and debug == "1":
+        room.debug_mode = True
 
     try:
         return build_livekit_join_payload(room, role)
@@ -196,20 +199,20 @@ async def end_session(session_id: str, token: str = ""):
 @app.get("/api/debug/latency")
 async def debug_latency(session_id: str = ""):
     if not session_id:
-        return {"error": "session_id required"}
+        raise HTTPException(status_code=400, detail="session_id required")
     room = session_manager.get_session(session_id)
     if room is None:
-        return {"error": "Session not found"}
+        raise HTTPException(status_code=404, detail="Session not found")
     return room.get_latency_stats().model_dump()
 
 
 @app.get("/api/debug/stats")
 async def debug_stats(session_id: str = ""):
     if not session_id:
-        return {"error": "session_id required"}
+        raise HTTPException(status_code=400, detail="session_id required")
     room = session_manager.get_session(session_id)
     if room is None:
-        return {"error": "Session not found"}
+        raise HTTPException(status_code=404, detail="Session not found")
     stats = room.get_latency_stats()
     return {
         **stats.model_dump(),

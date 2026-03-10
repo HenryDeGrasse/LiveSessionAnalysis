@@ -10,7 +10,7 @@ class EyeContactTracker:
     """Tracks rolling-window eye contact percentage for a participant."""
 
     def __init__(self, window_seconds: float = None):
-        self._window = window_seconds or settings.rolling_window_seconds
+        self._window = window_seconds if window_seconds is not None else settings.rolling_window_seconds
         self._samples: deque[tuple[float, bool]] = deque()
 
     def update(self, timestamp: float, on_camera: bool):
@@ -21,7 +21,7 @@ class EyeContactTracker:
     def score(self) -> float:
         """Get the current eye contact percentage (0-1)."""
         if not self._samples:
-            return 0.0
+            return 0.5
         now = self._samples[-1][0]
         self._prune(now)
         if not self._samples:

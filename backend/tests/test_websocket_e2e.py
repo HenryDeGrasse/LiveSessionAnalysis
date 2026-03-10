@@ -187,7 +187,8 @@ class TestSessionCreation:
     def test_session_info_not_found(self):
         client = TestClient(app)
         resp = client.get("/api/sessions/nonexistent/info")
-        assert resp.json()["error"] == "Session not found"
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Session not found"
 
 
 class TestWebSocketConnection:
@@ -297,17 +298,20 @@ class TestDebugEndpoints:
     def test_latency_requires_session_id(self):
         client = TestClient(app)
         resp = client.get("/api/debug/latency")
-        assert resp.json()["error"] == "session_id required"
+        assert resp.status_code == 400
+        assert resp.json()["detail"] == "session_id required"
 
     def test_latency_not_found(self):
         client = TestClient(app)
         resp = client.get("/api/debug/latency?session_id=nope")
-        assert resp.json()["error"] == "Session not found"
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Session not found"
 
     def test_stats_requires_session_id(self):
         client = TestClient(app)
         resp = client.get("/api/debug/stats")
-        assert resp.json()["error"] == "session_id required"
+        assert resp.status_code == 400
+        assert resp.json()["detail"] == "session_id required"
 
     def test_stats_for_valid_session(self):
         client = TestClient(app)

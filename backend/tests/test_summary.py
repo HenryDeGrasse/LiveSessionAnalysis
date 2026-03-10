@@ -169,7 +169,7 @@ class TestEmptyInput:
         summary = generate_summary("test", [])
         assert summary.session_id == "test"
         assert summary.duration_seconds == 0
-        assert summary.engagement_score == 0.0
+        assert summary.engagement_score == 50.0  # neutral default for empty sessions
 
     def test_empty_snapshots_preserve_session_type(self):
         summary = generate_summary("test", [], session_type="lecture")

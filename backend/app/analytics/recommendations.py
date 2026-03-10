@@ -15,6 +15,10 @@ _TUTOR_TALK_THRESHOLDS = {
 
 def generate_recommendations(summary: SessionSummary) -> list[str]:
     """Generate actionable coaching recommendations based on session metrics."""
+    # Don't generate recommendations for very short or empty sessions
+    if summary.duration_seconds < 30:
+        return []
+
     recs = []
     profile = get_profile(summary.session_type)
 

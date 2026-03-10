@@ -33,13 +33,13 @@ class InterruptionTracker:
         self._count: int = 0
         self._hard_count: int = 0
         self._backchannel_count: int = 0
-        self._timestamps: deque[float] = deque()
-        self._hard_timestamps: deque[float] = deque()
-        self._backchannel_timestamps: deque[float] = deque()
+        self._timestamps: deque[float] = deque(maxlen=500)
+        self._hard_timestamps: deque[float] = deque(maxlen=500)
+        self._backchannel_timestamps: deque[float] = deque(maxlen=500)
         self._echo_like_timestamps: deque[float] = deque()
-        self._tutor_cutoff_timestamps: deque[float] = deque()
-        self._student_cutoff_timestamps: deque[float] = deque()
-        self._completed_events: deque[OverlapEvent] = deque()
+        self._tutor_cutoff_timestamps: deque[float] = deque(maxlen=500)
+        self._student_cutoff_timestamps: deque[float] = deque(maxlen=500)
+        self._completed_events: deque[OverlapEvent] = deque(maxlen=100)
         self._tutor_interrupts_student: int = 0
         self._student_interrupts_tutor: int = 0
         self._echo_suspected = False
@@ -205,6 +205,9 @@ class InterruptionTracker:
             or quiet_margin_db >= settings.interruption_backchannel_quiet_margin_db
         )
 
+        # If it qualifies as hard, override backchannel — they're mutually exclusive
+        # (a loud, long overlap is an interruption, not a backchannel)
+
         interrupted_continues = (
             student_speaking_after if event.interrupted == Role.STUDENT else tutor_speaking_after
         )
@@ -236,6 +239,7 @@ class InterruptionTracker:
             >= settings.interruption_prior_speaker_min_duration_seconds
         ):
             event.hard = True
+            event.backchannel = False  # hard overrides backchannel
             self._hard_count += 1
             self._hard_timestamps.append(event.timestamp)
             if event.interrupter == Role.TUTOR:

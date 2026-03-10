@@ -99,8 +99,9 @@ class AttentionStateTracker:
         return max(0.0, effective_now - self._state_entered_at)
 
     def _track_state_transition(self, new_state: AttentionState, now: float | None):
-        if new_state != self._current_state:
-            self._current_state = new_state
+        if new_state != self._current_state or self._state_entered_at is None:
+            if new_state != self._current_state:
+                self._current_state = new_state
             if now is not None:
                 self._state_entered_at = now
             elif self._observations:

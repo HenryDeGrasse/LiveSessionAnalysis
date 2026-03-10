@@ -27,6 +27,7 @@ interface UseLiveKitTransportOptions {
   localStream: MediaStream | null
   sessionId: string
   sessionToken: string
+  debug?: boolean
   onDebugEvent?: (message: string) => void
   onDataPacket?: (topic: string, payload: Uint8Array) => void
 }
@@ -54,6 +55,7 @@ export function useLiveKitTransport({
   localStream,
   sessionId,
   sessionToken,
+  debug,
   onDebugEvent,
   onDataPacket,
 }: UseLiveKitTransportOptions) {
@@ -195,7 +197,7 @@ export function useLiveKitTransport({
 
   const fetchJoinConfig = useCallback(async () => {
     const response = await fetch(
-      `${API_URL}/api/sessions/${sessionId}/livekit-token?token=${encodeURIComponent(sessionToken)}`,
+      `${API_URL}/api/sessions/${sessionId}/livekit-token?token=${encodeURIComponent(sessionToken)}${debug ? '&debug=1' : ''}`,
       { method: 'POST' }
     )
 

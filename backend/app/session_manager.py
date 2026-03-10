@@ -92,6 +92,7 @@ class SessionRoom:
     # Grace period tasks per role
     _grace_tasks: dict[str, asyncio.Task] = field(default_factory=dict, repr=False)
     trace_recorder: object | None = field(default=None, repr=False)
+    debug_mode: bool = False
 
     def __post_init__(self):
         self.participants[Role.TUTOR] = ParticipantState(role=Role.TUTOR)

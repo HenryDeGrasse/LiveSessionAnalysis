@@ -101,6 +101,52 @@ def test_latency_stage_stats_are_averaged():
     assert stats.avg_aggregation_ms == pytest.approx(2.0)
 
 
+def test_latency_percentiles_use_sorted_index_percentiles():
+    """Percentiles use sorted indexes: p50 at n//2 and p95 at int(n * 0.95)."""
+    room = SessionRoom(session_id="test", tutor_token="t", student_token="s")
+    samples = [
+        200.0,
+        10.0,
+        180.0,
+        20.0,
+        160.0,
+        30.0,
+        140.0,
+        40.0,
+        120.0,
+        50.0,
+        100.0,
+        60.0,
+        80.0,
+        70.0,
+        90.0,
+        110.0,
+        130.0,
+        150.0,
+        170.0,
+        190.0,
+    ]
+
+    for ms in samples:
+        room.record_processing_time(ms)
+
+    p50, p95 = room.latency_percentiles()
+    assert p50 == pytest.approx(110.0)
+    assert p95 == pytest.approx(200.0)
+
+
+def test_latency_percentiles_fall_back_to_rolling_average_with_few_samples():
+    room = SessionRoom(session_id="test", tutor_token="t", student_token="s")
+    room.record_processing_time(100.0)
+    room.record_processing_time(200.0)
+    room._latency_history = [100.0]
+
+    p50, p95 = room.latency_percentiles()
+    assert room.rolling_avg_processing_ms() == pytest.approx(150.0)
+    assert p50 == pytest.approx(150.0)
+    assert p95 == pytest.approx(150.0)
+
+
 def test_remove_session():
     mgr = SessionManager()
     resp = mgr.create_session()

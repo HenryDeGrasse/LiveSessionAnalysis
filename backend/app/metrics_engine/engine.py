@@ -42,7 +42,7 @@ class MetricsEngine:
 
         # Session-level
         self._session_start: float = time.time()
-        self._engagement_history: list[float] = []
+        self._engagement_history: list[float] = []  # capped to prevent unbounded growth
         self._latest_tutor_rms_db: float = -100.0
         self._latest_student_rms_db: float = -100.0
 
@@ -222,6 +222,8 @@ class MetricsEngine:
             student_en,
         )
         self._engagement_history.append(engagement)
+        if len(self._engagement_history) > 500:
+            self._engagement_history = self._engagement_history[-500:]
 
         # Update drift detectors
         self.tutor_drift.update(now, tutor_en)

@@ -153,6 +153,11 @@ async def emit_metrics_snapshot(
 
     The periodic loop records analytics history and evaluates coaching rules.
     Fast-path emits from audio updates are UI-only and intentionally skip both.
+
+    Coaching evaluation now runs BEFORE the snapshot is serialized so that
+    ``coaching_decision`` is included in the payload sent to the tutor when
+    ``room.debug_mode`` is active.  Trace recording of coaching decisions
+    happens unconditionally regardless of debug mode.
     """
     if room.ended_at is not None:
         return None
@@ -191,6 +196,52 @@ async def emit_metrics_snapshot(
         if recorder is not None:
             recorder.record_metrics_snapshot(snapshot)
 
+    # ── Coaching evaluation (before send) ────────────────────────────
+    # Evaluate coaching rules BEFORE serializing the snapshot so that
+    # coaching_decision is present in the JSON sent to the frontend.
+    # The decision dict is only attached when debug_mode is active to
+    # avoid sending verbose diagnostic data in normal operation.
+    nudges_to_send: list = []
+    if allow_coaching:
+        try:
+            from .coaching_system.coach import Coach
+
+            coach = resources.get("coach")
+            if coach is None:
+                coach = Coach(session_type=room.session_type)
+                resources["coach"] = coach
+            evaluation = coach.evaluate(snapshot, room.elapsed_seconds())
+
+            # Attach to snapshot only in debug mode (tutor ?debug=1)
+            if room.debug_mode:
+                snapshot.coaching_decision = {
+                    "candidate_nudges": evaluation.candidate_nudges,
+                    "suppressed_reasons": evaluation.suppressed_reasons,
+                    "emitted_nudge": evaluation.emitted_nudge_type,
+                    "trigger_features": evaluation.trigger_features,
+                    "session_type": coach.session_type,
+                }
+
+            # Trace recording is unconditional — always record for evals
+            recorder = trace_recorder(room)
+            if recorder is not None:
+                recorder.record_coaching_decision(
+                    candidate_nudges=evaluation.candidate_nudges,
+                    emitted_nudge=evaluation.emitted_nudge_type,
+                    suppressed_reasons=evaluation.suppressed_reasons,
+                    metrics_index=metrics_index,
+                    trigger_features=evaluation.trigger_features,
+                )
+
+            for nudge in evaluation.nudges:
+                room.nudges_sent.append(nudge)
+                if recorder is not None:
+                    recorder.record_nudge(nudge)
+                nudges_to_send.append(nudge)
+        except ImportError:
+            pass
+
+    # ── Send metrics snapshot ────────────────────────────────────────
     tutor = room.participants[Role.TUTOR]
     metrics_sent = False
 
@@ -223,67 +274,31 @@ async def emit_metrics_snapshot(
     if metrics_sent:
         room._last_metrics_emit_at = now
 
-    if not allow_coaching:
-        return snapshot
+    # ── Send nudges ──────────────────────────────────────────────────
+    for nudge in nudges_to_send:
+        nudge_sent = False
+        try:
+            from .livekit_worker import get_active_worker, TOPIC_NUDGE
 
-    try:
-        from .coaching_system.coach import Coach
+            worker = get_active_worker(room.session_id)
+            if worker is not None:
+                payload = json.dumps(
+                    {"type": "nudge", "data": nudge.model_dump(mode="json")}
+                ).encode()
+                nudge_sent = await worker.publish_data_to_tutor(
+                    payload, topic=TOPIC_NUDGE, reliable=True
+                )
+        except ImportError:
+            pass
 
-        coach = resources.get("coach")
-        if coach is None:
-            coach = Coach(session_type=room.session_type)
-            resources["coach"] = coach
-        evaluation = coach.evaluate(snapshot, room.elapsed_seconds())
-
-        # Attach coaching decision to snapshot for debug panel
-        snapshot.coaching_decision = {
-            "candidate_nudges": evaluation.candidate_nudges,
-            "suppressed_reasons": evaluation.suppressed_reasons,
-            "emitted_nudge": evaluation.emitted_nudge_type,
-            "trigger_features": evaluation.trigger_features,
-            "session_type": coach.session_type,
-        }
-
-        recorder = trace_recorder(room)
-        if recorder is not None:
-            recorder.record_coaching_decision(
-                candidate_nudges=evaluation.candidate_nudges,
-                emitted_nudge=evaluation.emitted_nudge_type,
-                suppressed_reasons=evaluation.suppressed_reasons,
-                metrics_index=metrics_index,
-                trigger_features=evaluation.trigger_features,
-            )
-
-        for nudge in evaluation.nudges:
-            room.nudges_sent.append(nudge)
-            if recorder is not None:
-                recorder.record_nudge(nudge)
-
-            nudge_sent = False
+        if not nudge_sent and tutor.connected and tutor.websocket:
             try:
-                from .livekit_worker import get_active_worker, TOPIC_NUDGE
-
-                worker = get_active_worker(room.session_id)
-                if worker is not None:
-                    payload = json.dumps(
-                        {"type": "nudge", "data": nudge.model_dump(mode="json")}
-                    ).encode()
-                    nudge_sent = await worker.publish_data_to_tutor(
-                        payload, topic=TOPIC_NUDGE, reliable=True
-                    )
-            except ImportError:
+                await tutor.websocket.send_json({
+                    "type": "nudge",
+                    "data": nudge.model_dump(mode="json"),
+                })
+            except Exception:
                 pass
-
-            if not nudge_sent and tutor.connected and tutor.websocket:
-                try:
-                    await tutor.websocket.send_json({
-                        "type": "nudge",
-                        "data": nudge.model_dump(mode="json"),
-                    })
-                except Exception:
-                    pass
-    except ImportError:
-        pass
 
     return snapshot
 

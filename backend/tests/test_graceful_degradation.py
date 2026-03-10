@@ -151,8 +151,8 @@ class TestMetricsEngineWithMissingData:
         engine = MetricsEngine("test")
         snapshot = engine.compute_snapshot()
         assert snapshot.session_id == "test"
-        assert snapshot.tutor.eye_contact_score == 0.0
-        assert snapshot.student.eye_contact_score == 0.0
+        assert snapshot.tutor.eye_contact_score == 0.5
+        assert snapshot.student.eye_contact_score == 0.5
 
     def test_snapshot_with_only_audio(self):
         engine = MetricsEngine("test")
@@ -163,7 +163,7 @@ class TestMetricsEngineWithMissingData:
         assert snapshot.tutor.is_speaking is True
         assert snapshot.student.is_speaking is False
         # Eye contact should be 0 since no gaze data
-        assert snapshot.tutor.eye_contact_score == 0.0
+        assert snapshot.tutor.eye_contact_score == 0.5
 
     def test_degraded_flag_propagated(self):
         engine = MetricsEngine("test")

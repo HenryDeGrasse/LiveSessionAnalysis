@@ -28,5 +28,8 @@ backend/data/sessions/
 backend/data/playwright-sessions/
 backend/data/traces/
 
+# Generated reports (regenerated via `make accuracy-report`)
+docs/accuracy-report.md
+
 # Logs
 *.log

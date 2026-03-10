@@ -1,0 +1,12 @@
+{
+  "name": "live-session-analysis",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Root package — delegates controller checks to frontend/ and backend/ subdirectories, mirroring Makefile targets",
+  "scripts": {
+    "lint": "cd frontend && npx tsc --noEmit && cd ../backend && uv run --python 3.11 --with-requirements requirements.txt python -m py_compile app/main.py",
+    "typecheck": "cd frontend && npx tsc --noEmit",
+    "test": "cd frontend && npx vitest run && cd ../backend && uv run --python 3.11 --with-requirements requirements.txt pytest tests/ -q",
+    "build": "cd frontend && npx next build"
+  }
+}

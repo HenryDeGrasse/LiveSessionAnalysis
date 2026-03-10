@@ -8,8 +8,8 @@ def test_initial_snapshot():
     engine = MetricsEngine("test-session")
     snapshot = engine.compute_snapshot()
     assert snapshot.session_id == "test-session"
-    assert snapshot.tutor.eye_contact_score == 0.0
-    assert snapshot.student.eye_contact_score == 0.0
+    assert snapshot.tutor.eye_contact_score == 0.5
+    assert snapshot.student.eye_contact_score == 0.5
     assert snapshot.session.interruption_count == 0
     assert snapshot.degraded is False
 
@@ -207,3 +207,34 @@ def test_compute_snapshot_accepts_explicit_current_time_for_replay():
 
     snapshot = engine.compute_snapshot(current_time=base + 4.5)
     assert snapshot.student.eye_contact_score == pytest.approx(0.7, abs=0.01)
+
+
+def test_snapshot_exposes_windowed_talk_time_time_since_spoke_and_degradation_reason():
+    engine = MetricsEngine("test")
+    base = 1000.0
+
+    # Tutor speaks for four chunks while the student is silent.
+    for i in range(4):
+        t = base + i * 0.03
+        engine.update_audio(Role.TUTOR, t, True, 0.5, 0.5)
+        engine.update_audio(Role.STUDENT, t, False, 0.0, 0.0)
+
+    # Student then speaks for two chunks while tutor is silent.
+    for i in range(2):
+        t = base + (4 + i) * 0.03
+        engine.update_audio(Role.TUTOR, t, False, 0.0, 0.0)
+        engine.update_audio(Role.STUDENT, t, True, 0.5, 0.5)
+
+    # Both participants go silent so time_since_spoke_seconds can advance.
+    silence_start = base + 6 * 0.03
+    engine.update_audio(Role.TUTOR, silence_start, False, 0.0, 0.0)
+    engine.update_audio(Role.STUDENT, silence_start, False, 0.0, 0.0)
+
+    snapshot = engine.compute_snapshot(
+        degradation_reason="skip_expression",
+        current_time=silence_start + 1.0,
+    )
+
+    assert snapshot.tutor.talk_time_pct_windowed > 0.0
+    assert snapshot.student.time_since_spoke_seconds == pytest.approx(1.0, abs=0.05)
+    assert snapshot.degradation_reason == "skip_expression"

@@ -23,7 +23,7 @@ def generate_summary(
     snapshots: list[MetricsSnapshot],
     tutor_id: str = "",
     session_type: str = "general",
-    media_provider: MediaProvider = MediaProvider.CUSTOM_WEBRTC,
+    media_provider: MediaProvider = MediaProvider.LIVEKIT,
     nudges: Optional[list[Nudge]] = None,
 ) -> SessionSummary:
     """Generate a post-session summary from collected metrics snapshots."""
@@ -38,6 +38,7 @@ def generate_summary(
             start_time=now,
             end_time=now,
             duration_seconds=0,
+            engagement_score=50.0,  # neutral default, not 0 which triggers false flags
         )
 
     start_time = snapshots[0].timestamp

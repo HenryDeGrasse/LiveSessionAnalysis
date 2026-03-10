@@ -17,8 +17,8 @@ class AttentionDriftDetector:
         window_seconds: float = None,
         slope_threshold: float = None,
     ):
-        self._window = window_seconds or settings.attention_drift_window_seconds
-        self._threshold = slope_threshold or settings.attention_drift_slope_threshold
+        self._window = window_seconds if window_seconds is not None else settings.attention_drift_window_seconds
+        self._threshold = slope_threshold if slope_threshold is not None else settings.attention_drift_slope_threshold
         self._samples: deque[tuple[float, float]] = deque()
         self._drifting: bool = False
 

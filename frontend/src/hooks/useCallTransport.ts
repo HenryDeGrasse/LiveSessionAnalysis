@@ -12,6 +12,7 @@ interface UseCallTransportOptions {
   localStream: MediaStream | null
   sessionId: string
   sessionToken: string
+  debug?: boolean
   sendSignal: (signal: {
     signal_type: 'offer' | 'answer' | 'ice_candidate'
     payload: Record<string, unknown>
@@ -34,6 +35,7 @@ export function useCallTransport({
   localStream,
   sessionId,
   sessionToken,
+  debug,
   onDebugEvent,
   onDataPacket,
 }: UseCallTransportOptions) {
@@ -43,6 +45,7 @@ export function useCallTransport({
     localStream,
     sessionId,
     sessionToken,
+    debug,
     onDebugEvent,
     onDataPacket,
   })

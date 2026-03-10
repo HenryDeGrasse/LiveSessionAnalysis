@@ -113,7 +113,7 @@ class SessionSummary(BaseModel):
     end_time: datetime
     duration_seconds: float
     session_type: str = "general"
-    media_provider: MediaProvider = MediaProvider.CUSTOM_WEBRTC
+    media_provider: MediaProvider = MediaProvider.LIVEKIT
     talk_time_ratio: dict[str, float] = Field(default_factory=dict)
     avg_eye_contact: dict[str, float] = Field(default_factory=dict)
     avg_energy: dict[str, float] = Field(default_factory=dict)

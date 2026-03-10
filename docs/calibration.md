@@ -52,6 +52,54 @@
 | External webcam (beside monitor) | 18-20 degrees |
 | Phone camera (variable) | 15-20 degrees |
 
+## Attention-State Window Tuning
+
+The live attention model classifies recent visual observations into six tutor-facing states:
+`FACE_MISSING`, `LOW_CONFIDENCE`, `CAMERA_FACING`, `SCREEN_ENGAGED`,
+`DOWN_ENGAGED`, and `OFF_TASK_AWAY`.
+
+### Default Window Configuration
+- `attention_state_window_seconds = 10.0`
+- `attention_state_min_samples = 5`
+- `attention_state_min_gaze_samples = 3`
+- `attention_state_min_gaze_coverage = 0.5`
+
+At the default 3 FPS processing rate, a 10-second window gives roughly 30 recent
+visual observations when the pipeline is healthy. The tracker prunes anything
+older than the window, then classifies from only the recent observations.
+
+### How the Window Affects Classification
+- **Shorter window (5-7s)**: more responsive to quick behavior changes, but more
+  jittery during brief glances away or momentary face-tracking loss.
+- **Longer window (12-15s)**: smoother and better for lecture-style sessions,
+  but slower to recover after the student re-engages.
+- **Lower `attention_state_min_samples` (3-4)**: exits `LOW_CONFIDENCE` sooner at
+  low FPS or right after reconnect, but increases the chance of noisy state flips.
+- **Higher `attention_state_min_samples` (6-8)**: requires more evidence before
+  classifying, which is stabler, but keeps the system in `LOW_CONFIDENCE` longer.
+
+### Confidence Guardrails
+The tracker intentionally stays conservative when recent evidence is weak:
+- If too few recent observations exist, it returns `LOW_CONFIDENCE`.
+- If face presence across the window drops below the configured threshold,
+  it returns `FACE_MISSING`.
+- If the face is present but gaze coverage is sparse, it also returns
+  `LOW_CONFIDENCE` instead of over-classifying screen/down/off-task states.
+
+If you see too many `LOW_CONFIDENCE` states in the debug panel even when the
+student is visible, review:
+- `attention_state_min_gaze_samples`
+- `attention_state_min_gaze_coverage`
+- upstream gaze quality / camera placement
+
+### Recommended Calibration Process
+1. Record short clips for each target state (camera-facing, screen-engaged,
+   down-engaged, off-task-away, face-missing).
+2. Replay them while watching the tutor debug panel.
+3. Adjust `attention_state_window_seconds` first to control responsiveness.
+4. Adjust `attention_state_min_samples` second to control stability.
+5. Re-run `make eval` and `make accuracy-report` after any threshold changes.
+
 ## Speaking Time Validation
 
 ### Pre-recorded Fixtures
@@ -90,8 +138,21 @@ These weights can be adjusted via settings:
 - `ENERGY_WEIGHT_SPEECH_RATE`: Speech rate variance
 - `ENERGY_WEIGHT_EXPRESSION`: Facial expression valence (least reliable)
 
-The coaching system also supports a configurable baseline-drop threshold via:
-- `ENERGY_DROP_FROM_BASELINE_THRESHOLD`: how far current energy must fall below the rolling baseline before the baseline-aware energy-drop rule fires
+### Important note for live coaching
+`energy_drop` was removed from the **live** coaching rules because it produced
+false positives in lecture-style sessions. Energy is still useful for:
+- the composite engagement score
+- post-session summaries / flagged moments
+- offline calibration and analysis
+
+That means energy weights are now **less important for live nudge tuning** than
+attention-state thresholds, talk-balance thresholds, interruption filtering, and
+session-type coaching profiles.
+
+The system still tracks a configurable baseline-drop threshold via:
+- `ENERGY_DROP_FROM_BASELINE_THRESHOLD`: how far current energy must fall below
+  the rolling baseline before the value is surfaced for post-session analysis
+  (not a live nudge trigger)
 
 ### Engagement Score Weights
 Default: `student_eye * 40 + min_energy * 30 + talk_balance * 30`
