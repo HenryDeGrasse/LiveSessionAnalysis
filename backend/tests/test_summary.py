@@ -2,8 +2,12 @@ import pytest
 from datetime import datetime, timedelta
 from app.analytics.summary import generate_summary
 from app.models import (
-    MetricsSnapshot, ParticipantMetrics, SessionMetrics,
-    Nudge, NudgePriority,
+    MediaProvider,
+    MetricsSnapshot,
+    ParticipantMetrics,
+    SessionMetrics,
+    Nudge,
+    NudgePriority,
 )
 
 
@@ -20,6 +24,10 @@ def _snap(
     interruptions: int = 0,
     trend: str = "stable",
     degraded: bool = False,
+    tutor_attention_state: str = "CAMERA_FACING",
+    student_attention_state: str = "SCREEN_ENGAGED",
+    tutor_turn_count: int = 0,
+    student_turn_count: int = 0,
 ) -> MetricsSnapshot:
     base = datetime(2025, 1, 1)
     return MetricsSnapshot(
@@ -30,17 +38,21 @@ def _snap(
             talk_time_percent=tutor_talk,
             energy_score=tutor_energy,
             is_speaking=False,
+            attention_state=tutor_attention_state,
         ),
         student=ParticipantMetrics(
             eye_contact_score=student_eye,
             talk_time_percent=student_talk,
             energy_score=student_energy,
             is_speaking=False,
+            attention_state=student_attention_state,
         ),
         session=SessionMetrics(
             interruption_count=interruptions,
             engagement_trend=trend,
             engagement_score=engagement_score,
+            tutor_turn_count=tutor_turn_count,
+            student_turn_count=student_turn_count,
         ),
         degraded=degraded,
     )
@@ -164,6 +176,248 @@ class TestFlaggedMoments:
         assert len(flags) >= 1
 
 
+class TestAttentionStateDistribution:
+    def test_attention_state_distribution_computed(self):
+        """Varying attention states should produce correct percentage distribution."""
+        snapshots = [
+            _snap(elapsed=0, tutor_attention_state="CAMERA_FACING", student_attention_state="SCREEN_ENGAGED"),
+            _snap(elapsed=10, tutor_attention_state="CAMERA_FACING", student_attention_state="SCREEN_ENGAGED"),
+            _snap(elapsed=20, tutor_attention_state="SCREEN_ENGAGED", student_attention_state="CAMERA_FACING"),
+            _snap(elapsed=30, tutor_attention_state="SCREEN_ENGAGED", student_attention_state="OFF_TASK_AWAY"),
+        ]
+        summary = generate_summary("test", snapshots)
+        dist = summary.attention_state_distribution
+
+        # Both participants should be present
+        assert "tutor" in dist
+        assert "student" in dist
+
+        # Tutor: 2/4 CAMERA_FACING = 0.5, 2/4 SCREEN_ENGAGED = 0.5
+        assert abs(dist["tutor"]["CAMERA_FACING"] - 0.5) < 0.01
+        assert abs(dist["tutor"]["SCREEN_ENGAGED"] - 0.5) < 0.01
+
+        # Student: 2/4 SCREEN_ENGAGED = 0.5, 1/4 CAMERA_FACING = 0.25, 1/4 OFF_TASK_AWAY = 0.25
+        assert abs(dist["student"]["SCREEN_ENGAGED"] - 0.5) < 0.01
+        assert abs(dist["student"]["CAMERA_FACING"] - 0.25) < 0.01
+        assert abs(dist["student"]["OFF_TASK_AWAY"] - 0.25) < 0.01
+
+        # Each participant's percentages should sum to ~1.0
+        assert abs(sum(dist["tutor"].values()) - 1.0) < 0.01
+        assert abs(sum(dist["student"].values()) - 1.0) < 0.01
+
+    def test_single_state_distribution(self):
+        """All snapshots with same state should produce 100% for that state."""
+        snapshots = [
+            _snap(elapsed=i * 10, tutor_attention_state="CAMERA_FACING", student_attention_state="CAMERA_FACING")
+            for i in range(5)
+        ]
+        summary = generate_summary("test", snapshots)
+        dist = summary.attention_state_distribution
+        assert abs(dist["tutor"]["CAMERA_FACING"] - 1.0) < 0.01
+        assert abs(dist["student"]["CAMERA_FACING"] - 1.0) < 0.01
+
+
+class TestNudgeDetails:
+    def test_nudge_details_serialized(self):
+        """Nudge objects should be serialized into nudge_details dicts."""
+        snapshots = [_snap(elapsed=i * 10) for i in range(3)]
+        ts1 = datetime(2025, 6, 1, 10, 0, 0)
+        ts2 = datetime(2025, 6, 1, 10, 5, 0)
+        nudges = [
+            Nudge(nudge_type="silence", message="Student has been quiet", timestamp=ts1, priority=NudgePriority.HIGH),
+            Nudge(nudge_type="eye_contact", message="Low eye contact", timestamp=ts2, priority=NudgePriority.LOW),
+        ]
+        summary = generate_summary("test", snapshots, nudges=nudges)
+
+        assert len(summary.nudge_details) == 2
+
+        nd0 = summary.nudge_details[0]
+        assert nd0["nudge_type"] == "silence"
+        assert nd0["message"] == "Student has been quiet"
+        assert nd0["timestamp"] == ts1.isoformat()
+        assert nd0["priority"] == "high"
+
+        nd1 = summary.nudge_details[1]
+        assert nd1["nudge_type"] == "eye_contact"
+        assert nd1["message"] == "Low eye contact"
+        assert nd1["timestamp"] == ts2.isoformat()
+        assert nd1["priority"] == "low"
+
+    def test_no_nudges_empty_details(self):
+        """No nudges should produce empty nudge_details."""
+        snapshots = [_snap(elapsed=0)]
+        summary = generate_summary("test", snapshots, nudges=None)
+        assert summary.nudge_details == []
+
+    def test_nudge_details_preserves_count(self):
+        """nudges_sent count should still be correct alongside nudge_details."""
+        snapshots = [_snap(elapsed=0)]
+        nudges = [
+            Nudge(nudge_type="test", message="m1"),
+            Nudge(nudge_type="test", message="m2"),
+            Nudge(nudge_type="test", message="m3"),
+        ]
+        summary = generate_summary("test", snapshots, nudges=nudges)
+        assert summary.nudges_sent == 3
+        assert len(summary.nudge_details) == 3
+
+
+class TestTurnCounts:
+    def test_turn_counts_from_last_snapshot(self):
+        """Turn counts should come from the last snapshot's session metrics."""
+        snapshots = [
+            _snap(elapsed=0, tutor_turn_count=1, student_turn_count=0),
+            _snap(elapsed=10, tutor_turn_count=3, student_turn_count=2),
+            _snap(elapsed=20, tutor_turn_count=5, student_turn_count=4),
+        ]
+        summary = generate_summary("test", snapshots)
+        assert summary.turn_counts == {"tutor": 5, "student": 4}
+
+    def test_turn_counts_zero_defaults(self):
+        """Snapshots with default turn counts should produce zeros."""
+        snapshots = [_snap(elapsed=0)]
+        summary = generate_summary("test", snapshots)
+        assert summary.turn_counts == {"tutor": 0, "student": 0}
+
+
+class TestSummaryEndToEnd:
+    def test_summary_with_all_new_fields_end_to_end(self):
+        snapshots = [
+            _snap(
+                session_id="session-123",
+                elapsed=0,
+                tutor_eye=0.9,
+                student_eye=0.7,
+                tutor_talk=0.7,
+                student_talk=0.3,
+                tutor_energy=0.85,
+                student_energy=0.75,
+                engagement_score=82.0,
+                interruptions=1,
+                tutor_attention_state="CAMERA_FACING",
+                student_attention_state="SCREEN_ENGAGED",
+                tutor_turn_count=1,
+                student_turn_count=1,
+            ),
+            _snap(
+                session_id="session-123",
+                elapsed=30,
+                tutor_eye=0.7,
+                student_eye=0.45,
+                tutor_talk=0.64,
+                student_talk=0.36,
+                tutor_energy=0.74,
+                student_energy=0.45,
+                engagement_score=68.0,
+                interruptions=2,
+                tutor_attention_state="SCREEN_ENGAGED",
+                student_attention_state="CAMERA_FACING",
+                tutor_turn_count=4,
+                student_turn_count=3,
+            ),
+            _snap(
+                session_id="session-123",
+                elapsed=60,
+                tutor_eye=0.6,
+                student_eye=0.22,
+                tutor_talk=0.62,
+                student_talk=0.38,
+                tutor_energy=0.68,
+                student_energy=0.1,
+                engagement_score=35.0,
+                interruptions=5,
+                degraded=True,
+                tutor_attention_state="SCREEN_ENGAGED",
+                student_attention_state="OFF_TASK_AWAY",
+                tutor_turn_count=6,
+                student_turn_count=5,
+            ),
+        ]
+        snapshots[2].student.time_in_attention_state_seconds = 75.0
+        snapshots[2].student.attention_state_confidence = 0.9
+        snapshots[2].session.mutual_silence_duration_current = 50.0
+
+        first_nudge_time = datetime(2025, 6, 1, 10, 0, 0)
+        second_nudge_time = datetime(2025, 6, 1, 10, 3, 0)
+        nudges = [
+            Nudge(
+                nudge_type="silence",
+                message="Invite the student back in",
+                timestamp=first_nudge_time,
+                priority=NudgePriority.HIGH,
+            ),
+            Nudge(
+                nudge_type="eye_contact",
+                message="Student camera-facing dropped",
+                timestamp=second_nudge_time,
+                priority=NudgePriority.MEDIUM,
+            ),
+        ]
+
+        summary = generate_summary(
+            "session-123",
+            snapshots,
+            tutor_id="alice",
+            session_type="practice",
+            media_provider=MediaProvider.CUSTOM_WEBRTC,
+            nudges=nudges,
+        )
+
+        assert summary.session_id == "session-123"
+        assert summary.tutor_id == "alice"
+        assert summary.session_type == "practice"
+        assert summary.media_provider == MediaProvider.CUSTOM_WEBRTC
+        assert summary.duration_seconds == 60.0
+
+        assert summary.talk_time_ratio == {"tutor": 0.62, "student": 0.38}
+        assert summary.avg_eye_contact["tutor"] == pytest.approx((0.9 + 0.7 + 0.6) / 3)
+        assert summary.avg_eye_contact["student"] == pytest.approx((0.7 + 0.45 + 0.22) / 3)
+        assert summary.avg_energy["tutor"] == pytest.approx((0.85 + 0.74 + 0.68) / 3)
+        assert summary.avg_energy["student"] == pytest.approx((0.75 + 0.45 + 0.1) / 3)
+        assert summary.engagement_score == pytest.approx((82.0 + 68.0 + 35.0) / 3)
+        assert summary.total_interruptions == 5
+        assert summary.nudges_sent == 2
+        assert summary.degradation_events == 1
+
+        assert summary.timeline["engagement"] == [82.0, 68.0, 35.0]
+        assert summary.timeline["student_talk_time"] == [0.3, 0.36, 0.38]
+        assert summary.timeline["tutor_talk_time"] == [0.7, 0.64, 0.62]
+
+        assert summary.attention_state_distribution["tutor"] == pytest.approx(
+            {"CAMERA_FACING": 1 / 3, "SCREEN_ENGAGED": 2 / 3}
+        )
+        assert summary.attention_state_distribution["student"] == pytest.approx(
+            {
+                "SCREEN_ENGAGED": 1 / 3,
+                "CAMERA_FACING": 1 / 3,
+                "OFF_TASK_AWAY": 1 / 3,
+            }
+        )
+
+        assert summary.nudge_details == [
+            {
+                "nudge_type": "silence",
+                "message": "Invite the student back in",
+                "timestamp": first_nudge_time.isoformat(),
+                "priority": "high",
+            },
+            {
+                "nudge_type": "eye_contact",
+                "message": "Student camera-facing dropped",
+                "timestamp": second_nudge_time.isoformat(),
+                "priority": "medium",
+            },
+        ]
+        assert summary.turn_counts == {"tutor": 6, "student": 5}
+
+        flagged_metric_names = {flag.metric_name for flag in summary.flagged_moments}
+        assert "engagement" in flagged_metric_names
+        assert "interruptions" in flagged_metric_names
+        assert "student_energy" in flagged_metric_names
+        assert "student_attention" in flagged_metric_names
+        assert "mutual_silence" in flagged_metric_names
+
+
 class TestEmptyInput:
     def test_empty_snapshots(self):
         summary = generate_summary("test", [])
@@ -180,3 +434,10 @@ class TestEmptyInput:
         summary = generate_summary("test", snapshots)
         assert summary.duration_seconds == 0
         assert summary.engagement_score == 70.0
+
+    def test_empty_snapshots_new_fields_default(self):
+        """Empty snapshot input should produce empty defaults for all three new fields."""
+        summary = generate_summary("test", [])
+        assert summary.attention_state_distribution == {}
+        assert summary.nudge_details == []
+        assert summary.turn_counts == {}

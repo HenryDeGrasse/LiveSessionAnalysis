@@ -1,4 +1,4 @@
-import type { SessionSummary } from './types'
+import type { AttentionState, SessionSummary } from './types'
 
 export type TrendDirection = 'improving' | 'stable' | 'declining'
 export type AnalyticsTone = 'emerald' | 'amber' | 'rose' | 'slate' | 'violet'
@@ -63,6 +63,33 @@ const TALK_TOLERANCE: Record<string, number> = {
   discussion: 0.1,
 }
 
+export const ATTENTION_STATES: AttentionState[] = [
+  'CAMERA_FACING',
+  'SCREEN_ENGAGED',
+  'DOWN_ENGAGED',
+  'OFF_TASK_AWAY',
+  'FACE_MISSING',
+  'LOW_CONFIDENCE',
+]
+
+export const ATTENTION_STATE_LABELS: Record<string, string> = {
+  CAMERA_FACING: 'Camera-facing',
+  SCREEN_ENGAGED: 'Screen-engaged',
+  DOWN_ENGAGED: 'Down-engaged',
+  OFF_TASK_AWAY: 'Off-task / away',
+  FACE_MISSING: 'Face missing',
+  LOW_CONFIDENCE: 'Low confidence',
+}
+
+export const ATTENTION_STATE_COLORS: Record<string, string> = {
+  CAMERA_FACING: '#10B981',
+  SCREEN_ENGAGED: '#0EA5E9',
+  DOWN_ENGAGED: '#F59E0B',
+  OFF_TASK_AWAY: '#F43F5E',
+  FACE_MISSING: '#94A3B8',
+  LOW_CONFIDENCE: '#64748B',
+}
+
 function clamp(value: number, min = 0, max = 100) {
   return Math.min(max, Math.max(min, value))
 }
@@ -88,6 +115,69 @@ export function formatMinutes(durationSeconds: number) {
   if (durationSeconds < 60) return `${Math.round(durationSeconds)} sec`
   const minutes = Math.round(durationSeconds / 60)
   return `${minutes} min`
+}
+
+function startCase(value: string) {
+  return value
+    .trim()
+    .replace(/[_-]+/g, ' ')
+    .toLowerCase()
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+export function formatAttentionState(state: string) {
+  return ATTENTION_STATE_LABELS[state] || startCase(state) || 'Unknown'
+}
+
+export function computeAttentionDistributionFallback(
+  session: SessionSummary
+): Record<string, number> | null {
+  const distribution = session.attention_state_distribution
+
+  if (!distribution || Object.keys(distribution).length === 0) {
+    return null
+  }
+
+  if (distribution.student && Object.keys(distribution.student).length > 0) {
+    return distribution.student
+  }
+
+  if (distribution.tutor && Object.keys(distribution.tutor).length > 0) {
+    return distribution.tutor
+  }
+
+  const firstDistribution = Object.values(distribution).find(
+    (entry) => Object.keys(entry).length > 0
+  )
+
+  return firstDistribution || null
+}
+
+export function formatNudgePriority(priority: string): {
+  label: string
+  tone: AnalyticsTone
+} {
+  const normalized = priority.trim().toLowerCase()
+
+  if (normalized === 'high') {
+    return { label: 'High priority', tone: 'rose' }
+  }
+
+  if (normalized === 'medium') {
+    return { label: 'Medium priority', tone: 'amber' }
+  }
+
+  if (normalized === 'low') {
+    return { label: 'Low priority', tone: 'slate' }
+  }
+
+  return {
+    label: normalized ? `${startCase(normalized)} priority` : 'Priority',
+    tone: 'slate',
+  }
 }
 
 export function formatClock(totalSeconds: number) {

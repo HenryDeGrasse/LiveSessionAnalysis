@@ -10,14 +10,19 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  ReferenceDot,
   ResponsiveContainer,
 } from 'recharts'
 import { API_URL } from '@/lib/constants'
 import type { SessionSummary } from '@/lib/types'
 import {
+  ATTENTION_STATES,
+  ATTENTION_STATE_COLORS,
+  computeAttentionDistributionFallback,
   deriveComparisonDeltas,
   deriveSessionRubric,
   deriveTrendSnapshot,
+  formatAttentionState,
   formatClock,
   formatDelta,
   formatMinutes,
@@ -28,6 +33,8 @@ import {
   getTrendLabel,
   getTrendTone,
 } from '@/lib/analytics'
+import { DonutChart, NudgeHistoryItem } from '@/components/charts'
+import type { DonutSegment } from '@/components/charts'
 
 type DetailSeriesKey =
   | 'engagement'
@@ -58,6 +65,24 @@ function toneClasses(tone: 'emerald' | 'amber' | 'rose' | 'slate' | 'violet') {
   }
 
   return styles[tone]
+}
+
+function renderFlaggedDotShape(
+  dotColor: string,
+  description: string,
+  shapeProps: { cx?: number; cy?: number }
+) {
+  const x = shapeProps.cx ?? 0
+  const y = shapeProps.cy ?? 0
+  return (
+    <g style={{ cursor: 'pointer' }}>
+      <circle cx={x} cy={y} r={6} fill={dotColor} stroke="#020617" strokeWidth={2} />
+      <text x={x} y={y - 14} textAnchor="middle" fill={dotColor} fontSize={14}>
+        ⚑
+      </text>
+      <title>{description}</title>
+    </g>
+  )
 }
 
 function DetailStat({
@@ -253,6 +278,54 @@ export default function SessionDetailPage() {
       studentTalk: (timeline.student_talk_time?.[index] ?? 0) * 100,
     }))
   }, [session])
+
+  const talkDonutSegments = useMemo((): DonutSegment[] => {
+    if (!session) return []
+    const tutorPct = Math.round((session.talk_time_ratio.tutor || 0) * 100)
+    const studentPct = Math.max(0, 100 - tutorPct)
+    return [
+      { label: 'Tutor', value: tutorPct, color: '#38BDF8' },
+      { label: 'Student', value: studentPct, color: '#34D399' },
+    ]
+  }, [session])
+
+  const attentionDistribution = useMemo(() => {
+    if (!session) return null
+    return computeAttentionDistributionFallback(session)
+  }, [session])
+
+  const attentionDonutSegments = useMemo((): DonutSegment[] => {
+    if (!attentionDistribution) return []
+    return ATTENTION_STATES.filter(
+      (state) => (attentionDistribution[state] ?? 0) > 0
+    ).map((state) => ({
+      label: formatAttentionState(state),
+      value: Math.round((attentionDistribution[state] ?? 0) * 100),
+      color: ATTENTION_STATE_COLORS[state] || '#94A3B8',
+    }))
+  }, [attentionDistribution])
+
+  const flaggedDots = useMemo(() => {
+    if (!session || timelineData.length === 0) return []
+    const duration = session.duration_seconds
+    if (duration <= 0) return []
+
+    return session.flagged_moments.map((moment) => {
+      const idx = Math.min(
+        Math.round((moment.timestamp / duration) * timelineData.length),
+        timelineData.length - 1
+      )
+      const clampedIdx = Math.max(0, idx)
+      const yValue = timelineData[clampedIdx]?.engagement ?? 50
+      return {
+        ...moment,
+        timelineIndex: clampedIdx,
+        timelineLabel: timelineData[clampedIdx]?.label ?? `#${clampedIdx + 1}`,
+        yValue,
+        dotColor: moment.direction === 'below' ? '#F43F5E' : '#F59E0B',
+      }
+    })
+  }, [session, timelineData])
 
   const toggleSeries = (seriesKey: DetailSeriesKey) => {
     setSeriesVisible((current) => {
@@ -473,6 +546,85 @@ export default function SessionDetailPage() {
           </div>
         </section>
 
+        {/* Talk time & attention distribution donuts */}
+        <section
+          data-testid="analytics-detail-donuts"
+          className="grid gap-6 md:grid-cols-2"
+        >
+          {/* Talk-time donut */}
+          <div className="rounded-[28px] border border-white/10 bg-white/5 p-6">
+            <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+              Talk time breakdown
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold text-white">
+              Tutor vs student share
+            </h2>
+            <div className="mt-6 flex flex-col items-center gap-4">
+              <DonutChart
+                segments={talkDonutSegments}
+                size={180}
+                innerLabel={`${Math.round((session.talk_time_ratio.tutor || 0) * 100)}% / ${Math.max(0, 100 - Math.round((session.talk_time_ratio.tutor || 0) * 100))}%`}
+                innerSublabel="tutor / student"
+              />
+              <div className="flex items-center gap-4 text-sm text-slate-300">
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block h-3 w-3 rounded-full bg-sky-400" />
+                  Tutor
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block h-3 w-3 rounded-full bg-emerald-400" />
+                  Student
+                </span>
+              </div>
+              {session.turn_counts &&
+                ((session.turn_counts.tutor ?? 0) > 0 ||
+                  (session.turn_counts.student ?? 0) > 0) && (
+                <p className="text-sm text-slate-400">
+                  Tutor: {session.turn_counts.tutor ?? 0} turns · Student: {session.turn_counts.student ?? 0} turns
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Attention state distribution donut */}
+          <div className="rounded-[28px] border border-white/10 bg-white/5 p-6">
+            <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+              Student attention breakdown
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold text-white">
+              Attention state distribution
+            </h2>
+            {attentionDonutSegments.length > 0 ? (
+              <div className="mt-6 flex flex-col items-center gap-4">
+                <DonutChart
+                  segments={attentionDonutSegments}
+                  size={180}
+                />
+                <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm">
+                  {attentionDonutSegments.map((segment) => (
+                    <span
+                      key={segment.label}
+                      className="flex items-center gap-1.5 text-slate-300"
+                    >
+                      <span
+                        className="inline-block h-3 w-3 rounded-full"
+                        style={{ backgroundColor: segment.color }}
+                      />
+                      {segment.label} ({segment.value}%)
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-6 rounded-3xl border border-white/10 bg-slate-950/40 p-5 text-sm leading-6 text-slate-300">
+                Attention distribution is available for sessions recorded after
+                the attention-state tracking update. Older sessions show the
+                average camera-facing score instead.
+              </div>
+            )}
+          </div>
+        </section>
+
         <section className="rounded-[28px] border border-white/10 bg-white/5 p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -548,6 +700,17 @@ export default function SessionDetailPage() {
                     strokeWidth={series.key === 'engagement' ? 3 : 2.5}
                     dot={false}
                     activeDot={{ r: 5 }}
+                  />
+                ))}
+                {flaggedDots.map((dot, dotIdx) => (
+                  <ReferenceDot
+                    key={`flagged-${dot.metric_name}-${dot.timestamp}-${dotIdx}`}
+                    x={dot.timelineLabel}
+                    y={dot.yValue}
+                    isFront
+                    shape={(shapeProps: { cx?: number; cy?: number }) =>
+                      renderFlaggedDotShape(dot.dotColor, dot.description, shapeProps)
+                    }
                   />
                 ))}
               </LineChart>
@@ -633,6 +796,39 @@ export default function SessionDetailPage() {
               </div>
             )}
           </div>
+        </section>
+
+        {/* Nudge history */}
+        <section
+          data-testid="analytics-detail-nudge-history"
+          className="rounded-[28px] border border-white/10 bg-white/5 p-6"
+        >
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+              Coaching nudges sent during session
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold text-white">
+              Nudge history
+            </h2>
+          </div>
+          {session.nudge_details && session.nudge_details.length > 0 ? (
+            <div className="mt-6 space-y-3">
+              {session.nudge_details.map((nudge, nudgeIdx) => (
+                <NudgeHistoryItem
+                  key={`${nudge.nudge_type}-${nudge.timestamp}-${nudgeIdx}`}
+                  nudge={nudge}
+                />
+              ))}
+            </div>
+          ) : session.nudges_sent > 0 ? (
+            <div className="mt-6 rounded-3xl border border-white/10 bg-slate-950/40 p-5 text-sm leading-6 text-slate-300">
+              {session.nudges_sent} nudge{session.nudges_sent === 1 ? ' was' : 's were'} sent during this session. Detailed nudge history is available for newer sessions.
+            </div>
+          ) : (
+            <div className="mt-6 rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5 text-sm leading-6 text-emerald-100">
+              No coaching nudges were needed during this session.
+            </div>
+          )}
         </section>
 
         <section

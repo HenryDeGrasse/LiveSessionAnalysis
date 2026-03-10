@@ -96,7 +96,9 @@ test.describe(`${DEFAULT_MEDIA_PROVIDER} live tutoring call`, () => {
       tutor.page.on('dialog', (dialog) => dialog.accept())
       await tutor.page.getByTestId('end-session-button').click()
 
-      await expect(tutor.page.getByTestId('session-ended-banner')).toBeVisible()
+      await expect(
+        tutor.page.getByTestId('session-end-summary-overlay')
+      ).toBeVisible()
       await expect(student.page.getByTestId('session-ended-banner')).toBeVisible()
       await expect(tutor.page.getByTestId('view-analytics-button')).toBeVisible()
       await expect(student.page.getByTestId('leave-session-button')).toContainText(

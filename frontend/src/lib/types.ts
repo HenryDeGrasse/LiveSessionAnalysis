@@ -1,18 +1,22 @@
 export type MediaProvider = 'custom_webrtc' | 'livekit'
 
+export type AttentionState =
+  | 'FACE_MISSING'
+  | 'LOW_CONFIDENCE'
+  | 'CAMERA_FACING'
+  | 'SCREEN_ENGAGED'
+  | 'DOWN_ENGAGED'
+  | 'OFF_TASK_AWAY'
+
+export type NudgePriority = 'low' | 'medium' | 'high'
+
 export interface ParticipantMetrics {
   eye_contact_score: number
   talk_time_percent: number
   energy_score: number
   energy_drop_from_baseline: number
   is_speaking: boolean
-  attention_state:
-    | 'FACE_MISSING'
-    | 'LOW_CONFIDENCE'
-    | 'CAMERA_FACING'
-    | 'SCREEN_ENGAGED'
-    | 'DOWN_ENGAGED'
-    | 'OFF_TASK_AWAY'
+  attention_state: AttentionState
   attention_state_confidence: number
   face_presence_score: number
   visual_attention_score: number
@@ -79,8 +83,15 @@ export interface Nudge {
   timestamp: string
   nudge_type: string
   message: string
-  priority: 'low' | 'medium' | 'high'
+  priority: NudgePriority
   trigger_metrics: Record<string, number>
+}
+
+export interface NudgeDetail {
+  nudge_type: string
+  message: string
+  timestamp: string
+  priority: NudgePriority
 }
 
 export interface ParticipantPresenceData {
@@ -149,6 +160,9 @@ export interface SessionSummary {
   recommendations: string[]
   nudges_sent: number
   degradation_events: number
+  attention_state_distribution?: Record<string, Record<string, number>>
+  nudge_details?: NudgeDetail[]
+  turn_counts?: Record<string, number>
 }
 
 export interface TrendData {

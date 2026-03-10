@@ -7,6 +7,16 @@ import { useMediaStream } from '@/hooks/useMediaStream'
 import { useMetrics } from '@/hooks/useMetrics'
 import { useNudges } from '@/hooks/useNudges'
 import { useCallTransport } from '@/hooks/useCallTransport'
+import { MetricCard } from '@/components/charts'
+import {
+  formatMinutes,
+  formatPercent,
+  formatScore,
+  getSessionHealth,
+  isTalkBalanced,
+  type AnalyticsTone,
+} from '@/lib/analytics'
+import { clearActiveSession } from '@/lib/active-session'
 import { API_URL, ENABLE_WEBRTC_CALL_UI } from '@/lib/constants'
 import { resolveMediaProvider } from '@/lib/call/provider'
 import { encodeVideoFrame, encodeAudioChunk } from '@/lib/frameEncoder'
@@ -14,6 +24,7 @@ import type {
   MetricsSnapshot,
   Nudge,
   SessionInfo,
+  SessionSummary,
   WSMessage,
 } from '@/lib/types'
 
@@ -203,6 +214,21 @@ function callStatusClasses(status: string) {
   }
 }
 
+function analyticsToneClasses(tone: AnalyticsTone) {
+  switch (tone) {
+    case 'emerald':
+      return 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100'
+    case 'amber':
+      return 'border-amber-400/30 bg-amber-400/10 text-amber-100'
+    case 'rose':
+      return 'border-rose-400/30 bg-rose-400/10 text-rose-100'
+    case 'violet':
+      return 'border-violet-400/30 bg-violet-400/10 text-violet-100'
+    default:
+      return 'border-white/10 bg-white/5 text-slate-200'
+  }
+}
+
 export default function SessionPage() {
   const routeParams = useParams<{ id: string }>()
   const router = useRouter()
@@ -218,6 +244,11 @@ export default function SessionPage() {
   const [peerDisconnected, setPeerDisconnected] = useState(false)
   const [endingSession, setEndingSession] = useState(false)
   const [endSessionError, setEndSessionError] = useState<string | null>(null)
+  const [showEndSummary, setShowEndSummary] = useState(false)
+  const [endSummary, setEndSummary] = useState<SessionSummary | null>(null)
+  const [endSummaryRecommendations, setEndSummaryRecommendations] = useState<string[]>([])
+  const [endSummaryLoading, setEndSummaryLoading] = useState(false)
+  const [endSummaryFailed, setEndSummaryFailed] = useState(false)
   const [debugEvents, setDebugEvents] = useState<Array<{ at: string; message: string }>>([])
   const [showCoachDebug, setShowCoachDebug] = useState(
     searchParams.get('debug') === '1'
@@ -247,6 +278,8 @@ export default function SessionPage() {
     handleParticipantReconnected: async () => {},
     closeConnection: (_reason: string) => {},
   })
+  const activeSessionClearedRef = useRef(false)
+  const endSummaryRequestedRef = useRef(false)
 
   const {
     stream,
@@ -268,6 +301,7 @@ export default function SessionPage() {
     disableAllNudges,
     enableAllNudges,
   } = useNudges()
+  const isTutorRole = role === 'tutor' || currentMetrics !== null
 
   const appendDebugEvent = useCallback((message: string) => {
     const at = new Date().toLocaleTimeString()
@@ -520,6 +554,94 @@ export default function SessionPage() {
   ])
 
   useEffect(() => {
+    if (!sessionEnded || activeSessionClearedRef.current) return
+
+    activeSessionClearedRef.current = true
+    clearActiveSession()
+    appendDebugEvent('cleared active session')
+  }, [appendDebugEvent, sessionEnded])
+
+  useEffect(() => {
+    if (!sessionEnded || !isTutorRole || !sessionId) return
+
+    setShowEndSummary(true)
+
+    if (endSummaryRequestedRef.current) {
+      return
+    }
+
+    endSummaryRequestedRef.current = true
+    setEndSummaryLoading(true)
+    setEndSummaryFailed(false)
+    setEndSummary(null)
+    setEndSummaryRecommendations([])
+    appendDebugEvent('fetching end-of-session summary')
+
+    let cancelled = false
+
+    Promise.allSettled([
+      fetch(`${API_URL}/api/analytics/sessions/${sessionId}`).then(async (response) => {
+        if (!response.ok) {
+          throw new Error('Session summary not ready')
+        }
+
+        return (await response.json()) as SessionSummary | null
+      }),
+      fetch(`${API_URL}/api/analytics/sessions/${sessionId}/recommendations`).then(
+        async (response) => {
+          if (!response.ok) {
+            return []
+          }
+
+          return (await response.json()) as unknown
+        }
+      ),
+    ])
+      .then(([summaryResult, recommendationsResult]) => {
+        if (cancelled) return
+
+        if (summaryResult.status === 'fulfilled' && summaryResult.value) {
+          setEndSummary(summaryResult.value)
+          setEndSummaryFailed(false)
+          appendDebugEvent('session report ready')
+        } else {
+          setEndSummary(null)
+          setEndSummaryFailed(true)
+          appendDebugEvent(
+            'session report unavailable; falling back to analytics link'
+          )
+        }
+
+        if (recommendationsResult.status === 'fulfilled') {
+          setEndSummaryRecommendations(
+            Array.isArray(recommendationsResult.value)
+              ? recommendationsResult.value.filter(
+                  (value): value is string => typeof value === 'string'
+                )
+              : []
+          )
+        }
+      })
+      .catch(() => {
+        if (cancelled) return
+
+        setEndSummary(null)
+        setEndSummaryFailed(true)
+        setEndSummaryRecommendations([])
+        appendDebugEvent('session report request failed')
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setEndSummaryLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [appendDebugEvent, isTutorRole, sessionEnded, sessionId])
+
+  useEffect(() => {
     if (!sessionId || !token) return
     appendDebugEvent(`websocket ${connected ? 'connected' : 'disconnected'}`)
   }, [appendDebugEvent, connected, sessionId, token])
@@ -718,7 +840,7 @@ export default function SessionPage() {
     }
   }, [browserAnalyticsUploadEnabled, connected, stream, sendBinary])
 
-  const isTutor = role === 'tutor' || currentMetrics !== null
+  const isTutor = isTutorRole
   const hasAudioTrack = Boolean(stream?.getAudioTracks().length)
   const hasVideoTrack = Boolean(stream?.getVideoTracks().length)
   const engagementTrendLabel = currentMetrics
@@ -741,8 +863,10 @@ export default function SessionPage() {
   const minimalFlowSummary = currentMetrics
     ? flowSummary(currentMetrics)
     : null
-  const remoteLabel = role === 'tutor' ? 'Student' : role === 'student' ? 'Tutor' : 'Participant'
-  const localLabel = role === 'tutor' ? 'You (Tutor)' : role === 'student' ? 'You (Student)' : 'You'
+  const remoteLabel =
+    role === 'tutor' ? 'Student' : role === 'student' ? 'Tutor' : 'Participant'
+  const localLabel =
+    role === 'tutor' ? 'You (Tutor)' : role === 'student' ? 'You (Student)' : 'You'
   const roleBadgeLabel = isTutor
     ? 'Tutor workspace'
     : role === 'student'
@@ -783,6 +907,13 @@ export default function SessionPage() {
     ? 'The session has ended. Analytics are ready and you can review them now.'
     : 'The session has ended. You can safely leave this page.'
   const canShowDebugToggle = isTutor || showCoachDebug
+  const endSummaryHealth = endSummary ? getSessionHealth(endSummary) : null
+  const endSummaryRecommendationsToShow = (
+    endSummaryRecommendations.length > 0
+      ? endSummaryRecommendations
+      : endSummary?.recommendations ?? []
+  ).slice(0, 2)
+  const showTutorEndSummaryOverlay = sessionEnded && isTutor && showEndSummary
 
   const handleEndSession = useCallback(async () => {
     if (!sessionId || !token || endingSession || sessionEnded) return
@@ -813,16 +944,19 @@ export default function SessionPage() {
     }
   }, [appendDebugEvent, endingSession, sessionEnded, sessionId, token])
 
-  const handleLeaveSession = useCallback(() => {
-    if (sessionEnded) {
-      appendDebugEvent('leaving ended session view')
+  const handleEndedSessionNavigation = useCallback(
+    (destination: string) => {
+      appendDebugEvent(`leaving ended session view -> ${destination}`)
       closeConnection('leaving ended session view')
       stopStream()
-      if (isTutor) {
-        router.push(`/analytics/${sessionId}`)
-      } else {
-        router.push('/')
-      }
+      router.push(destination)
+    },
+    [appendDebugEvent, closeConnection, router, stopStream]
+  )
+
+  const handleLeaveSession = useCallback(() => {
+    if (sessionEnded) {
+      handleEndedSessionNavigation(isTutor ? `/analytics/${sessionId}` : '/')
       return
     }
 
@@ -834,7 +968,16 @@ export default function SessionPage() {
     closeConnection('left session locally')
     stopStream()
     router.push('/')
-  }, [appendDebugEvent, closeConnection, isTutor, router, sessionEnded, sessionId, stopStream])
+  }, [
+    appendDebugEvent,
+    closeConnection,
+    handleEndedSessionNavigation,
+    isTutor,
+    router,
+    sessionEnded,
+    sessionId,
+    stopStream,
+  ])
 
   if (showConsent) {
     return (
@@ -1021,7 +1164,7 @@ export default function SessionPage() {
           </div>
         )}
 
-        {sessionEnded && (
+        {sessionEnded && !isTutor && (
           <div data-testid="session-ended-banner" className="w-full max-w-5xl rounded-2xl border border-blue-700 bg-blue-900/40 p-4 text-sm text-blue-100">
             {sessionEndedMessage}
           </div>
@@ -1080,15 +1223,26 @@ export default function SessionPage() {
                   {sessionEnded ? 'Return home' : 'Leave session'}
                 </button>
               )}
-              {isTutor && sessionEnded && (
-                <button
-                  data-testid="view-analytics-button"
-                  type="button"
-                  onClick={handleLeaveSession}
-                  className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
-                >
-                  View analytics
-                </button>
+              {isTutor && sessionEnded && !showTutorEndSummaryOverlay && (
+                <>
+                  <button
+                    data-testid="view-analytics-button"
+                    type="button"
+                    onClick={() =>
+                      handleEndedSessionNavigation(`/analytics/${sessionId}`)
+                    }
+                    className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+                  >
+                    View analytics
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleEndedSessionNavigation('/')}
+                    className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+                  >
+                    Back to dashboard
+                  </button>
+                </>
               )}
               {isTutor && (
                 <button
@@ -1520,6 +1674,219 @@ export default function SessionPage() {
                   Metrics snapshots kept in memory: {metricsHistory.length}. Live nudge history: {nudgeHistory.length}.
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {showTutorEndSummaryOverlay && (
+          <div
+            data-testid="session-end-summary-overlay"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 px-6 py-8 backdrop-blur"
+          >
+            <div className="w-full max-w-5xl rounded-[32px] border border-white/10 bg-slate-950/95 p-6 shadow-[0_28px_120px_rgba(2,6,23,0.72)] md:p-8">
+              <div className="flex flex-col gap-4 border-b border-white/10 pb-6 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                    Session wrap-up
+                  </p>
+                  <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+                    Session Complete
+                  </h2>
+                  {endSummary && endSummaryHealth && (
+                    <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-200">
+                        Duration {formatMinutes(endSummary.duration_seconds)}
+                      </span>
+                      <span
+                        className={`rounded-full border px-3 py-1 ${analyticsToneClasses(
+                          endSummaryHealth.tone
+                        )}`}
+                      >
+                        {endSummaryHealth.label}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <button
+                  data-testid="session-end-summary-close"
+                  type="button"
+                  onClick={() => setShowEndSummary(false)}
+                  className="self-start rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+                >
+                  Close
+                </button>
+              </div>
+
+              {(endSummaryLoading || (!endSummary && !endSummaryFailed)) && (
+                <div
+                  data-testid="session-end-summary-loading"
+                  className="flex min-h-[280px] flex-col items-center justify-center gap-4 text-center"
+                >
+                  <div className="h-10 w-10 animate-spin rounded-full border-2 border-slate-700 border-t-sky-400" />
+                  <div>
+                    <p className="text-lg font-medium text-white">
+                      Generating session report...
+                    </p>
+                    <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
+                      We&apos;re packaging the final analytics summary so you can move straight from the call into review.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {!endSummaryLoading && endSummary && endSummaryHealth && (
+                <div className="space-y-8 pt-8">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <MetricCard
+                      title="Engagement score"
+                      value={formatScore(endSummary.engagement_score)}
+                      detail={endSummaryHealth.summary}
+                      tone={endSummaryHealth.tone}
+                    />
+                    <MetricCard
+                      title="Student camera-facing"
+                      value={formatPercent(endSummary.avg_eye_contact.student || 0)}
+                      detail="Average presence across the full session."
+                      tone={
+                        (endSummary.avg_eye_contact.student || 0) >= 0.5
+                          ? 'emerald'
+                          : (endSummary.avg_eye_contact.student || 0) >= 0.3
+                          ? 'amber'
+                          : 'rose'
+                      }
+                    />
+                    <MetricCard
+                      title="Tutor talk share"
+                      value={formatPercent(endSummary.talk_time_ratio.tutor || 0)}
+                      detail={
+                        isTalkBalanced(endSummary)
+                          ? 'Talk balance stayed near the session target.'
+                          : 'Talk balance drifted outside the session target.'
+                      }
+                      tone={
+                        isTalkBalanced(endSummary)
+                          ? 'emerald'
+                          : (endSummary.talk_time_ratio.tutor || 0) >= 0.8
+                          ? 'rose'
+                          : 'amber'
+                      }
+                    />
+                    <MetricCard
+                      title="Interruptions"
+                      value={`${endSummary.total_interruptions}`}
+                      detail={
+                        endSummary.total_interruptions === 0
+                          ? 'No interruptions were flagged.'
+                          : 'Counted across the entire session.'
+                      }
+                      tone={
+                        endSummary.total_interruptions >= 5
+                          ? 'rose'
+                          : endSummary.total_interruptions >= 2
+                          ? 'amber'
+                          : 'emerald'
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
+                    <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+                      <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                        Quick highlights
+                      </p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {endSummary.flagged_moments.length > 0 ? (
+                          <span className="rounded-full border border-rose-400/30 bg-rose-400/10 px-3 py-1.5 text-sm font-medium text-rose-100">
+                            {endSummary.flagged_moments.length} flagged moment
+                            {endSummary.flagged_moments.length === 1 ? '' : 's'}
+                          </span>
+                        ) : (
+                          <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-sm font-medium text-emerald-100">
+                            No flagged moments surfaced
+                          </span>
+                        )}
+                        {endSummary.nudges_sent > 0 && (
+                          <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-sm font-medium text-amber-100">
+                            {endSummary.nudges_sent} live nudges sent
+                          </span>
+                        )}
+                        {endSummary.turn_counts &&
+                          Object.keys(endSummary.turn_counts).length > 0 && (
+                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-slate-200">
+                              {endSummary.turn_counts.tutor ?? 0} tutor turns ·{' '}
+                              {endSummary.turn_counts.student ?? 0} student turns
+                            </span>
+                          )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+                      <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                        First recommendations
+                      </p>
+                      {endSummaryRecommendationsToShow.length > 0 ? (
+                        <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-200">
+                          {endSummaryRecommendationsToShow.map((recommendation, index) => (
+                            <li key={`${recommendation}-${index}`} className="flex gap-3">
+                              <span className="mt-1 text-violet-300">•</span>
+                              <span>{recommendation}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-4 text-sm leading-6 text-slate-400">
+                          No immediate follow-up recommendations were generated for this session.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <button
+                      data-testid="view-analytics-button"
+                      type="button"
+                      onClick={() =>
+                        handleEndedSessionNavigation(`/analytics/${sessionId}`)
+                      }
+                      className="inline-flex items-center justify-center rounded-2xl bg-violet-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-violet-500"
+                    >
+                      View Full Analytics
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleEndedSessionNavigation('/')}
+                      className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-white/10"
+                    >
+                      Back to Dashboard
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!endSummaryLoading && !endSummary && endSummaryFailed && (
+                <div className="space-y-6 pt-8">
+                  <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+                    <p className="text-lg font-medium text-white">
+                      Session ended. Full analytics are still finalizing.
+                    </p>
+                    <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+                      The session report wasn&apos;t available yet, but the detail page will fetch it independently as soon as persistence finishes.
+                    </p>
+                  </div>
+                  <div>
+                    <button
+                      data-testid="view-analytics-button"
+                      type="button"
+                      onClick={() =>
+                        handleEndedSessionNavigation(`/analytics/${sessionId}`)
+                      }
+                      className="inline-flex items-center justify-center rounded-2xl bg-violet-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-violet-500"
+                    >
+                      View Full Analytics
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

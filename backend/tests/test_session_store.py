@@ -177,3 +177,33 @@ class TestSessionStoreEdgeCases:
         store.save(summary)
         loaded = store.load("s1")
         assert loaded.session_type == "practice"
+
+    def test_preserves_new_fields(self, store):
+        """Round-trip attention_state_distribution, nudge_details, and turn_counts."""
+        summary = _make_summary()
+        summary.attention_state_distribution = {
+            "tutor": {"CAMERA_FACING": 0.6, "SCREEN_ENGAGED": 0.4},
+            "student": {"SCREEN_ENGAGED": 0.5, "OFF_TASK_AWAY": 0.3, "CAMERA_FACING": 0.2},
+        }
+        summary.nudge_details = [
+            {
+                "nudge_type": "silence",
+                "message": "Student quiet",
+                "timestamp": "2025-06-01T10:00:00",
+                "priority": "high",
+            },
+            {
+                "nudge_type": "eye_contact",
+                "message": "Low eye contact",
+                "timestamp": "2025-06-01T10:05:00",
+                "priority": "low",
+            },
+        ]
+        summary.turn_counts = {"tutor": 12, "student": 9}
+
+        store.save(summary)
+        loaded = store.load("s1")
+
+        assert loaded.attention_state_distribution == summary.attention_state_distribution
+        assert loaded.nudge_details == summary.nudge_details
+        assert loaded.turn_counts == summary.turn_counts

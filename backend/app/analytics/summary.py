@@ -84,6 +84,26 @@ def generate_summary(
     # Flagged moments
     flagged = _detect_flagged_moments(snapshots, start_time)
 
+    # Attention state distribution: count frames per state, normalize to percentages
+    attention_state_distribution = _compute_attention_distribution(snapshots)
+
+    # Nudge details: serialize full nudge objects
+    nudge_details: list[dict] = []
+    if nudges:
+        for nudge in nudges:
+            nudge_details.append({
+                "nudge_type": nudge.nudge_type,
+                "message": nudge.message,
+                "timestamp": nudge.timestamp.isoformat(),
+                "priority": nudge.priority.value,
+            })
+
+    # Turn counts from the last snapshot
+    turn_counts = {
+        "tutor": last.session.tutor_turn_count,
+        "student": last.session.student_turn_count,
+    }
+
     return SessionSummary(
         session_id=session_id,
         tutor_id=tutor_id,
@@ -101,7 +121,35 @@ def generate_summary(
         timeline=timeline,
         nudges_sent=len(nudges) if nudges else 0,
         degradation_events=degradation_events,
+        attention_state_distribution=attention_state_distribution,
+        nudge_details=nudge_details,
+        turn_counts=turn_counts,
     )
+
+
+def _compute_attention_distribution(
+    snapshots: list[MetricsSnapshot],
+) -> dict[str, dict[str, float]]:
+    """Count frames per attention state for tutor and student, normalize to percentages."""
+    if not snapshots:
+        return {}
+
+    tutor_counts: dict[str, int] = {}
+    student_counts: dict[str, int] = {}
+    n = len(snapshots)
+
+    for s in snapshots:
+        tutor_counts[s.tutor.attention_state] = (
+            tutor_counts.get(s.tutor.attention_state, 0) + 1
+        )
+        student_counts[s.student.attention_state] = (
+            student_counts.get(s.student.attention_state, 0) + 1
+        )
+
+    tutor_dist = {state: count / n for state, count in tutor_counts.items()}
+    student_dist = {state: count / n for state, count in student_counts.items()}
+
+    return {"tutor": tutor_dist, "student": student_dist}
 
 
 STUDENT_ENERGY_LOW = 0.15

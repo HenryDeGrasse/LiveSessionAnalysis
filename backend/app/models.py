@@ -124,6 +124,12 @@ class SessionSummary(BaseModel):
     recommendations: list[str] = Field(default_factory=list)
     nudges_sent: int = 0
     degradation_events: int = 0
+    # Post-session analytics enrichments
+    attention_state_distribution: dict[str, dict[str, float]] = Field(
+        default_factory=dict
+    )
+    nudge_details: list[dict] = Field(default_factory=list)
+    turn_counts: dict[str, int] = Field(default_factory=dict)
 
 
 class TrendData(BaseModel):
