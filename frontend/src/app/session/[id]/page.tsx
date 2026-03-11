@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { signIn, useSession } from 'next-auth/react'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import { useMediaStream } from '@/hooks/useMediaStream'
 import { useMetrics } from '@/hooks/useMetrics'
@@ -20,6 +21,7 @@ import { clearActiveSession } from '@/lib/active-session'
 import { API_URL, ENABLE_WEBRTC_CALL_UI } from '@/lib/constants'
 import { resolveMediaProvider } from '@/lib/call/provider'
 import { encodeVideoFrame, encodeAudioChunk } from '@/lib/frameEncoder'
+import { apiFetch } from '@/lib/api-client'
 import type {
   MetricsSnapshot,
   Nudge,
@@ -235,6 +237,8 @@ export default function SessionPage() {
   const sessionId = routeParams.id
   const searchParams = useSearchParams()
   const token = searchParams.get('token') || ''
+  const { data: authSession, status: authStatus, update: updateSession } = useSession()
+  const userAccessToken = authSession?.user?.accessToken
 
   const [role, setRole] = useState<SessionRole | null>(null)
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null)
@@ -280,6 +284,20 @@ export default function SessionPage() {
   })
   const activeSessionClearedRef = useRef(false)
   const endSummaryRequestedRef = useRef(false)
+  const guestAutoCreatedRef = useRef(false)
+
+  // Tracks whether user_auth has been sent for the current WebSocket connection.
+  // Used to guarantee user_auth is the first text frame before client_status.
+  const [userAuthSent, setUserAuthSent] = useState(false)
+
+  // Tracks whether the auth state for this connection has definitively settled.
+  // For authenticated users this is true immediately (they already have a token).
+  // For unauthenticated students it becomes true only after the guest auto-create
+  // attempt finishes (success or failure), preventing client_status from racing
+  // ahead of user_auth during async guest sign-in.
+  // For tutors (who never go through guest creation) it becomes true once the
+  // role is known from the session info load.
+  const [guestAuthSettled, setGuestAuthSettled] = useState(false)
 
   const {
     stream,
@@ -353,11 +371,77 @@ export default function SessionPage() {
     }
   }, [searchParams])
 
+  // Settle guestAuthSettled for cases where no guest creation is needed:
+  //   • User is already authenticated → token is available right away.
+  //   • Role is 'tutor' (once known) → tutors never go through guest creation.
+  // For unauthenticated students the flag is set inside the guest auto-create
+  // effect's finally block (below) so that client_status is held until the
+  // async sign-in completes.
+  useEffect(() => {
+    if (authStatus === 'authenticated') {
+      setGuestAuthSettled(true)
+      return
+    }
+    if (sessionInfoLoaded && role === 'tutor') {
+      setGuestAuthSettled(true)
+    }
+    // For unauthenticated students: settled by the guest auto-create finally block.
+    // For authStatus === 'loading': wait until auth resolves.
+  }, [authStatus, sessionInfoLoaded, role])
+
+  // When a student opens a session link without being signed in, silently
+  // create a guest account and sign them in.  This allows the backend to
+  // associate their WebSocket connection with a user ID via the user_auth
+  // message, enabling student-side session history.  The effect is intentionally
+  // fire-and-forget — if it fails, the session join still proceeds normally but
+  // without authenticated session history tracking.
+  //
+  // We wait for sessionInfoLoaded so we know the role from the session token
+  // before creating a guest.  This prevents an unauthenticated tutor-link opener
+  // from being silently created as a student-role guest account.
+  useEffect(() => {
+    if (!sessionInfoLoaded || role !== 'student') return
+    if (authStatus !== 'unauthenticated' || guestAutoCreatedRef.current) return
+
+    guestAutoCreatedRef.current = true
+
+    fetch(`${API_URL}/api/auth/guest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then(async (res) => {
+        if (!res.ok) return
+        const data = (await res.json()) as { access_token?: string }
+        if (!data.access_token) return
+
+        const result = await signIn('credentials', {
+          token: data.access_token,
+          redirect: false,
+        })
+        if (result?.ok) {
+          await updateSession()
+        }
+      })
+      .catch(() => {
+        // Silent failure — session analytics tracking will proceed without user ID
+      })
+      .finally(() => {
+        // Mark auth as settled so client_status can proceed (with or without a
+        // token).  If guest creation succeeded, user_auth will have been sent
+        // before client_status because userAccessToken will now be non-null and
+        // the user_auth effect fires before the guestAuthSettled gate lifts for
+        // client_status (the effects run in dependency order on the same cycle).
+        setGuestAuthSettled(true)
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authStatus, sessionInfoLoaded, role])
+
   useEffect(() => {
     if (!sessionId || !token) return
 
-    fetch(
-      `${API_URL}/api/sessions/${sessionId}/info?token=${encodeURIComponent(token)}`
+    apiFetch(
+      `/api/sessions/${sessionId}/info?token=${encodeURIComponent(token)}`,
+      { accessToken: userAccessToken }
     )
       .then((res) => res.json())
       .then((data: SessionInfo) => {
@@ -526,6 +610,7 @@ export default function SessionPage() {
     localStream: stream,
     sessionId,
     sessionToken: token,
+    accessToken: userAccessToken,
     debug: searchParams.get('debug') === '1',
     sendSignal: () => {},
     onDebugEvent: appendDebugEvent,
@@ -580,14 +665,14 @@ export default function SessionPage() {
     let cancelled = false
 
     Promise.allSettled([
-      fetch(`${API_URL}/api/analytics/sessions/${sessionId}`).then(async (response) => {
+      apiFetch(`/api/analytics/sessions/${sessionId}`, { accessToken: userAccessToken }).then(async (response) => {
         if (!response.ok) {
           throw new Error('Session summary not ready')
         }
 
         return (await response.json()) as SessionSummary | null
       }),
-      fetch(`${API_URL}/api/analytics/sessions/${sessionId}/recommendations`).then(
+      apiFetch(`/api/analytics/sessions/${sessionId}/recommendations`, { accessToken: userAccessToken }).then(
         async (response) => {
           if (!response.ok) {
             return []
@@ -675,8 +760,43 @@ export default function SessionPage() {
     }
   }, [remoteStream])
 
+  // Send user_auth as the first text frame when the WebSocket connects so the
+  // backend can associate this participant with their authenticated user account.
+  // This must fire before client_status to ensure room.student_user_id is set
+  // before session finalization writes the SessionSummary.
+  //
+  // The effect also resets userAuthSent when the connection drops so that
+  // user_auth is re-sent on the next successful reconnect.
+  useEffect(() => {
+    if (!connected) {
+      setUserAuthSent(false)
+      return
+    }
+    if (!userAccessToken || userAuthSent) return
+    setUserAuthSent(true)
+    sendJson({
+      type: 'user_auth',
+      data: {
+        access_token: userAccessToken,
+      },
+    })
+  }, [connected, userAccessToken, userAuthSent, sendJson])
+
+  // Send client_status after user_auth has been sent (when a token exists),
+  // guaranteeing user_auth is always the first text frame for authenticated
+  // connections.
+  //
+  // guestAuthSettled gates this for unauthenticated students: it becomes true
+  // only after the async guest creation attempt finishes, ensuring user_auth
+  // (dispatched by the effect above once userAccessToken is available) is sent
+  // before client_status regardless of network timing.
   useEffect(() => {
     if (!connected) return
+    // Wait until auth has settled — prevents client_status racing ahead of
+    // user_auth during async guest sign-in for student visitors.
+    if (!guestAuthSettled) return
+    // If we have a token, wait until user_auth has been sent first.
+    if (userAccessToken && !userAuthSent) return
     sendJson({
       type: 'client_status',
       data: {
@@ -685,12 +805,19 @@ export default function SessionPage() {
         tab_hidden: typeof document !== 'undefined' ? document.hidden : false,
       },
     })
-  }, [connected, isAudioEnabled, isVideoEnabled, sendJson])
+  }, [connected, guestAuthSettled, userAccessToken, userAuthSent, isAudioEnabled, isVideoEnabled, sendJson])
 
   useEffect(() => {
     if (!connected || typeof document === 'undefined') return
 
     const onVisibilityChange = () => {
+      // Apply the same auth-ordering gate as the main client_status effect:
+      // do not send client_status before user_auth has been confirmed sent.
+      // This prevents a tab-background/visibility event from racing ahead of
+      // user_auth during async guest sign-in for student visitors.
+      if (!guestAuthSettled) return
+      if (userAccessToken && !userAuthSent) return
+
       sendJson({
         type: 'client_status',
         data: {
@@ -705,7 +832,7 @@ export default function SessionPage() {
     return () => {
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
-  }, [connected, isAudioEnabled, isVideoEnabled, sendJson])
+  }, [connected, guestAuthSettled, userAccessToken, userAuthSent, isAudioEnabled, isVideoEnabled, sendJson])
 
   // Attach stream to video element
   useEffect(() => {
@@ -924,9 +1051,9 @@ export default function SessionPage() {
     appendDebugEvent('manual end session requested')
 
     try {
-      const response = await fetch(
-        `${API_URL}/api/sessions/${sessionId}/end?token=${encodeURIComponent(token)}`,
-        { method: 'POST' }
+      const response = await apiFetch(
+        `/api/sessions/${sessionId}/end?token=${encodeURIComponent(token)}`,
+        { method: 'POST', accessToken: userAccessToken }
       )
       if (!response.ok) {
         throw new Error('Failed to end session')

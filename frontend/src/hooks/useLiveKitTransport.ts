@@ -8,7 +8,8 @@ import {
   RoomEvent,
   Track,
 } from 'livekit-client'
-import { API_URL, LIVEKIT_URL } from '@/lib/constants'
+import { LIVEKIT_URL } from '@/lib/constants'
+import { apiFetch } from '@/lib/api-client'
 import { buildLiveKitConfig } from '@/lib/call/livekit-config'
 import type { WebRTCSignalData } from '@/lib/types'
 
@@ -27,6 +28,8 @@ interface UseLiveKitTransportOptions {
   localStream: MediaStream | null
   sessionId: string
   sessionToken: string
+  /** Optional user-level JWT (from NextAuth session) for authenticated API calls. */
+  accessToken?: string
   debug?: boolean
   onDebugEvent?: (message: string) => void
   onDataPacket?: (topic: string, payload: Uint8Array) => void
@@ -55,6 +58,7 @@ export function useLiveKitTransport({
   localStream,
   sessionId,
   sessionToken,
+  accessToken,
   debug,
   onDebugEvent,
   onDataPacket,
@@ -196,15 +200,15 @@ export function useLiveKitTransport({
   }, [localStream, log])
 
   const fetchJoinConfig = useCallback(async () => {
-    const response = await fetch(
-      `${API_URL}/api/sessions/${sessionId}/livekit-token?token=${encodeURIComponent(sessionToken)}${debug ? '&debug=1' : ''}`,
-      { method: 'POST' }
+    const response = await apiFetch(
+      `/api/sessions/${sessionId}/livekit-token?token=${encodeURIComponent(sessionToken)}${debug ? '&debug=1' : ''}`,
+      { method: 'POST', accessToken }
     )
 
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}))
       throw new Error(
-        payload?.detail || 'Failed to create LiveKit join token'
+        (payload as { detail?: string })?.detail || 'Failed to create LiveKit join token'
       )
     }
 
@@ -214,7 +218,7 @@ export function useLiveKitTransport({
       room_name: string
       identity: string
     }
-  }, [sessionId, sessionToken, debug])
+  }, [sessionId, sessionToken, accessToken, debug])
 
   useEffect(() => {
     if (!enabled) {

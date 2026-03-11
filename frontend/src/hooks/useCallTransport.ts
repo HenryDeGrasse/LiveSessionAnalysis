@@ -12,6 +12,8 @@ interface UseCallTransportOptions {
   localStream: MediaStream | null
   sessionId: string
   sessionToken: string
+  /** Optional user-level JWT (from NextAuth session) forwarded to apiFetch calls. */
+  accessToken?: string
   debug?: boolean
   sendSignal: (signal: {
     signal_type: 'offer' | 'answer' | 'ice_candidate'
@@ -35,6 +37,7 @@ export function useCallTransport({
   localStream,
   sessionId,
   sessionToken,
+  accessToken,
   debug,
   onDebugEvent,
   onDataPacket,
@@ -45,6 +48,7 @@ export function useCallTransport({
     localStream,
     sessionId,
     sessionToken,
+    accessToken,
     debug,
     onDebugEvent,
     onDataPacket,
