@@ -44,7 +44,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npx tsc --noEmit
-      - run: npm run test:unit -- --passWithNoTests
+      - run: npx vitest run --reporter=verbose
 
   test-backend:
     name: Backend tests
@@ -57,7 +57,8 @@ jobs:
       - uses: astral-sh/setup-uv@v4
       - run: |
           uv run --python 3.11 --with-requirements requirements.txt \
-            pytest -x -q -m "not slow and not eval_replay"
+            pytest -x -v --tb=short \
+            -m "not slow and not eval_replay and not browser_smoke and not soak_manual"
 
   # ──────────────────────────────────────────────────────────────
   # Deploy backend
