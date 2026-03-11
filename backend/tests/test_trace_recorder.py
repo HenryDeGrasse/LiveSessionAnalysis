@@ -113,6 +113,8 @@ def test_trace_recorder_sanitizes_webrtc_payloads_and_persists_trace(tmp_path):
         emitted_nudge="tutor_overtalk",
         metrics_index=0,
         trigger_features={"recent_tutor_talk_percent": 0.9},
+        candidates_evaluated=["check_for_understanding", "tutor_overtalk"],
+        fired_rule="tutor_overtalk",
     )
 
     trace = recorder.finalize(summary=_make_summary())
@@ -127,6 +129,8 @@ def test_trace_recorder_sanitizes_webrtc_payloads_and_persists_trace(tmp_path):
     assert trace.visual_signals[0].t_ms == 500
     assert trace.audio_signals[0].t_ms == 750
     assert trace.coaching_decisions[0].metrics_index == 0
+    assert trace.coaching_decisions[0].candidates_evaluated == ["check_for_understanding", "tutor_overtalk"]
+    assert trace.coaching_decisions[0].fired_rule == "tutor_overtalk"
     assert trace.summary.session_type == "practice"
     assert trace.config_hash
 

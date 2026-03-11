@@ -237,6 +237,8 @@ class SessionTraceRecorder:
         suppressed_reasons: Optional[List[str]] = None,
         metrics_index: Optional[int] = None,
         trigger_features: Optional[Dict[str, Any]] = None,
+        candidates_evaluated: Optional[List[str]] = None,
+        fired_rule: Optional[str] = None,
     ) -> CoachingDecisionTrace:
         decision = CoachingDecisionTrace(
             candidate_nudges=candidate_nudges,
@@ -244,6 +246,8 @@ class SessionTraceRecorder:
             suppressed_reasons=suppressed_reasons or [],
             metrics_index=metrics_index,
             trigger_features=trigger_features or {},
+            candidates_evaluated=candidates_evaluated or [],
+            fired_rule=fired_rule,
             **self._next_point(),
         )
         self._coaching_decisions.append(decision)

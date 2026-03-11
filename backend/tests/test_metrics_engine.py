@@ -10,6 +10,8 @@ def test_initial_snapshot():
     assert snapshot.session_id == "test-session"
     assert snapshot.tutor.eye_contact_score == 0.5
     assert snapshot.student.eye_contact_score == 0.5
+    assert snapshot.tutor.energy_score == 0.5
+    assert snapshot.student.energy_score == 0.5
     assert snapshot.session.interruption_count == 0
     assert snapshot.degraded is False
 
@@ -96,11 +98,44 @@ def test_engagement_score_range():
 
 def test_expression_updates_energy():
     engine = MetricsEngine("test")
+    now = time.time()
+
+    # Give both participants some speech evidence so vocal energy is active.
+    for i in range(8):
+        t = now + i * 0.03
+        engine.update_audio(Role.TUTOR, t, True, 0.5, 0.4)
+        engine.update_audio(Role.STUDENT, t, True, 0.5, 0.4)
+
     engine.update_expression(Role.TUTOR, 0.9)
     engine.update_expression(Role.STUDENT, 0.1)
-    snapshot = engine.compute_snapshot()
+    snapshot = engine.compute_snapshot(current_time=now + 1.0)
     # Tutor should have higher energy than student
-    assert snapshot.tutor.energy_score >= snapshot.student.energy_score
+    assert snapshot.tutor.energy_score > snapshot.student.energy_score
+
+
+def test_energy_does_not_collapse_to_low_during_silence_after_speaking():
+    engine = MetricsEngine("test")
+    base = 1000.0
+
+    # Student speaks with decent energy long enough to establish a baseline.
+    for i in range(15):
+        t = base + i * 0.03
+        engine.update_audio(Role.TUTOR, t, False, 0.0, 0.0)
+        engine.update_audio(Role.STUDENT, t, True, 0.08, 0.35)
+
+    # Then both go silent.
+    silence_t = base + 15 * 0.03
+    engine.update_audio(Role.TUTOR, silence_t, False, 0.0, 0.0)
+    engine.update_audio(Role.STUDENT, silence_t, False, 0.0, 0.0)
+
+    recent_snapshot = engine.compute_snapshot(current_time=silence_t + 1.0)
+    later_snapshot = engine.compute_snapshot(current_time=silence_t + 6.0)
+
+    # We should not interpret silence as low energy. Recent speech uses the last
+    # vocal-energy score; longer silence falls back to the speaking baseline.
+    assert recent_snapshot.student.energy_score >= 0.3
+    assert later_snapshot.student.energy_score >= 0.3
+    assert later_snapshot.student.energy_drop_from_baseline == 0.0
 
 
 def test_full_pipeline_integration():
