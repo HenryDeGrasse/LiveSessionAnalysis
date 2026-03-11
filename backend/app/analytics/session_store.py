@@ -40,6 +40,7 @@ class SessionStore:
     def list_sessions(
         self,
         tutor_id: Optional[str] = None,
+        student_user_id: Optional[str] = None,
         last_n: Optional[int] = None,
     ) -> list[SessionSummary]:
         sessions = []
@@ -51,6 +52,8 @@ class SessionStore:
             if summary is None:
                 continue
             if tutor_id and summary.tutor_id != tutor_id:
+                continue
+            if student_user_id and summary.student_user_id != student_user_id:
                 continue
             sessions.append(summary)
         # Sort by start_time descending (most recent first)

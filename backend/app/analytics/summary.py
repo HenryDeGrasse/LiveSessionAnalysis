@@ -22,6 +22,7 @@ def generate_summary(
     session_id: str,
     snapshots: list[MetricsSnapshot],
     tutor_id: str = "",
+    student_user_id: str = "",
     session_type: str = "general",
     media_provider: MediaProvider = MediaProvider.LIVEKIT,
     nudges: Optional[list[Nudge]] = None,
@@ -33,6 +34,7 @@ def generate_summary(
         return SessionSummary(
             session_id=session_id,
             tutor_id=tutor_id,
+            student_user_id=student_user_id,
             session_type=session_type,
             media_provider=media_provider,
             start_time=now,
@@ -107,6 +109,7 @@ def generate_summary(
     return SessionSummary(
         session_id=session_id,
         tutor_id=tutor_id,
+        student_user_id=student_user_id,
         session_type=session_type,
         start_time=start_time,
         end_time=end_time,
