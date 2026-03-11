@@ -150,6 +150,22 @@ beforeEach(() => {
         })
       )
     }
+    if (path.includes('/student-insights')) {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            engagement_percent: 75,
+            talk_time_percent: 35,
+            attention_score: 72,
+            tips: ['Great job staying engaged!'],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+      )
+    }
     if (path.includes('/sessions?')) {
       // peer sessions for comparison
       return Promise.resolve(
@@ -289,6 +305,47 @@ describe('SessionDetailPage — student view', () => {
         screen.getByTestId('analytics-detail-flagged-moments')
       ).toBeInTheDocument()
     })
+  })
+
+  it('shows the student insights section for a student', async () => {
+    mockUserRole = 'student'
+    render(<SessionDetailPage />)
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId('analytics-student-insights')
+      ).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Your Session Insights')).toBeInTheDocument()
+    expect(
+      screen.getByTestId('analytics-student-insights-summary')
+    ).toHaveTextContent('Your engagement was 75%')
+    expect(
+      screen.getByTestId('analytics-student-insights-engagement')
+    ).toHaveTextContent('75%')
+    expect(
+      screen.getByTestId('analytics-student-insights-talk-time')
+    ).toHaveTextContent('35%')
+    expect(
+      screen.getByTestId('analytics-student-insights-attention')
+    ).toHaveTextContent('72')
+    expect(screen.getByText('Great job staying engaged!')).toBeInTheDocument()
+  })
+
+  it('does not show the student insights section for a tutor', async () => {
+    mockUserRole = 'tutor'
+    render(<SessionDetailPage />)
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId('analytics-detail-flagged-moments')
+      ).toBeInTheDocument()
+    })
+
+    expect(
+      screen.queryByTestId('analytics-student-insights')
+    ).not.toBeInTheDocument()
   })
 
   it('shows "Session summary" in the title for a student', async () => {

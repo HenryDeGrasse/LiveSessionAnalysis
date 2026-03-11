@@ -15,7 +15,7 @@ import {
 } from 'recharts'
 import { useSession } from 'next-auth/react'
 import { apiFetch } from '@/lib/api-client'
-import type { SessionSummary } from '@/lib/types'
+import type { SessionSummary, StudentInsights } from '@/lib/types'
 import {
   ATTENTION_STATES,
   ATTENTION_STATE_COLORS,
@@ -56,10 +56,18 @@ const DETAIL_SERIES: Array<{
 }> = [
   { key: 'engagement', label: 'Engagement', color: '#8B5CF6' },
   { key: 'studentEye', label: 'Student camera-facing', color: '#22C55E' },
-  { key: 'studentEnergy', label: 'Student energy', color: '#F59E0B' },
+  { key: 'studentEnergy', label: 'Student speaking energy', color: '#F59E0B' },
   { key: 'tutorTalk', label: 'Tutor talk share', color: '#38BDF8' },
   { key: 'studentTalk', label: 'Student talk share', color: '#F43F5E' },
 ]
+
+function getEngagementFeedback(engagementPercent: number): string {
+  if (engagementPercent >= 80) return "You were highly focused — excellent work!"
+  if (engagementPercent >= 65) return "Good focus overall. A few more active moments could push it even higher."
+  if (engagementPercent >= 50) return "Decent effort. Try to minimise distractions to improve further."
+  if (engagementPercent >= 35) return "There's room to grow — small habits like staying in frame help a lot."
+  return "Sessions with lower engagement can be improved by reducing distractions and staying present."
+}
 
 function toneClasses(tone: 'emerald' | 'amber' | 'rose' | 'slate' | 'violet') {
   const styles = {
@@ -95,11 +103,13 @@ function DetailStat({
   label,
   value,
   detail,
+  tooltip,
   testId,
 }: {
   label: string
   value: string
   detail: string
+  tooltip?: string
   testId?: string
 }) {
   return (
@@ -107,8 +117,18 @@ function DetailStat({
       data-testid={testId}
       className="rounded-3xl border border-white/10 bg-white/5 p-5"
     >
-      <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
-        {label}
+      <p className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-slate-400">
+        <span>{label}</span>
+        {tooltip ? (
+          <span
+            className="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-white/15 text-[10px] font-semibold normal-case text-slate-300"
+            title={tooltip}
+            aria-label={tooltip}
+            tabIndex={0}
+          >
+            i
+          </span>
+        ) : null}
       </p>
       <p className="mt-3 text-3xl font-semibold text-white">{value}</p>
       <p className="mt-2 text-sm leading-6 text-slate-400">{detail}</p>
@@ -160,6 +180,7 @@ export default function SessionDetailPage() {
   const { data: authSession, status: authStatus } = useSession()
   const [session, setSession] = useState<SessionSummary | null>(null)
   const [recommendations, setRecommendations] = useState<string[]>([])
+  const [studentInsights, setStudentInsights] = useState<StudentInsights | null>(null)
   const [peerSessions, setPeerSessions] = useState<SessionSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [seriesVisible, setSeriesVisible] = useState<DetailSeriesKey[]>([
@@ -203,16 +224,27 @@ export default function SessionDetailPage() {
               return response.json()
             }
           ),
+      // Students receive a dedicated insights payload; tutors do not.
+      isStudentView
+        ? apiFetch(`/api/analytics/sessions/${sessionId}/student-insights`, { accessToken }).then(
+            async (response) => {
+              if (!response.ok) return null
+              return response.json()
+            }
+          )
+        : Promise.resolve(null),
     ])
-      .then(([sessionData, recs]) => {
+      .then(([sessionData, recs, insights]) => {
         if (cancelled) return
         setSession(sessionData)
         setRecommendations(Array.isArray(recs) ? recs : [])
+        setStudentInsights(insights ?? null)
       })
       .catch(() => {
         if (!cancelled) {
           setSession(null)
           setRecommendations([])
+          setStudentInsights(null)
         }
       })
       .finally(() => {
@@ -434,7 +466,19 @@ export default function SessionDetailPage() {
               <div className="mt-5 flex flex-wrap gap-4 text-sm text-slate-400">
                 <span>Started {new Date(session.start_time).toLocaleString()}</span>
                 <span>Duration {formatMinutes(session.duration_seconds)}</span>
-                <span>Session ID {session.session_id}</span>
+                <button
+                  type="button"
+                  className="group cursor-pointer text-slate-500 transition-colors hover:text-slate-300"
+                  title={`Click to copy: ${session.session_id}`}
+                  onClick={() => {
+                    navigator.clipboard.writeText(session.session_id)
+                  }}
+                >
+                  ID: {session.session_id.slice(0, 8)}…
+                  <span className="ml-1 text-[10px] opacity-0 transition-opacity group-hover:opacity-100">
+                    copy
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -479,9 +523,10 @@ export default function SessionDetailPage() {
             detail="Average student visual attention / camera-facing signal."
           />
           <DetailStat
-            label="Student energy"
+            label="Student speaking energy"
             value={formatPercent(session.avg_energy.student || 0)}
-            detail="Average student audio-primary energy score."
+            detail="Average student speaking-energy score (while speaking / just after speaking)."
+            tooltip="Measured while the student is speaking or has just spoken, so silence does not count as low energy."
           />
           <DetailStat
             label="Tutor talk share"
@@ -667,6 +712,103 @@ export default function SessionDetailPage() {
             )}
           </div>
         </section>
+
+        {/* Student insights — student-only */}
+        {isStudentView && studentInsights && (
+          <section
+            data-testid="analytics-student-insights"
+            className="rounded-[28px] border border-violet-400/20 bg-[radial-gradient(circle_at_top_left,_rgba(139,92,246,0.12),_transparent_60%)] bg-slate-950/60 p-6"
+          >
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-violet-400">
+                Student view
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold text-white">
+                Your Session Insights
+              </h2>
+              <p
+                data-testid="analytics-student-insights-summary"
+                className="mt-2 text-base leading-7 text-slate-300"
+              >
+                Your engagement was{' '}
+                <span className="font-semibold text-white">
+                  {Math.round(studentInsights.engagement_percent)}%
+                </span>{' '}
+                — {getEngagementFeedback(studentInsights.engagement_percent)}
+              </p>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+              <div
+                data-testid="analytics-student-insights-engagement"
+                className="rounded-3xl border border-violet-400/20 bg-violet-400/10 p-5"
+              >
+                <p className="text-xs uppercase tracking-[0.22em] text-violet-300">
+                  Engagement
+                </p>
+                <p className="mt-3 text-3xl font-semibold text-white">
+                  {Math.round(studentInsights.engagement_percent)}%
+                </p>
+                <p className="mt-2 text-sm leading-6 text-violet-200/70">
+                  Your overall focus and presence score for this session.
+                </p>
+              </div>
+
+              <div
+                data-testid="analytics-student-insights-talk-time"
+                className="rounded-3xl border border-sky-400/20 bg-sky-400/10 p-5"
+              >
+                <p className="text-xs uppercase tracking-[0.22em] text-sky-300">
+                  Your talk time
+                </p>
+                <p className="mt-3 text-3xl font-semibold text-white">
+                  {Math.round(studentInsights.talk_time_percent)}%
+                </p>
+                <p className="mt-2 text-sm leading-6 text-sky-200/70">
+                  Share of the session where you were actively speaking.
+                </p>
+              </div>
+
+              <div
+                data-testid="analytics-student-insights-attention"
+                className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5"
+              >
+                <p className="text-xs uppercase tracking-[0.22em] text-emerald-300">
+                  Attention score
+                </p>
+                <p className="mt-3 text-3xl font-semibold text-white">
+                  {Math.round(studentInsights.attention_score)}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-emerald-200/70">
+                  Composite of camera-facing and energy signals (0–100).
+                </p>
+              </div>
+            </div>
+
+            {(studentInsights.tips?.length ?? 0) > 0 && (
+              <div className="mt-6">
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                  Tips for next time
+                </p>
+                <div className="mt-4 space-y-3">
+                  {studentInsights.tips.map((tip, tipIdx) => (
+                    <div
+                      key={`tip-${tipIdx}`}
+                      className="rounded-3xl border border-white/10 bg-slate-950/40 p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-violet-400/30 bg-violet-400/10 text-xs font-semibold text-violet-200">
+                          {tipIdx + 1}
+                        </span>
+                        <p className="text-sm leading-6 text-slate-200">{tip}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="rounded-[28px] border border-white/10 bg-white/5 p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">

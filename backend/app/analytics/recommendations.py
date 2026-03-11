@@ -3,6 +3,72 @@ from __future__ import annotations
 from ..coaching_system.profiles import get_profile
 from ..models import SessionSummary
 
+
+def generate_student_insights(summary: SessionSummary) -> dict:
+    """Generate a student-facing insights summary from session metrics.
+
+    Returns a structured dict with engagement, talk-time, attention metrics and
+    actionable tips framed for the student (not the tutor).
+    """
+    engagement_percent = float(summary.engagement_score)
+
+    # talk_time_percent for the student (0-100 scale)
+    student_talk_ratio = summary.talk_time_ratio.get("student", 0.0)
+    talk_time_percent = round(student_talk_ratio * 100, 1)
+
+    # attention_score: average of eye-contact and energy for the student (0-100)
+    student_eye = summary.avg_eye_contact.get("student", 0.5)
+    student_energy = summary.avg_energy.get("student", 0.5)
+    attention_score = round((student_eye + student_energy) / 2.0 * 100, 1)
+
+    tips: list[str] = []
+
+    # Talk-time tips
+    if student_talk_ratio < 0.20:
+        tips.append(
+            "Try asking more questions and sharing your thoughts — "
+            "active participation helps you learn and retain more."
+        )
+    elif student_talk_ratio > 0.60:
+        tips.append(
+            "Great job staying engaged! Make sure to also give your tutor "
+            "time to explain and clarify concepts."
+        )
+
+    # Engagement tips
+    if engagement_percent > 75:
+        tips.append("Great engagement! You were highly focused during this session.")
+    elif engagement_percent < 40:
+        tips.append(
+            "Your overall engagement was lower this session. "
+            "Try minimizing distractions and staying in frame during future sessions."
+        )
+
+    # Attention tips
+    attention_flags = [
+        f for f in summary.flagged_moments if f.metric_name == "student_attention"
+    ]
+    if attention_flags:
+        tips.append(
+            "You appeared away from the screen a few times. "
+            "Staying in frame and facing the camera helps your tutor "
+            "gauge your understanding."
+        )
+
+    # Energy tips
+    if student_energy < 0.25:
+        tips.append(
+            "Your energy level seemed low. Make sure you are rested and comfortable "
+            "before sessions — it makes a big difference in focus and retention."
+        )
+
+    return {
+        "engagement_percent": round(engagement_percent, 1),
+        "talk_time_percent": talk_time_percent,
+        "attention_score": attention_score,
+        "tips": tips,
+    }
+
 # Talk time thresholds by session type (pulled from profiles)
 _TUTOR_TALK_THRESHOLDS = {
     "general": 0.75,
