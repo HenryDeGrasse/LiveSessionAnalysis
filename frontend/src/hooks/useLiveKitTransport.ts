@@ -11,7 +11,7 @@ import {
 import { LIVEKIT_URL } from '@/lib/constants'
 import { apiFetch } from '@/lib/api-client'
 import { buildLiveKitConfig } from '@/lib/call/livekit-config'
-import type { WebRTCSignalData } from '@/lib/types'
+import type { RemoteParticipant, WebRTCSignalData } from '@/lib/types'
 
 type SessionRole = 'tutor' | 'student'
 
@@ -67,9 +67,12 @@ export function useLiveKitTransport({
   const publishedTrackIdsRef = useRef<Set<string>>(new Set())
   const publishingTrackIdsRef = useRef<Set<string>>(new Set())
   const remoteStreamRef = useRef<MediaStream | null>(null)
+  /** Per-participant streams, keyed by LiveKit identity (excludes worker:* identities). */
+  const remoteParticipantsRef = useRef<Map<string, RemoteParticipant>>(new Map())
   const remoteParticipantDisconnectedRef = useRef(false)
 
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
+  const [remoteParticipants, setRemoteParticipants] = useState<Map<string, RemoteParticipant>>(new Map())
   const [callStatus, setCallStatus] = useState<CallStatus>(
     enabled ? 'waiting_for_participant' : 'disabled'
   )
@@ -89,22 +92,41 @@ export function useLiveKitTransport({
     [onDebugEvent]
   )
 
+  /** Build a React-state-safe snapshot of the current per-participant map. */
+  const buildParticipantsSnapshot = useCallback((): Map<string, RemoteParticipant> => {
+    const snapshot = new Map<string, RemoteParticipant>()
+    Array.from(remoteParticipantsRef.current.entries()).forEach(([identity, participant]) => {
+      snapshot.set(identity, {
+        identity,
+        stream: participant.stream,
+        hasVideo: participant.stream
+          .getVideoTracks()
+          .some((t: MediaStreamTrack) => t.readyState === 'live'),
+        hasAudio: participant.stream
+          .getAudioTracks()
+          .some((t: MediaStreamTrack) => t.readyState === 'live'),
+      })
+    })
+    return snapshot
+  }, [])
+
+  const syncRemoteParticipants = useCallback(() => {
+    const snapshot = buildParticipantsSnapshot()
+    setRemoteParticipants(snapshot)
+
+    const firstRemoteParticipant = snapshot.values().next().value ?? null
+    const nextRemoteStream = firstRemoteParticipant?.stream ?? null
+    remoteStreamRef.current = nextRemoteStream
+    setRemoteStream(nextRemoteStream)
+    setRemoteTrackCount(nextRemoteStream?.getTracks().length ?? 0)
+  }, [buildParticipantsSnapshot])
+
   const resetRemoteState = useCallback(() => {
     remoteStreamRef.current = null
     setRemoteStream(null)
     setRemoteTrackCount(0)
-  }, [])
-
-  const syncRemoteTrackCount = useCallback(() => {
-    setRemoteTrackCount(remoteStreamRef.current?.getTracks().length ?? 0)
-  }, [])
-
-  const ensureRemoteStream = useCallback(() => {
-    if (!remoteStreamRef.current) {
-      remoteStreamRef.current = new MediaStream()
-      setRemoteStream(remoteStreamRef.current)
-    }
-    return remoteStreamRef.current
+    remoteParticipantsRef.current.clear()
+    setRemoteParticipants(new Map())
   }, [])
 
   const applyRoomState = useCallback((room: Room) => {
@@ -118,7 +140,7 @@ export function useLiveKitTransport({
     const hasRemoteTracks = Boolean(
       remoteStreamRef.current?.getTracks().some((track) => track.readyState === 'live')
     )
-    const hasRemoteParticipant = room.remoteParticipants.size > 0 || hasRemoteTracks
+    const hasRemoteParticipant = remoteParticipantsRef.current.size > 0 || hasRemoteTracks
 
     if (room.state === ConnectionState.Connected) {
       if (remoteParticipantDisconnectedRef.current) {
@@ -259,33 +281,68 @@ export function useLiveKitTransport({
         })
         room.on(RoomEvent.ParticipantConnected, (participant) => {
           log(`participant connected: ${participant.identity}`)
+          if (participant.identity.startsWith('worker:')) {
+            return
+          }
           remoteParticipantDisconnectedRef.current = false
           setCallStatus('connecting')
           applyRoomState(room)
         })
         room.on(RoomEvent.ParticipantDisconnected, (participant) => {
           log(`participant disconnected: ${participant.identity}`)
-          remoteParticipantDisconnectedRef.current = true
-          resetRemoteState()
-          setCallStatus('reconnecting')
+          // Worker identities drive analytics, not UI; ignore them entirely.
+          if (!participant.identity.startsWith('worker:')) {
+            remoteParticipantsRef.current.delete(participant.identity)
+            syncRemoteParticipants()
+            if (remoteParticipantsRef.current.size === 0) {
+              remoteParticipantDisconnectedRef.current = true
+              resetRemoteState()
+              setCallStatus('reconnecting')
+            }
+          }
           applyRoomState(room)
         })
         room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
-          const stream = ensureRemoteStream()
-          remoteParticipantDisconnectedRef.current = false
-          if (!stream.getTracks().find((candidate) => candidate.id === track.mediaStreamTrack.id)) {
-            stream.addTrack(track.mediaStreamTrack)
+          // Exclude analytics-worker participants from the UI participant map.
+          if (participant.identity.startsWith('worker:')) {
+            log(`skipping worker track (${track.kind}) from ${participant.identity}`)
+            return
           }
-          syncRemoteTrackCount()
+
+          remoteParticipantDisconnectedRef.current = false
+          const identity = participant.identity
+
+          // Per-participant stream: one MediaStream per remote identity.
+          let remoteParticipant = remoteParticipantsRef.current.get(identity)
+          if (!remoteParticipant) {
+            remoteParticipant = {
+              identity,
+              stream: new MediaStream(),
+              hasVideo: false,
+              hasAudio: false,
+            }
+            remoteParticipantsRef.current.set(identity, remoteParticipant)
+          }
+          if (!remoteParticipant.stream.getTracks().find((t) => t.id === track.mediaStreamTrack.id)) {
+            remoteParticipant.stream.addTrack(track.mediaStreamTrack)
+          }
+
+          syncRemoteParticipants()
           setCallStatus('connected')
           log(`subscribed remote ${track.kind} from ${participant.identity}`)
         })
         room.on(RoomEvent.TrackUnsubscribed, (track, _publication, participant) => {
-          if (remoteStreamRef.current) {
-            remoteStreamRef.current.removeTrack(track.mediaStreamTrack)
+          if (!participant.identity.startsWith('worker:')) {
+            const remoteParticipant = remoteParticipantsRef.current.get(participant.identity)
+            if (remoteParticipant) {
+              remoteParticipant.stream.removeTrack(track.mediaStreamTrack)
+              if (remoteParticipant.stream.getTracks().length === 0) {
+                remoteParticipantsRef.current.delete(participant.identity)
+              }
+            }
+            syncRemoteParticipants()
           }
-          syncRemoteTrackCount()
-          if (remoteParticipantDisconnectedRef.current) {
+          if (remoteParticipantsRef.current.size === 0 && remoteParticipantDisconnectedRef.current) {
             setCallStatus('reconnecting')
           }
           log(`unsubscribed remote ${track.kind} from ${participant.identity}`)
@@ -338,11 +395,10 @@ export function useLiveKitTransport({
     fetchJoinConfig,
     applyRoomState,
     closeConnection,
-    ensureRemoteStream,
     log,
     publishLocalTracks,
     resetRemoteState,
-    syncRemoteTrackCount,
+    syncRemoteParticipants,
   ])
 
   useEffect(() => {
@@ -403,6 +459,8 @@ export function useLiveKitTransport({
     remoteTrackCount,
     hasRemoteVideo,
     hasRemoteAudio,
+    /** Map of visible remote participant identities to their per-participant data. */
+    remoteParticipants,
     callStatus,
     connectionState,
     iceConnectionState,

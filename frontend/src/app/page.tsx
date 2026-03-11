@@ -30,6 +30,7 @@ type SessionCreateResponse = {
   student_token: string
   media_provider?: 'custom_webrtc' | 'livekit'
   livekit_room_name?: string | null
+  coaching_intensity?: string
 }
 
 type AnalyticsTone = 'emerald' | 'amber' | 'rose' | 'slate' | 'violet'
@@ -95,23 +96,27 @@ function StatCard({
 
 function SessionCreationCard({
   sessionType,
+  coachingIntensity,
   creating,
   copiedStudentLink,
   error,
   sessionInfo,
   large = false,
   onSessionTypeChange,
+  onCoachingIntensityChange,
   onCreate,
   onEnterSession,
   onCopyStudentLink,
 }: {
   sessionType: string
+  coachingIntensity: string
   creating: boolean
   copiedStudentLink: boolean
   error: string
   sessionInfo: SessionCreateResponse | null
   large?: boolean
   onSessionTypeChange: (value: string) => void
+  onCoachingIntensityChange: (value: string) => void
   onCreate: () => void
   onEnterSession: () => void
   onCopyStudentLink: () => Promise<void>
@@ -158,6 +163,27 @@ function SessionCreationCard({
                 <option value="lecture">Lecture / explanation</option>
                 <option value="practice">Practice / problem solving</option>
                 <option value="discussion">Discussion / Socratic</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="coaching-intensity"
+                className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400"
+              >
+                Coaching intensity
+              </label>
+              <select
+                id="coaching-intensity"
+                data-testid="coaching-intensity-select"
+                value={coachingIntensity}
+                onChange={(event) => onCoachingIntensityChange(event.target.value)}
+                className={SELECT_CLASSES}
+              >
+                <option value="off">Off</option>
+                <option value="subtle">Subtle</option>
+                <option value="normal">Normal</option>
+                <option value="aggressive">Aggressive</option>
               </select>
             </div>
 
@@ -340,6 +366,7 @@ function HomeContent() {
   const isStudent = userRole === 'student'
 
   const [sessionType, setSessionType] = useState('general')
+  const [coachingIntensity, setCoachingIntensity] = useState('normal')
   const [joinToken, setJoinToken] = useState('')
   const [joinSessionId, setJoinSessionId] = useState('')
   const [creating, setCreating] = useState(false)
@@ -449,6 +476,7 @@ function HomeContent() {
         accessToken,
         body: JSON.stringify({
           session_type: sessionType,
+          coaching_intensity: coachingIntensity,
           media_provider: 'livekit',
         }),
       })
@@ -656,11 +684,13 @@ function HomeContent() {
             <SessionCreationCard
               large
               sessionType={sessionType}
+              coachingIntensity={coachingIntensity}
               creating={creating}
               copiedStudentLink={copiedStudentLink}
               error={error}
               sessionInfo={sessionInfo}
               onSessionTypeChange={setSessionType}
+              onCoachingIntensityChange={setCoachingIntensity}
               onCreate={createSession}
               onEnterSession={enterCreatedSession}
               onCopyStudentLink={copyStudentLink}
@@ -790,11 +820,13 @@ function HomeContent() {
             <aside className="space-y-6">
               <SessionCreationCard
                 sessionType={sessionType}
+                coachingIntensity={coachingIntensity}
                 creating={creating}
                 copiedStudentLink={copiedStudentLink}
                 error={error}
                 sessionInfo={sessionInfo}
                 onSessionTypeChange={setSessionType}
+                onCoachingIntensityChange={setCoachingIntensity}
                 onCreate={createSession}
                 onEnterSession={enterCreatedSession}
                 onCopyStudentLink={copyStudentLink}

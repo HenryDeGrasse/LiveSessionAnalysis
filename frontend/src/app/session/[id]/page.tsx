@@ -25,6 +25,7 @@ import { apiFetch } from '@/lib/api-client'
 import type {
   MetricsSnapshot,
   Nudge,
+  RemoteParticipant,
   SessionInfo,
   SessionSummary,
   WSMessage,
@@ -229,6 +230,76 @@ function analyticsToneClasses(tone: AnalyticsTone) {
     default:
       return 'border-white/10 bg-white/5 text-slate-200'
   }
+}
+
+/**
+ * Derive a human-readable display name from a LiveKit participant identity.
+ * Expected formats: `{sessionId}:tutor` or `{sessionId}:student:{N}`.
+ */
+function deriveDisplayName(identity: string): string {
+  const parts = identity.split(':')
+  if (parts.length >= 3) {
+    const role = parts[parts.length - 2]
+    const idx = parts[parts.length - 1]
+    if (role === 'student' && /^\d+$/.test(idx)) {
+      return `Student ${Number(idx) + 1}`
+    }
+  }
+  const last = parts[parts.length - 1]
+  if (last === 'tutor') return 'Tutor'
+  if (last === 'student') return 'Student 1'
+  return identity
+}
+
+function compareParticipantIdentity(a: RemoteParticipant, b: RemoteParticipant): number {
+  const tutorSuffix = ':tutor'
+  if (a.identity.endsWith(tutorSuffix) && !b.identity.endsWith(tutorSuffix)) return -1
+  if (!a.identity.endsWith(tutorSuffix) && b.identity.endsWith(tutorSuffix)) return 1
+
+  const studentPattern = /:student:(\d+)$/
+  const aMatch = a.identity.match(studentPattern)
+  const bMatch = b.identity.match(studentPattern)
+  if (aMatch && bMatch) {
+    return Number(aMatch[1]) - Number(bMatch[1])
+  }
+
+  return a.identity.localeCompare(b.identity)
+}
+
+/** Renders a single participant video tile for the multi-participant grid. */
+function ParticipantTile({ participant }: { participant: RemoteParticipant }) {
+  const tileVideoRef = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    if (tileVideoRef.current) {
+      tileVideoRef.current.srcObject = participant.stream
+      void tileVideoRef.current.play().catch(() => {
+        // Ignore autoplay policy errors during stream setup
+      })
+    }
+  }, [participant.stream])
+
+  return (
+    <div
+      data-testid="participant-tile"
+      className="relative overflow-hidden rounded-xl bg-black"
+    >
+      <video
+        ref={tileVideoRef}
+        autoPlay
+        playsInline
+        className="h-full w-full object-cover"
+      />
+      {!participant.hasVideo && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-xs text-gray-300">
+          No video
+        </div>
+      )}
+      <div className="absolute bottom-2 left-2 rounded-full border border-white/15 bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-md">
+        {deriveDisplayName(participant.identity)}
+      </div>
+    </div>
+  )
 }
 
 export default function SessionPage() {
@@ -593,6 +664,7 @@ export default function SessionPage() {
     remoteTrackCount,
     hasRemoteVideo,
     hasRemoteAudio,
+    remoteParticipants,
     callStatus,
     connectionState,
     iceConnectionState,
@@ -1009,7 +1081,7 @@ export default function SessionPage() {
   const consentButtonLabel = sessionEnded
     ? isTutor
       ? 'View analytics'
-      : 'Return home'
+      : 'View your session'
     : isTutor
     ? 'Join as Tutor'
     : role === 'student'
@@ -1032,7 +1104,7 @@ export default function SessionPage() {
       : `Waiting for the ${remoteLabel.toLowerCase()} to join.`
   const sessionEndedMessage = isTutor
     ? 'The session has ended. Analytics are ready and you can review them now.'
-    : 'The session has ended. You can safely leave this page.'
+    : 'Session complete — your engagement insights are ready.'
   const canShowDebugToggle = isTutor || showCoachDebug
   const endSummaryHealth = endSummary ? getSessionHealth(endSummary) : null
   const endSummaryRecommendationsToShow = (
@@ -1083,7 +1155,7 @@ export default function SessionPage() {
 
   const handleLeaveSession = useCallback(() => {
     if (sessionEnded) {
-      handleEndedSessionNavigation(isTutor ? `/analytics/${sessionId}` : '/')
+      handleEndedSessionNavigation(`/analytics/${sessionId}`)
       return
     }
 
@@ -1126,8 +1198,12 @@ export default function SessionPage() {
                   >
                     {roleBadgeLabel}
                   </span>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
-                    Session {sessionId}
+                  <span
+                    className="group cursor-pointer rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-400 transition-colors hover:text-slate-200"
+                    title={`Session ${sessionId}`}
+                    onClick={() => navigator.clipboard.writeText(sessionId)}
+                  >
+                    {sessionId.slice(0, 8)}…
                   </span>
                 </div>
                 <div>
@@ -1159,7 +1235,7 @@ export default function SessionPage() {
                   <ul className="mt-3 space-y-2 text-sm text-slate-200">
                     <li>• camera-facing / gaze direction</li>
                     <li>• speaking time and turn-taking</li>
-                    <li>• audio-primary energy / engagement signals</li>
+                    <li>• speaking-energy and engagement signals</li>
                   </ul>
                 </div>
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
@@ -1245,8 +1321,12 @@ export default function SessionPage() {
                 >
                   {roleBadgeLabel}
                 </span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-slate-300">
-                  Session {sessionId}
+                <span
+                  className="group cursor-pointer rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-slate-400 transition-colors hover:text-slate-200"
+                  title={`Session ${sessionId}`}
+                  onClick={() => navigator.clipboard.writeText(sessionId)}
+                >
+                  {sessionId.slice(0, 8)}…
                 </span>
               </div>
               <p className="mt-2 text-sm text-white">
@@ -1347,7 +1427,7 @@ export default function SessionPage() {
                   onClick={handleLeaveSession}
                   className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
                 >
-                  {sessionEnded ? 'Return home' : 'Leave session'}
+                  {sessionEnded ? 'View your session' : 'Leave session'}
                 </button>
               )}
               {isTutor && sessionEnded && !showTutorEndSummaryOverlay && (
@@ -1389,7 +1469,60 @@ export default function SessionPage() {
         {/* Call surface */}
         <div className="relative w-full max-w-5xl">
           <div data-testid="call-surface" className="relative aspect-video overflow-hidden rounded-[28px] border border-white/10 bg-black shadow-[0_24px_90px_rgba(0,0,0,0.45)]">
-            {ENABLE_WEBRTC_CALL_UI ? (
+            {ENABLE_WEBRTC_CALL_UI && remoteParticipants.size > 1 ? (
+              <>
+                {/* Multi-participant grid — 2-up for 2 participants, 2×2 for 3–4 */}
+                <div
+                  data-testid="participant-grid"
+                  className={`absolute inset-0 grid gap-1 ${
+                    remoteParticipants.size === 2
+                      ? 'grid-cols-2'
+                      : 'grid-cols-2 grid-rows-2'
+                  }`}
+                >
+                  {Array.from(remoteParticipants.values())
+                    .sort(compareParticipantIdentity)
+                    .map((participant) => (
+                      <ParticipantTile
+                        key={participant.identity}
+                        participant={participant}
+                      />
+                    ))}
+                </div>
+
+                {/* Call-status badge top-left */}
+                <div className="absolute left-4 top-4 flex items-center gap-2">
+                  <div data-testid="call-status-badge" className={`rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-md ${callStatusClasses(callStatus)}`}>
+                    {callStatusLabel(callStatus)}
+                  </div>
+                  {peerDisconnected && !sessionEnded && (
+                    <div className="rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-100 backdrop-blur-md">
+                      Reconnect grace active
+                    </div>
+                  )}
+                </div>
+
+                {/* Local video PIP in corner */}
+                <div className="absolute bottom-4 right-4 w-40 overflow-hidden rounded-2xl border border-white/15 bg-black/80 shadow-lg sm:w-52">
+                  <video
+                    data-testid="local-video"
+                    ref={videoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className="aspect-video h-full w-full object-cover"
+                  />
+                  {!isVideoEnabled && hasVideoTrack && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-xs text-gray-200">
+                      Camera off
+                    </div>
+                  )}
+                  <div className="absolute bottom-2 left-2 rounded-full border border-white/10 bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-md">
+                    {localLabel}
+                  </div>
+                </div>
+              </>
+            ) : ENABLE_WEBRTC_CALL_UI ? (
               <>
                 <video
                   data-testid="remote-video"
@@ -1750,7 +1883,34 @@ export default function SessionPage() {
                       <span className="text-gray-500">Session type:</span>{' '}
                       {currentMetrics.coaching_decision.session_type}
                     </p>
-                    {currentMetrics.coaching_decision.emitted_nudge ? (
+                    {(currentMetrics.coaching_decision.coaching_intensity ?? sessionInfo?.coaching_intensity) ? (
+                      <p>
+                        <span className="text-gray-500">Coaching intensity:</span>{' '}
+                        {currentMetrics.coaching_decision.coaching_intensity ?? sessionInfo?.coaching_intensity}
+                      </p>
+                    ) : null}
+                    {currentMetrics.coaching_decision.candidates_evaluated !== undefined && (
+                      <details className="cursor-pointer">
+                        <summary className="text-gray-400">
+                          Rules evaluated: {currentMetrics.coaching_decision.candidates_evaluated.length}
+                        </summary>
+                        <ul className="ml-4 mt-1 list-disc text-gray-500">
+                          {currentMetrics.coaching_decision.candidates_evaluated.map((name, i) => (
+                            <li key={i}>{name}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                    {currentMetrics.coaching_decision.fired_rule !== undefined ? (
+                      currentMetrics.coaching_decision.fired_rule ? (
+                        <p>
+                          <span className="text-green-400">▶ Fired rule:</span>{' '}
+                          <span className="text-green-300">{currentMetrics.coaching_decision.fired_rule}</span>
+                        </p>
+                      ) : (
+                        <p className="text-gray-500">No rule fired</p>
+                      )
+                    ) : currentMetrics.coaching_decision.emitted_nudge ? (
                       <p>
                         <span className="text-green-400">▶ Fired:</span>{' '}
                         {currentMetrics.coaching_decision.emitted_nudge}
