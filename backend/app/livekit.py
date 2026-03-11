@@ -119,8 +119,12 @@ def build_livekit_join_payload(room: SessionRoom, role: Role) -> dict[str, Any]:
         algorithm="HS256",
     )
 
+    # Return the public URL for browser clients.  Falls back to the
+    # internal livekit_url when livekit_public_url is not configured.
+    public_url = settings.livekit_public_url or settings.livekit_url
+
     return {
-        "url": settings.livekit_url,
+        "url": public_url,
         "room_name": room_name,
         "identity": livekit_identity(room.session_id, role),
         "token": token,

@@ -67,7 +67,7 @@ class LiveKitAnalyticsWorker:
             tutor_identity = livekit_identity(
                 self.session.session_id, Role.TUTOR
             )
-            room.local_participant.publish_data(
+            await room.local_participant.publish_data(
                 payload,
                 reliable=reliable,
                 destination_identities=[tutor_identity],
