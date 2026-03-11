@@ -24,6 +24,7 @@ class ParticipantState:
     role: Role
     websocket: WebSocket | None = None
     connected: bool = False
+    user_id: str = ""  # Authenticated user ID (empty for guests / unauthenticated)
     livekit_connected: bool = False
     livekit_identity: str = ""
     livekit_published_tracks: set[str] = field(default_factory=set)
@@ -55,6 +56,7 @@ class SessionRoom:
     tutor_token: str
     student_token: str
     tutor_id: str = ""
+    student_user_id: str = ""  # Authenticated student user ID (set via first-message auth)
     session_type: str = "general"
     media_provider: MediaProvider = MediaProvider.CUSTOM_WEBRTC
     livekit_room_name: str = ""
@@ -265,6 +267,7 @@ class SessionManager:
     def create_session(
         self,
         tutor_id: str = "",
+        student_user_id: str = "",
         session_type: str = "general",
         media_provider: MediaProvider | None = None,
     ) -> SessionCreateResponse:
@@ -282,6 +285,7 @@ class SessionManager:
             tutor_token=tutor_token,
             student_token=student_token,
             tutor_id=tutor_id,
+            student_user_id=student_user_id,
             session_type=session_type,
             media_provider=media_provider,
             livekit_room_name=livekit_room_name,

@@ -58,6 +58,7 @@ def generate_session_summary(room: SessionRoom):
         room.session_id,
         room.metrics_history,
         tutor_id=room.tutor_id,
+        student_user_id=room.student_user_id,
         session_type=room.session_type,
         media_provider=room.media_provider,
         nudges=room.nudges_sent,
@@ -67,10 +68,10 @@ def generate_session_summary(room: SessionRoom):
 def save_session(room: SessionRoom):
     """Persist session summary to storage."""
     try:
-        from .analytics.session_store import SessionStore
+        from .analytics import get_session_store
 
         summary = generate_session_summary(room)
-        store = SessionStore()
+        store = get_session_store()
         store.save(summary)
         return summary
     except Exception as exc:
