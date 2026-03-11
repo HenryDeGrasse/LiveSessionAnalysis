@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import { Toaster } from 'sonner'
+import { Providers } from '@/components/providers'
+import { SiteHeader } from '@/components/auth/SiteHeader'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -15,8 +17,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-slate-950 text-slate-100">
-        {children}
-        <Toaster position="bottom-right" richColors />
+        <Providers>
+          <SiteHeader />
+          {children}
+          <Toaster position="bottom-right" richColors />
+        </Providers>
       </body>
     </html>
   )

@@ -1,6 +1,13 @@
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
+/**
+ * Google OAuth client ID (public — safe to expose to the browser).
+ * Required when the Google sign-in button is rendered on the client.
+ */
+export const GOOGLE_CLIENT_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''
+
 export const WS_URL =
   process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000'
 
