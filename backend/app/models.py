@@ -5,12 +5,19 @@ from datetime import datetime
 from enum import Enum
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class Role(str, Enum):
     TUTOR = "tutor"
     STUDENT = "student"
+
+
+class CoachingIntensity(str, Enum):
+    OFF = "off"
+    SUBTLE = "subtle"
+    NORMAL = "normal"
+    AGGRESSIVE = "aggressive"
 
 
 class MediaProvider(str, Enum):
@@ -81,6 +88,10 @@ class MetricsSnapshot(BaseModel):
     degradation_reason: str = "normal"
     target_fps: int = 3
     coaching_decision: Optional[dict] = None
+    # Per-student metrics for multi-student sessions (indices 1+ students).
+    # Keyed by student index as a string for JSON serialization.
+    # Not populated for single-student sessions (max_students=1).
+    per_student_metrics: Optional[dict] = None
 
 
 class NudgePriority(str, Enum):
@@ -116,6 +127,9 @@ class SessionSummary(BaseModel):
     session_type: str = "general"
     media_provider: MediaProvider = MediaProvider.LIVEKIT
     talk_time_ratio: dict[str, float] = Field(default_factory=dict)
+    # Multi-student sessions can expose a per-student talk-time breakdown keyed
+    # by student index ("0" == primary student, "1+" == extra students).
+    per_student_talk_time_ratio: Optional[dict[str, float]] = None
     avg_eye_contact: dict[str, float] = Field(default_factory=dict)
     avg_energy: dict[str, float] = Field(default_factory=dict)
     total_interruptions: int = 0
@@ -152,14 +166,25 @@ class SessionCreateRequest(BaseModel):
     student_user_id: str = ""
     session_type: str = "general"
     media_provider: Optional[MediaProvider] = None
+    coaching_intensity: CoachingIntensity = CoachingIntensity.NORMAL
+    max_students: int = 1
 
 
 class SessionCreateResponse(BaseModel):
     session_id: str
     tutor_token: str
-    student_token: str
+    # Primary list of all pre-generated student tokens.
+    student_tokens: list[str] = Field(default_factory=list)
+    max_students: int = 1
     media_provider: MediaProvider = MediaProvider.CUSTOM_WEBRTC
     livekit_room_name: Optional[str] = None
+    coaching_intensity: CoachingIntensity = CoachingIntensity.NORMAL
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def student_token(self) -> str:
+        """Backward-compatible alias for student_tokens[0]."""
+        return self.student_tokens[0] if self.student_tokens else ""
 
 
 class WebRTCSignal(BaseModel):

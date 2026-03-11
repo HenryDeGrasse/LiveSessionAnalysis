@@ -191,12 +191,18 @@ class LiveKitAnalyticsWorker:
         if track_sid in self._track_tasks:
             return
 
-        role = self._role_for_participant(participant)
-        if role is None:
+        role_result = self._role_and_index_for_participant(participant)
+        if role_result is None:
             return
+        role, student_index = role_result
 
         task = asyncio.create_task(
-            self._consume_track(track=track, track_sid=track_sid, role=role)
+            self._consume_track(
+                track=track,
+                track_sid=track_sid,
+                role=role,
+                student_index=student_index,
+            )
         )
         self._track_tasks[track_sid] = task
         task.add_done_callback(lambda _task, sid=track_sid: self._track_tasks.pop(sid, None))
@@ -224,8 +230,8 @@ class LiveKitAnalyticsWorker:
 
         remote_participants = getattr(room, "remote_participants", {})
         for participant in list(remote_participants.values()):
-            role = self._role_for_participant(participant)
-            if role is None:
+            role_result = self._role_and_index_for_participant(participant)
+            if role_result is None:
                 continue
             for publication in getattr(participant, "track_publications", {}).values():
                 track = getattr(publication, "track", None)
@@ -233,21 +239,43 @@ class LiveKitAnalyticsWorker:
                     continue
                 self._on_track_subscribed(track, publication, participant)
 
-    def _role_for_participant(self, participant) -> Role | None:
+    def _role_and_index_for_participant(
+        self, participant
+    ) -> "tuple[Role, int] | None":
+        """Return (role, student_index) for a LiveKit participant, or None."""
         identity = getattr(participant, "identity", "")
         if not isinstance(identity, str):
             return None
         return livekit_role_for_identity(self.session.session_id, identity)
 
-    async def _consume_track(self, *, track, track_sid: str, role: Role):
+    def _role_for_participant(self, participant) -> "Role | None":
+        """Legacy helper kept for external callers; returns only the role."""
+        result = self._role_and_index_for_participant(participant)
+        return result[0] if result is not None else None
+
+    async def _consume_track(
+        self, *, track, track_sid: str, role: Role, student_index: int = 0
+    ):
         if isinstance(track, rtc.RemoteAudioTrack):
-            await self._consume_audio_track(track_sid=track_sid, track=track, role=role)
+            await self._consume_audio_track(
+                track_sid=track_sid,
+                track=track,
+                role=role,
+                student_index=student_index,
+            )
             return
         if isinstance(track, rtc.RemoteVideoTrack):
-            await self._consume_video_track(track_sid=track_sid, track=track, role=role)
+            await self._consume_video_track(
+                track_sid=track_sid,
+                track=track,
+                role=role,
+                student_index=student_index,
+            )
             return
 
-    async def _consume_audio_track(self, *, track_sid: str, track, role: Role):
+    async def _consume_audio_track(
+        self, *, track_sid: str, track, role: Role, student_index: int = 0
+    ):
         stream = rtc.AudioStream.from_track(
             track=track,
             sample_rate=LIVEKIT_WORKER_AUDIO_SAMPLE_RATE,
@@ -257,7 +285,9 @@ class LiveKitAnalyticsWorker:
             async for event in stream:
                 pcm = pcm_bytes_from_audio_frame(event.frame)
                 if pcm:
-                    await process_audio_chunk(self.session, role, pcm)
+                    await process_audio_chunk(
+                        self.session, role, pcm, student_index=student_index
+                    )
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -271,7 +301,9 @@ class LiveKitAnalyticsWorker:
         finally:
             await stream.aclose()
 
-    async def _consume_video_track(self, *, track_sid: str, track, role: Role):
+    async def _consume_video_track(
+        self, *, track_sid: str, track, role: Role, student_index: int = 0
+    ):
         stream = rtc.VideoStream.from_track(
             track=track,
             format=rtc.VideoBufferType.RGB24,
@@ -280,7 +312,9 @@ class LiveKitAnalyticsWorker:
         try:
             async for event in stream:
                 frame_bgr = bgr_frame_from_video_frame(event.frame)
-                await process_video_frame_array(self.session, role, frame_bgr)
+                await process_video_frame_array(
+                    self.session, role, frame_bgr, student_index=student_index
+                )
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -302,9 +336,11 @@ def maybe_start_livekit_analytics_worker(room: SessionRoom) -> bool:
         return False
 
     tutor = room.participants[Role.TUTOR]
-    student = room.participants[Role.STUDENT]
+    any_student_connected = any(
+        participant.livekit_connected for _idx, participant in room.all_student_participants()
+    )
     webhooks_seen = room.livekit_last_webhook_at is not None
-    if webhooks_seen and (not tutor.livekit_connected or not student.livekit_connected):
+    if webhooks_seen and (not tutor.livekit_connected or not any_student_connected):
         return False
 
     existing = _workers.get(room.session_id)

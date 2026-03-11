@@ -70,3 +70,66 @@ def test_session_average():
     avg = tracker.session_average
     assert isinstance(avg, float)
     assert 0.0 <= avg <= 1.0
+
+
+class TestEnergyCalibration:
+    """Verify the dB-scale recalibration produces sensible energy scores
+    for real-world conversational audio levels."""
+
+    def test_conversational_rms_produces_moderate_energy(self):
+        """Normal conversational speech (RMS ~0.03-0.15) should produce
+        energy in the 0.4-0.8 range, not squashed near zero."""
+        tracker = EnergyTracker()
+        # Simulate normal conversation: RMS ~0.08, moderate speech rate variation
+        for i in range(15):
+            tracker.update_audio(
+                rms_energy=0.08,
+                speech_rate_proxy=0.3 + (0.1 if i % 3 == 0 else 0.0),
+            )
+        assert tracker.score >= 0.35, (
+            f"Conversational RMS ~0.08 should produce energy >= 0.35, got {tracker.score:.3f}"
+        )
+        assert tracker.score <= 0.85
+
+    def test_quiet_speech_above_silence(self):
+        """Quiet but present speech (RMS ~0.02) should be clearly above
+        the silent baseline."""
+        quiet = EnergyTracker()
+        quiet.update_expression(0.5)
+        for _ in range(10):
+            quiet.update_audio(rms_energy=0.02, speech_rate_proxy=0.2)
+
+        silent = EnergyTracker()
+        silent.update_expression(0.5)
+        for _ in range(10):
+            silent.update_audio(rms_energy=0.0, speech_rate_proxy=0.0)
+
+        assert quiet.score > silent.score + 0.1, (
+            f"Quiet speech ({quiet.score:.3f}) should be noticeably above silence ({silent.score:.3f})"
+        )
+
+    def test_loud_speech_high_energy(self):
+        """Loud, animated speech (RMS ~0.3+) should produce energy > 0.7."""
+        tracker = EnergyTracker()
+        tracker.update_expression(0.7)
+        for i in range(15):
+            tracker.update_audio(
+                rms_energy=0.35,
+                speech_rate_proxy=0.4 + (0.3 if i % 2 == 0 else 0.0),
+            )
+        assert tracker.score >= 0.65, (
+            f"Loud speech should produce energy >= 0.65, got {tracker.score:.3f}"
+        )
+
+    def test_rms_to_db_score_mapping(self):
+        """Spot-check the static dB mapping function."""
+        # Silence → 0
+        assert EnergyTracker._rms_to_db_score(0.0) == 0.0
+        # Very quiet (RMS 0.001 → ~-60dB) → near 0
+        assert EnergyTracker._rms_to_db_score(0.001) < 0.1
+        # Conversational (RMS 0.05 → ~-26dB) → mid-range
+        mid = EnergyTracker._rms_to_db_score(0.05)
+        assert 0.3 <= mid <= 0.7, f"RMS 0.05 maps to {mid:.3f}, expected 0.3–0.7"
+        # Loud (RMS 0.3 → ~-10.5dB) → near 1.0
+        loud = EnergyTracker._rms_to_db_score(0.3)
+        assert loud >= 0.9, f"RMS 0.3 maps to {loud:.3f}, expected >= 0.9"

@@ -23,10 +23,16 @@ class MetricsEngine:
     faster UI refreshes on meaningful audio/overlap state changes.
     """
 
+    # After someone stops speaking, keep using the current vocal-energy score
+    # briefly so the metric reflects the just-finished contribution. Once that
+    # window passes, fall back to their speaking baseline / neutral value rather
+    # than treating silence as low energy.
+    _ENERGY_RECENT_SPEECH_HOLD_SECONDS = 3.0
+
     def __init__(self, session_id: str):
         self.session_id = session_id
 
-        # Per-participant trackers
+        # Per-participant trackers (index 0 / primary student)
         self.tutor_eye_contact = EyeContactTracker()
         self.student_eye_contact = EyeContactTracker()
         self.tutor_energy = EnergyTracker()
@@ -35,6 +41,11 @@ class MetricsEngine:
         self.student_drift = AttentionDriftDetector()
         self.tutor_attention_state = AttentionStateTracker()
         self.student_attention_state = AttentionStateTracker()
+
+        # Extra student trackers: index 1+ in multi-student sessions.
+        # Each entry holds eye_contact, energy, drift, attention_state, and
+        # speaking_time (per-student talk-time tracker).
+        self.extra_student_trackers: dict[int, dict] = {}
 
         # Cross-participant trackers
         self.speaking_time = SpeakingTimeTracker()
@@ -46,6 +57,19 @@ class MetricsEngine:
         self._latest_tutor_rms_db: float = -100.0
         self._latest_student_rms_db: float = -100.0
 
+    def _get_or_create_extra_student_tracker(self, student_index: int) -> dict:
+        """Return (creating if needed) the tracker dict for an extra student (index >= 1)."""
+        if student_index not in self.extra_student_trackers:
+            self.extra_student_trackers[student_index] = {
+                "eye_contact": EyeContactTracker(),
+                "energy": EnergyTracker(),
+                "drift": AttentionDriftDetector(),
+                "attention_state": AttentionStateTracker(),
+                "speaking_time": SpeakingTimeTracker(),
+                "_latest_rms_db": -100.0,
+            }
+        return self.extra_student_trackers[student_index]
+
     def update_visual_observation(
         self,
         role: Role,
@@ -55,8 +79,22 @@ class MetricsEngine:
         on_camera: bool | None = None,
         horizontal_angle_deg: float | None = None,
         vertical_angle_deg: float | None = None,
+        student_index: int = 0,
     ):
         """Update face presence / gaze-derived attention state for a participant."""
+        if role == Role.STUDENT and student_index > 0:
+            t = self._get_or_create_extra_student_tracker(student_index)
+            t["attention_state"].update(
+                timestamp,
+                face_detected=face_detected,
+                on_camera=on_camera,
+                horizontal_angle_deg=horizontal_angle_deg,
+                vertical_angle_deg=vertical_angle_deg,
+            )
+            if not face_detected:
+                t["eye_contact"].update(timestamp, False)
+            return
+
         tracker = (
             self.tutor_attention_state if role == Role.TUTOR else self.student_attention_state
         )
@@ -80,8 +118,21 @@ class MetricsEngine:
         on_camera: bool,
         horizontal_angle_deg: float | None = None,
         vertical_angle_deg: float | None = None,
+        student_index: int = 0,
     ):
         """Update eye contact for a participant."""
+        if role == Role.STUDENT and student_index > 0:
+            t = self._get_or_create_extra_student_tracker(student_index)
+            t["attention_state"].update(
+                timestamp,
+                face_detected=True,
+                on_camera=on_camera,
+                horizontal_angle_deg=horizontal_angle_deg,
+                vertical_angle_deg=vertical_angle_deg,
+            )
+            t["eye_contact"].update(timestamp, on_camera)
+            return
+
         self.update_visual_observation(
             role,
             timestamp,
@@ -89,14 +140,19 @@ class MetricsEngine:
             on_camera=on_camera,
             horizontal_angle_deg=horizontal_angle_deg,
             vertical_angle_deg=vertical_angle_deg,
+            student_index=student_index,
         )
         if role == Role.TUTOR:
             self.tutor_eye_contact.update(timestamp, on_camera)
         else:
             self.student_eye_contact.update(timestamp, on_camera)
 
-    def update_expression(self, role: Role, valence: float):
+    def update_expression(self, role: Role, valence: float, student_index: int = 0):
         """Update facial expression valence for a participant."""
+        if role == Role.STUDENT and student_index > 0:
+            t = self._get_or_create_extra_student_tracker(student_index)
+            t["energy"].update_expression(valence)
+            return
         if role == Role.TUTOR:
             self.tutor_energy.update_expression(valence)
         else:
@@ -126,11 +182,28 @@ class MetricsEngine:
         rms_energy: float,
         speech_rate_proxy: float,
         rms_db: float | None = None,
+        student_index: int = 0,
     ) -> bool:
         """Update audio metrics for a participant.
 
         Returns True when live UI metrics should ideally refresh quickly.
+
+        For extra students (student_index > 0), only per-student speaking-time
+        tracking is updated; the primary cross-participant interruption tracker
+        is not modified to avoid corrupting the primary tutor↔student metrics.
         """
+        # Allow old call sites/tests to omit raw dB and derive an approximation.
+        if rms_db is None:
+            rms_db = 20.0 * math.log10(max(rms_energy * 0.3, 1e-6))
+
+        # Extra students: update their own speaking-time tracker only.
+        if role == Role.STUDENT and student_index > 0:
+            t = self._get_or_create_extra_student_tracker(student_index)
+            t["energy"].update_audio(rms_energy, speech_rate_proxy, is_speech=is_speech)
+            t["_latest_rms_db"] = rms_db
+            t["speaking_time"].update(timestamp, False, is_speech)
+            return False
+
         before_key = (
             self.speaking_time.tutor_speaking,
             self.speaking_time.student_speaking,
@@ -139,18 +212,23 @@ class MetricsEngine:
             self.interruptions.live_state_key(timestamp),
         )
 
-        # Allow old call sites/tests to omit raw dB and derive an approximation.
-        if rms_db is None:
-            rms_db = 20.0 * math.log10(max(rms_energy * 0.3, 1e-6))
-
-        # Update energy tracker
+        # Update energy tracker. Non-speech chunks are intentionally ignored by
+        # the tracker so silence does not drag vocal energy toward zero.
         if role == Role.TUTOR:
-            self.tutor_energy.update_audio(rms_energy, speech_rate_proxy)
+            self.tutor_energy.update_audio(
+                rms_energy,
+                speech_rate_proxy,
+                is_speech=is_speech,
+            )
             self._latest_tutor_rms_db = rms_db
             tutor_speaking = is_speech
             student_speaking = self.speaking_time.student_speaking
         else:
-            self.student_energy.update_audio(rms_energy, speech_rate_proxy)
+            self.student_energy.update_audio(
+                rms_energy,
+                speech_rate_proxy,
+                is_speech=is_speech,
+            )
             self._latest_student_rms_db = rms_db
             tutor_speaking = self.speaking_time.tutor_speaking
             student_speaking = is_speech
@@ -198,8 +276,30 @@ class MetricsEngine:
         # Per-participant metrics
         tutor_eye = self.tutor_eye_contact.score()
         student_eye = self.student_eye_contact.score()
-        tutor_en = self.tutor_energy.score
-        student_en = self.student_energy.score
+
+        tutor_time_since_spoke = self.speaking_time.time_since_tutor_spoke(now)
+        student_time_since_spoke = self.speaking_time.time_since_student_spoke(now)
+
+        tutor_en = self._effective_energy(
+            self.tutor_energy,
+            is_speaking=self.speaking_time.tutor_speaking,
+            time_since_spoke_seconds=tutor_time_since_spoke,
+        )
+        student_en = self._effective_energy(
+            self.student_energy,
+            is_speaking=self.speaking_time.student_speaking,
+            time_since_spoke_seconds=student_time_since_spoke,
+        )
+        tutor_energy_drop = self._effective_energy_drop(
+            self.tutor_energy,
+            is_speaking=self.speaking_time.tutor_speaking,
+            time_since_spoke_seconds=tutor_time_since_spoke,
+        )
+        student_energy_drop = self._effective_energy_drop(
+            self.student_energy,
+            is_speaking=self.speaking_time.student_speaking,
+            time_since_spoke_seconds=student_time_since_spoke,
+        )
 
         tutor_attention_state = self.tutor_attention_state.state(now)
         tutor_attention_confidence = self.tutor_attention_state.confidence(now)
@@ -232,13 +332,52 @@ class MetricsEngine:
         # Determine overall trend (use student drift as primary signal)
         trend = self.student_drift.trend()
 
+        # Build per-student metrics for extra students (indices 1+)
+        per_student: dict | None = None
+        if self.extra_student_trackers:
+            per_student = {}
+            for idx, t in self.extra_student_trackers.items():
+                st = t["speaking_time"]
+                en_tracker = t["energy"]
+                eye_tracker = t["eye_contact"]
+                attn_tracker = t["attention_state"]
+                drift_tracker = t["drift"]
+
+                s_time_since_spoke = st.time_since_student_spoke(now)
+                s_is_speaking = st.student_speaking
+                s_en = self._effective_energy(
+                    en_tracker,
+                    is_speaking=s_is_speaking,
+                    time_since_spoke_seconds=s_time_since_spoke,
+                )
+                s_energy_drop = self._effective_energy_drop(
+                    en_tracker,
+                    is_speaking=s_is_speaking,
+                    time_since_spoke_seconds=s_time_since_spoke,
+                )
+                drift_tracker.update(now, s_en)
+                per_student[str(idx)] = ParticipantMetrics(
+                    eye_contact_score=eye_tracker.score(),
+                    talk_time_percent=st.student_ratio(),
+                    energy_score=s_en,
+                    energy_drop_from_baseline=s_energy_drop,
+                    is_speaking=s_is_speaking,
+                    attention_state=attn_tracker.state(now),
+                    attention_state_confidence=attn_tracker.confidence(now),
+                    face_presence_score=attn_tracker.face_presence_score(now),
+                    visual_attention_score=attn_tracker.visual_attention_score(now),
+                    time_in_attention_state_seconds=attn_tracker.time_in_current_state(now),
+                    talk_time_pct_windowed=st.recent_student_ratio(now),
+                    time_since_spoke_seconds=s_time_since_spoke,
+                ).model_dump()
+
         return MetricsSnapshot(
             session_id=self.session_id,
             tutor=ParticipantMetrics(
                 eye_contact_score=tutor_eye,
                 talk_time_percent=self.speaking_time.tutor_ratio(),
                 energy_score=tutor_en,
-                energy_drop_from_baseline=self.tutor_energy.drop_from_baseline,
+                energy_drop_from_baseline=tutor_energy_drop,
                 is_speaking=self.speaking_time.tutor_speaking,
                 attention_state=tutor_attention_state,
                 attention_state_confidence=tutor_attention_confidence,
@@ -246,13 +385,13 @@ class MetricsEngine:
                 visual_attention_score=tutor_visual_attention,
                 time_in_attention_state_seconds=tutor_time_in_state,
                 talk_time_pct_windowed=self.speaking_time.recent_tutor_ratio(now),
-                time_since_spoke_seconds=self.speaking_time.time_since_tutor_spoke(now),
+                time_since_spoke_seconds=tutor_time_since_spoke,
             ),
             student=ParticipantMetrics(
                 eye_contact_score=student_eye,
                 talk_time_percent=self.speaking_time.student_ratio(),
                 energy_score=student_en,
-                energy_drop_from_baseline=self.student_energy.drop_from_baseline,
+                energy_drop_from_baseline=student_energy_drop,
                 is_speaking=self.speaking_time.student_speaking,
                 attention_state=student_attention_state,
                 attention_state_confidence=student_attention_confidence,
@@ -260,8 +399,9 @@ class MetricsEngine:
                 visual_attention_score=student_visual_attention,
                 time_in_attention_state_seconds=student_time_in_state,
                 talk_time_pct_windowed=self.speaking_time.recent_student_ratio(now),
-                time_since_spoke_seconds=self.speaking_time.time_since_student_spoke(now),
+                time_since_spoke_seconds=student_time_since_spoke,
             ),
+            per_student_metrics=per_student,
             session=SessionMetrics(
                 interruption_count=self.interruptions.total_count,
                 recent_interruptions=self.interruptions.recent_count(
@@ -309,6 +449,46 @@ class MetricsEngine:
             degradation_reason=degradation_reason,
             target_fps=target_fps,
         )
+
+    def _has_recent_speech(self, is_speaking: bool, time_since_spoke_seconds: float) -> bool:
+        return is_speaking or (
+            0.0 <= time_since_spoke_seconds <= self._ENERGY_RECENT_SPEECH_HOLD_SECONDS
+        )
+
+    def _effective_energy(
+        self,
+        tracker: EnergyTracker,
+        *,
+        is_speaking: bool,
+        time_since_spoke_seconds: float,
+    ) -> float:
+        """Return a speech-gated energy score for live snapshots.
+
+        - While speaking (or just after), use the current vocal-energy score.
+        - During longer silent stretches, fall back to the participant's
+          speaking baseline if available.
+        - With no speech evidence at all, return a neutral 0.5 rather than
+          treating silence as low energy.
+        """
+        if not tracker.has_speech_history:
+            return 0.5
+        if self._has_recent_speech(is_speaking, time_since_spoke_seconds):
+            return tracker.score
+        return tracker.baseline
+
+    def _effective_energy_drop(
+        self,
+        tracker: EnergyTracker,
+        *,
+        is_speaking: bool,
+        time_since_spoke_seconds: float,
+    ) -> float:
+        """Only expose energy-drop signals when there's recent speech evidence."""
+        if not tracker.has_speech_history:
+            return 0.0
+        if not self._has_recent_speech(is_speaking, time_since_spoke_seconds):
+            return 0.0
+        return tracker.drop_from_baseline
 
     def _compute_engagement(
         self,

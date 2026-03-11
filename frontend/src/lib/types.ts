@@ -75,6 +75,9 @@ export interface MetricsSnapshot {
     emitted_nudge: string | null
     trigger_features: Record<string, unknown>
     session_type: string
+    coaching_intensity?: string
+    candidates_evaluated?: string[]
+    fired_rule?: string | null
   } | null
 }
 
@@ -132,6 +135,7 @@ export interface SessionInfo {
   media_provider: MediaProvider
   analytics_ingest_mode?: 'browser_upload' | 'livekit_worker'
   livekit_room_name?: string | null
+  coaching_intensity?: string
 }
 
 export interface FlaggedMoment {
@@ -163,6 +167,28 @@ export interface SessionSummary {
   attention_state_distribution?: Record<string, Record<string, number>>
   nudge_details?: NudgeDetail[]
   turn_counts?: Record<string, number>
+}
+
+export interface StudentInsights {
+  /** Overall engagement score for the student, expressed as a percentage (0–100). */
+  engagement_percent: number
+  /** Student talk-time share expressed as a percentage (0–100). */
+  talk_time_percent: number
+  /** Composite attention score (average of eye-contact and energy), 0–100. */
+  attention_score: number
+  /** Ordered list of student-facing actionable tips. */
+  tips: string[]
+}
+
+export interface RemoteParticipant {
+  /** LiveKit participant identity, e.g. `{sessionId}:tutor` or `{sessionId}:student:{N}`. */
+  identity: string
+  /** Per-participant MediaStream containing that participant's tracks. */
+  stream: MediaStream
+  /** True if the participant has at least one live video track. */
+  hasVideo: boolean
+  /** True if the participant has at least one live audio track. */
+  hasAudio: boolean
 }
 
 export interface TrendData {

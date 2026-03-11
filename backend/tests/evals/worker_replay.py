@@ -26,7 +26,8 @@ def _resolved_role(session_id: str, role_name: str) -> Role:
     resolved = livekit_role_for_identity(session_id, identity)
     if resolved is None:
         raise AssertionError(f"Failed to resolve role from identity {identity}")
-    return resolved
+    resolved_role, _student_index = resolved
+    return resolved_role
 
 
 def replay_trace_signals_via_livekit_worker(trace: SessionTrace) -> WorkerReplayResult:

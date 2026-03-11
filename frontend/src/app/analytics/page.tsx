@@ -428,7 +428,7 @@ export default function AnalyticsPage() {
                         labelFormatter={(value, payload) => {
                           const row = payload?.[0]?.payload as { start_time?: string; session_id?: string } | undefined
                           return row?.start_time
-                            ? `${new Date(row.start_time).toLocaleDateString()} · ${row.session_id}`
+                            ? `${new Date(row.start_time).toLocaleDateString()} · ${row.session_id?.slice(0, 8) ?? ''}`
                             : String(value)
                         }}
                       />

@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Optional
 
-from ..config import settings
+from ..config import INTENSITY_MULTIPLIERS, settings
 from ..models import MetricsSnapshot, Nudge
 from .profiles import SessionProfile, get_profile
 from .rules import CoachingRule, DEFAULT_RULES
@@ -17,6 +17,8 @@ class CoachingEvaluation:
     suppressed_reasons: list[str] = field(default_factory=list)
     emitted_nudge_type: Optional[str] = None
     trigger_features: dict = field(default_factory=dict)
+    candidates_evaluated: list[str] = field(default_factory=list)
+    fired_rule: Optional[str] = None
 
 
 class Coach:
@@ -24,19 +26,33 @@ class Coach:
 
     Respects cooldowns, minimum session elapsed time, global budget,
     session-type profiles, and selective suppression gates.
+
+    The ``intensity`` parameter scales the built-in coaching thresholds:
+
+    * ``off``        – no nudges ever fire (max_per_session set to 0).
+    * ``subtle``     – warmup/cooldown doubled, max_per_session lowered by 1.
+    * ``normal``     – settings defaults used as-is.
+    * ``aggressive`` – warmup/cooldown halved, max_per_session doubled.
     """
 
     def __init__(
         self,
         rules: list[CoachingRule] | None = None,
         session_type: str = "general",
+        intensity: str = "normal",
     ):
         self._rules = rules or DEFAULT_RULES
         self._session_type = session_type
+        normalized_intensity = intensity if intensity in INTENSITY_MULTIPLIERS else "normal"
+        self._intensity = normalized_intensity
         self._profile = get_profile(session_type)
         self._last_fired: dict[str, float] = {}  # rule name -> timestamp
         self._last_nudge_at: float | None = None
         self._session_nudges_sent: int = 0
+
+        # Store the raw multiplier so evaluate() can apply it at call time
+        # (keeping settings patchable for tests while still scaling thresholds).
+        self._intensity_multiplier = INTENSITY_MULTIPLIERS[normalized_intensity]
 
     @property
     def profile(self) -> SessionProfile:
@@ -45,6 +61,10 @@ class Coach:
     @property
     def session_type(self) -> str:
         return self._session_type
+
+    @property
+    def intensity(self) -> str:
+        return self._intensity
 
     def _trigger_features(self, snapshot: MetricsSnapshot) -> dict:
         return {
@@ -79,31 +99,51 @@ class Coach:
         now = time.time() if now is None else now
         evaluation = CoachingEvaluation()
 
+        # Compute effective thresholds from settings * intensity multiplier.
+        # Reading settings dynamically keeps test-time patching effective.
+        multiplier = self._intensity_multiplier
+        if multiplier is None:
+            # "off" intensity — no nudges ever fire
+            evaluation.suppressed_reasons.append("global_nudge_budget_exhausted")
+            return evaluation
+
+        effective_warmup = settings.global_nudge_warmup_seconds * multiplier
+        effective_interval = settings.global_nudge_min_interval_seconds * multiplier
+        if self._intensity == "aggressive":
+            effective_max = settings.global_nudge_max_per_session * 2
+        elif self._intensity == "subtle":
+            effective_max = max(1, settings.global_nudge_max_per_session - 1)
+        else:
+            effective_max = settings.global_nudge_max_per_session
+
         # Global safety rails for minimal, high-precision live coaching.
         if snapshot.degraded:
             evaluation.suppressed_reasons.append("session_degraded")
             return evaluation
-        if elapsed_seconds < settings.global_nudge_warmup_seconds:
+        if elapsed_seconds < effective_warmup:
             evaluation.suppressed_reasons.append("global_warmup")
             return evaluation
-        if self._session_nudges_sent >= settings.global_nudge_max_per_session:
+        if self._session_nudges_sent >= effective_max:
             evaluation.suppressed_reasons.append("global_nudge_budget_exhausted")
             return evaluation
         if (
             self._last_nudge_at is not None
-            and now - self._last_nudge_at < settings.global_nudge_min_interval_seconds
+            and now - self._last_nudge_at < effective_interval
         ):
             evaluation.suppressed_reasons.append("global_min_interval")
             return evaluation
 
         matched_rules: list[CoachingRule] = []
         for rule in self._rules:
+            evaluation.candidates_evaluated.append(rule.name)
+
             if elapsed_seconds < rule.min_session_elapsed:
                 evaluation.suppressed_reasons.append(f"rule_min_elapsed:{rule.name}")
                 continue
 
             last = self._last_fired.get(rule.name, 0.0)
-            if now - last < rule.cooldown_seconds:
+            effective_cooldown = rule.cooldown_seconds * multiplier
+            if now - last < effective_cooldown:
                 evaluation.suppressed_reasons.append(f"rule_cooldown:{rule.name}")
                 continue
 
@@ -138,6 +178,7 @@ class Coach:
 
         evaluation.nudges = [nudge]
         evaluation.emitted_nudge_type = nudge.nudge_type
+        evaluation.fired_rule = selected_rule.name
         evaluation.trigger_features = trigger_features
         return evaluation
 

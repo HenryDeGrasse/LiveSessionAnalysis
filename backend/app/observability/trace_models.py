@@ -58,6 +58,8 @@ class CoachingDecisionTrace(TracePoint):
     suppressed_reasons: List[str] = Field(default_factory=list)
     metrics_index: Optional[int] = None
     trigger_features: Dict[str, Any] = Field(default_factory=dict)
+    candidates_evaluated: List[str] = Field(default_factory=list)
+    fired_rule: Optional[str] = None
 
 
 class SessionTrace(BaseModel):

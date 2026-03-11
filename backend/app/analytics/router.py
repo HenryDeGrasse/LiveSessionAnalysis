@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 
 from . import get_session_store
-from .recommendations import generate_recommendations
+from .recommendations import generate_recommendations, generate_student_insights
 from .trends import compute_trends
 from ..auth.dependencies import get_optional_user
 from ..auth.models import User
@@ -103,6 +103,8 @@ async def get_session(
     if current_user.role == "student":
         data["nudge_details"] = []
         data["recommendations"] = []
+        # Enrich the student view with student-facing insights.
+        data["student_insights"] = generate_student_insights(summary)
 
     return data
 
@@ -141,6 +143,41 @@ async def get_recommendations(
         )
 
     return generate_recommendations(summary)
+
+
+@router.get("/sessions/{session_id}/student-insights")
+async def get_student_insights(
+    session_id: str,
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    """Get student-facing insights for a session.
+
+    Student insights are student-only content: a structured summary of engagement,
+    talk-time, and attention, plus actionable tips framed for the student.
+    Tutors are denied access (403) — they should use /recommendations instead.
+    """
+    if current_user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required to access student insights",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Tutors must not see the student-framed insights endpoint.
+    if current_user.role == "tutor":
+        raise HTTPException(
+            status_code=403,
+            detail="Student insights are student-only content",
+        )
+
+    summary = _session_store().load(session_id)
+    if summary is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if not summary.is_owner(current_user.id):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    return generate_student_insights(summary)
 
 
 @router.get("/trends")
