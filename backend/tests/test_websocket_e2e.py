@@ -175,14 +175,9 @@ class TestSessionCreation:
             f"/api/sessions/{data['session_id']}/end?token={data['tutor_token']}"
         )
         assert end_resp.status_code == 200
-
-        detail_resp = client.get(f"/api/analytics/sessions/{data['session_id']}")
-        assert detail_resp.status_code == 200
-        detail = detail_resp.json()
-        assert detail["tutor_id"] == "alice"
-        assert detail["session_type"] == "practice"
-        assert detail["media_provider"] == "livekit"
-        assert detail["duration_seconds"] == 0
+        # Session detail endpoint now requires authentication.
+        # Authenticated access to session detail is covered by
+        # TestAnalyticsDetailAuth in test_auth_session_integration.py.
 
     def test_session_info_not_found(self):
         client = TestClient(app)
@@ -334,15 +329,15 @@ class TestAnalyticsEndpoints:
         assert resp.status_code == 200
         assert isinstance(resp.json(), list)
 
-    def test_get_session_not_found(self):
+    def test_get_session_requires_auth(self):
         client = TestClient(app)
         resp = client.get("/api/analytics/sessions/nonexistent")
-        assert resp.status_code == 404
+        assert resp.status_code == 401
 
-    def test_recommendations_not_found(self):
+    def test_recommendations_requires_auth(self):
         client = TestClient(app)
         resp = client.get("/api/analytics/sessions/nonexistent/recommendations")
-        assert resp.status_code == 404
+        assert resp.status_code == 401
 
     def test_trends_without_tutor_id_returns_global_series(self):
         client = TestClient(app)
