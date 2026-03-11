@@ -25,6 +25,7 @@ def _make_room(*, debug_mode: bool = False) -> SessionRoom:
         tutor_token="tutor-tok",
         student_token="student-tok",
         session_type="practice",
+        coaching_intensity="subtle",
     )
     room.started_at = 1.0
     room.debug_mode = debug_mode
@@ -53,7 +54,7 @@ def _teardown(room: SessionRoom):
     _session_resources.pop(room.session_id, None)
 
 
-def _sent_payload(room: SessionRoom) -> dict | None:
+def _sent_payload(room: SessionRoom) -> "dict | None":
     """Extract the metrics payload that was sent to the tutor websocket."""
     ws = room.participants[Role.TUTOR].websocket
     if ws.send_json.call_count == 0:
@@ -94,7 +95,7 @@ async def test_coaching_decision_absent_in_normal_mode():
 async def test_coaching_decision_populated_in_debug_mode():
     """In debug mode, coaching_decision must be populated with
     candidate_nudges, suppressed_reasons, emitted_nudge, trigger_features,
-    and session_type."""
+    and session_type/coaching_intensity."""
     room = _make_room(debug_mode=True)
     _install_resources(room)
 
@@ -116,7 +117,9 @@ async def test_coaching_decision_populated_in_debug_mode():
     assert "emitted_nudge" in cd
     assert "trigger_features" in cd
     assert "session_type" in cd
+    assert "coaching_intensity" in cd
     assert cd["session_type"] == "practice"
+    assert cd["coaching_intensity"] == "subtle"
 
     # The payload sent to the tutor should include the decision
     sent = _sent_payload(room)
@@ -125,6 +128,7 @@ async def test_coaching_decision_populated_in_debug_mode():
     assert sent_cd is not None
     assert "candidate_nudges" in sent_cd
     assert "session_type" in sent_cd
+    assert sent_cd["coaching_intensity"] == "subtle"
 
 
 @pytest.mark.asyncio

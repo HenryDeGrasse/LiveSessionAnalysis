@@ -1,4 +1,4 @@
-from typing import Any, Tuple, Type
+from typing import Any, Dict, Optional as _Optional, Tuple, Type
 
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource
 
@@ -198,3 +198,14 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Coaching intensity multipliers applied to warmup, cooldown, and max-per-session thresholds.
+# A value of None means coaching nudges are completely disabled for that intensity level.
+# Values > 1.0 make the coach less aggressive (longer waits, fewer nudges);
+# values < 1.0 make the coach more aggressive.
+INTENSITY_MULTIPLIERS: Dict[str, _Optional[float]] = {
+    "off": None,
+    "subtle": 2.0,
+    "normal": 1.0,
+    "aggressive": 0.5,
+}
