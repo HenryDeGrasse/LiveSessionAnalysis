@@ -70,7 +70,8 @@ export async function createSession(
 export async function createSessionFromHome(
   page: Page,
   options: {
-    tutorName: string
+    /** @deprecated Tutor name is now taken from the authenticated session. This field is ignored. */
+    tutorName?: string
     sessionType: 'general' | 'lecture' | 'practice' | 'discussion'
     mediaProvider?: MediaProvider
   }
@@ -78,7 +79,7 @@ export async function createSessionFromHome(
   const mediaProvider = options.mediaProvider ?? DEFAULT_MEDIA_PROVIDER
 
   await page.goto('/')
-  await page.getByTestId('tutor-name-input').fill(options.tutorName)
+  // Tutor name input removed — identity now comes from the NextAuth session.
   await page.getByTestId('session-type-select').selectOption(options.sessionType)
   // Media provider selector removed — always LiveKit
   await page.getByTestId('create-session-button').click()
