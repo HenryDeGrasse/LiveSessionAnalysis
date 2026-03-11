@@ -1,11 +1,61 @@
-from pydantic_settings import BaseSettings
+from typing import Any, Tuple, Type
+
+from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource
+
+
+class _CsvAwareEnvSource(EnvSettingsSource):
+    """Extend the default env source so that list fields also accept
+    comma-separated strings.
+
+    Pydantic-settings 2.x calls ``json.loads`` on complex-typed env vars
+    (e.g. ``list[str]``) before any field validators run, so a value like::
+
+        LSA_CORS_ORIGINS="http://localhost:3000,https://app.fly.dev"
+
+    would fail JSON-decoding.  This subclass intercepts string values for
+    list-typed fields: if the raw string doesn't look like a JSON array it
+    is split on commas and returned as a Python list so Pydantic can coerce
+    it normally.  JSON-array values (``'["url1","url2"]'``) are left alone.
+    """
+
+    def prepare_field_value(
+        self,
+        field_name: str,
+        field: Any,
+        value: Any,
+        value_is_complex: bool,
+    ) -> Any:
+        # Check whether the field type itself is complex (e.g. list[str]).
+        # _field_is_complex returns (is_complex, allow_parse_failure).
+        is_complex, _ = self._field_is_complex(field)
+        if (is_complex or value_is_complex) and isinstance(value, str):
+            stripped = value.strip()
+            # Not a JSON array — treat as comma-separated so operators can use
+            # LSA_CORS_ORIGINS="url1,url2" instead of '["url1","url2"]'.
+            if stripped and not stripped.startswith("["):
+                return [v.strip() for v in stripped.split(",") if v.strip()]
+        return super().prepare_field_value(field_name, field, value, value_is_complex)
 
 
 class Settings(BaseSettings):
     # Server
     host: str = "0.0.0.0"
     port: int = 8000
+    # Accepts either a JSON array or a comma-separated string via LSA_CORS_ORIGINS.
     cors_origins: list[str] = ["http://localhost:3000"]
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        # Replace the default env source with our CSV-aware variant.
+        csv_env = _CsvAwareEnvSource(settings_cls)
+        return init_settings, csv_env, dotenv_settings, file_secret_settings
 
     # Video processing
     frame_resize_width: int = 320
@@ -94,6 +144,7 @@ class Settings(BaseSettings):
     enable_livekit: bool = True
     enable_livekit_analytics_worker: bool = True
     livekit_url: str = ""
+    livekit_public_url: str = ""
     livekit_api_key: str = ""
     livekit_api_secret: str = ""
     livekit_room_prefix: str = "lsa"
@@ -110,6 +161,38 @@ class Settings(BaseSettings):
     trace_max_metrics_snapshots: int = 1800
     trace_max_signal_points_per_role: int = 7200
     trace_downsample_long_sessions: bool = True
+
+    # Auth
+    jwt_secret: str = "dev-secret-change-in-production"
+    jwt_expiry_hours: int = 24
+    auth_db_path: str = "data/auth.db"
+    google_client_id: str = ""  # Leave empty to disable Google OAuth
+
+    # Sentry observability
+    # Leave sentry_dsn empty to disable Sentry (no-op for local dev).
+    sentry_dsn: str = ""
+    sentry_environment: str = "development"
+
+    # Postgres / storage backend
+    # When database_url is empty, the app falls back to local file/SQLite stores
+    # (full backward-compatibility for local dev).
+    # Set LSA_DATABASE_URL to a postgres:// DSN to enable Postgres-backed stores.
+    database_url: str = ""
+    # Controls which storage backend is used for session summaries and auth.
+    # Values: "local" (default, file/SQLite) | "postgres"
+    storage_backend: str = "local"
+
+    # Trace storage backend
+    # Values: "local" (default, write to disk) | "s3" (S3-compatible, e.g. Cloudflare R2)
+    trace_storage_backend: str = "local"
+    # S3-compatible endpoint URL — set to the Cloudflare R2 account endpoint,
+    # e.g. https://<account-id>.r2.cloudflarestorage.com
+    s3_endpoint_url: str = ""
+    s3_bucket_name: str = ""
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
+    # Key prefix used for all trace objects inside the bucket.
+    s3_trace_prefix: str = "traces/"
 
     model_config = {"env_prefix": "LSA_"}
 
