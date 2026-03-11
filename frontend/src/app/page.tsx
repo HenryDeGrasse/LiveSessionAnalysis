@@ -3,7 +3,10 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { API_URL } from '@/lib/constants'
+import { useSession } from 'next-auth/react'
+import { AuthGuard } from '@/components/auth/AuthGuard'
+import { UserMenu } from '@/components/auth/UserMenu'
+import { apiFetch } from '@/lib/api-client'
 import type { SessionSummary } from '@/lib/types'
 import {
   deriveTrendSnapshot,
@@ -20,11 +23,6 @@ import {
   type ActiveSession,
   saveActiveSession,
 } from '@/lib/active-session'
-import {
-  getTutorId,
-  getTutorName,
-  setTutorName as persistTutorName,
-} from '@/lib/tutor-identity'
 
 type SessionCreateResponse = {
   session_id: string
@@ -96,29 +94,23 @@ function StatCard({
 }
 
 function SessionCreationCard({
-  tutorName,
-  tutorId,
   sessionType,
   creating,
   copiedStudentLink,
   error,
   sessionInfo,
   large = false,
-  onTutorNameChange,
   onSessionTypeChange,
   onCreate,
   onEnterSession,
   onCopyStudentLink,
 }: {
-  tutorName: string
-  tutorId: string
   sessionType: string
   creating: boolean
   copiedStudentLink: boolean
   error: string
   sessionInfo: SessionCreateResponse | null
   large?: boolean
-  onTutorNameChange: (value: string) => void
   onSessionTypeChange: (value: string) => void
   onCreate: () => void
   onEnterSession: () => void
@@ -148,29 +140,6 @@ function SessionCreationCard({
 
         {!sessionInfo ? (
           <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="tutor-name"
-                className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400"
-              >
-                Tutor name
-              </label>
-              <input
-                id="tutor-name"
-                data-testid="tutor-name-input"
-                type="text"
-                placeholder="Tutor name (saved to this browser)"
-                value={tutorName}
-                onChange={(event) => onTutorNameChange(event.target.value)}
-                className={INPUT_CLASSES}
-              />
-              <p className="mt-2 text-xs text-slate-500">
-                {tutorName.trim()
-                  ? `Saved locally and used as the tutor ID for future session history.`
-                  : `No name set yet — this browser will use local workspace ${tutorId}.`}
-              </p>
-            </div>
-
             <div>
               <label
                 htmlFor="session-type"
@@ -322,59 +291,88 @@ function JoinSessionCard({
   )
 }
 
-export default function Home() {
+function StudentDashboard({
+  joinSessionId,
+  joinToken,
+  onJoinSessionIdChange,
+  onJoinTokenChange,
+  onJoin,
+}: {
+  joinSessionId: string
+  joinToken: string
+  onJoinSessionIdChange: (value: string) => void
+  onJoinTokenChange: (value: string) => void
+  onJoin: () => void
+}) {
+  return (
+    <div className="mx-auto w-full max-w-3xl space-y-6">
+      <section className="rounded-[28px] border border-white/10 bg-white/5 p-6 text-center shadow-[0_24px_80px_rgba(2,6,23,0.28)] backdrop-blur md:p-8">
+        <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+          Student workspace
+        </p>
+        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+          Join a tutoring session
+        </h2>
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+          Ask your tutor to share the session join link, or paste a session ID and token below to join directly.
+        </p>
+      </section>
+
+      <JoinSessionCard
+        joinSessionId={joinSessionId}
+        joinToken={joinToken}
+        onJoinSessionIdChange={onJoinSessionIdChange}
+        onJoinTokenChange={onJoinTokenChange}
+        onJoin={onJoin}
+      />
+    </div>
+  )
+}
+
+function HomeContent() {
   const router = useRouter()
-  const [ready, setReady] = useState(false)
-  const [tutorName, setTutorName] = useState('')
-  const [tutorId, setTutorId] = useState('')
+  const { data: session } = useSession()
+
+  const userName = session?.user?.name ?? ''
+  const userEmail = (session?.user as { email?: string } | undefined)?.email ?? ''
+  const userRole = (session?.user as { role?: string } | undefined)?.role ?? 'tutor'
+  const accessToken = (session?.user as { accessToken?: string } | undefined)?.accessToken
+  const isStudent = userRole === 'student'
+
   const [sessionType, setSessionType] = useState('general')
   const [joinToken, setJoinToken] = useState('')
   const [joinSessionId, setJoinSessionId] = useState('')
   const [creating, setCreating] = useState(false)
   const [copiedStudentLink, setCopiedStudentLink] = useState(false)
   const [error, setError] = useState('')
-  const [sessionInfo, setSessionInfo] = useState<SessionCreateResponse | null>(
-    null
-  )
+  const [sessionInfo, setSessionInfo] = useState<SessionCreateResponse | null>(null)
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null)
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(true)
   const [sessionsError, setSessionsError] = useState('')
 
   useEffect(() => {
-    setTutorName(getTutorName())
-    setTutorId(getTutorId())
-    setActiveSession(getActiveSession())
-    setReady(true)
-  }, [])
-
-  useEffect(() => {
-    if (!ready) return
-
-    const handle = window.setTimeout(() => {
-      persistTutorName(tutorName.trim())
-    }, 350)
-
-    return () => {
-      window.clearTimeout(handle)
+    if (isStudent) {
+      // Students never use tutor tokens from localStorage. Clear any stale
+      // active_session entry so it doesn't show up if they later switch roles
+      // or share a browser with a tutor.
+      clearStoredActiveSession()
+      setActiveSession(null)
+    } else {
+      setActiveSession(getActiveSession())
     }
-  }, [ready, tutorName])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStudent])
 
+  // Fetch sessions using authenticated API client.
+  // No tutor_id query param needed — backend filters by the JWT identity.
   useEffect(() => {
-    if (!ready) return
-
     let cancelled = false
-    const tutorScope = tutorName.trim() || tutorId
-    const params = new URLSearchParams()
-
-    if (tutorScope) {
-      params.set('tutor_id', tutorScope)
-    }
 
     setSessionsLoading(true)
     setSessionsError('')
 
-    fetch(`${API_URL}/api/analytics/sessions?${params.toString()}`)
+    apiFetch('/api/analytics/sessions', { accessToken })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error('Failed to load session history')
@@ -405,7 +403,7 @@ export default function Home() {
     return () => {
       cancelled = true
     }
-  }, [ready, tutorId, tutorName])
+  }, [accessToken])
 
   const sortedSessions = useMemo(() => {
     return [...sessions].sort(
@@ -419,7 +417,7 @@ export default function Home() {
   const averageEngagement = useMemo(() => {
     if (sortedSessions.length === 0) return 0
     const total = sortedSessions.reduce(
-      (sum, session) => sum + session.engagement_score,
+      (sum, s) => sum + s.engagement_score,
       0
     )
     return total / sortedSessions.length
@@ -430,8 +428,7 @@ export default function Home() {
     [recentSessions]
   )
 
-  const tutorScopeLabel = tutorName.trim() || `workspace ${tutorId || 'local'}`
-  const showOnboarding = ready && !sessionsLoading && !sessionsError && sortedSessions.length === 0
+  const showOnboarding = !sessionsLoading && !sessionsError && sortedSessions.length === 0
 
   const dismissActiveSession = () => {
     clearStoredActiveSession()
@@ -443,23 +440,14 @@ export default function Home() {
   }
 
   const createSession = async () => {
-    const normalizedTutorName = tutorName.trim()
-    const tutorIdentity = normalizedTutorName || tutorId || undefined
-
-    if (normalizedTutorName !== tutorName) {
-      setTutorName(normalizedTutorName)
-    }
-
-    persistTutorName(normalizedTutorName)
     setCreating(true)
     setError('')
 
     try {
-      const response = await fetch(`${API_URL}/api/sessions`, {
+      const response = await apiFetch('/api/sessions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        accessToken,
         body: JSON.stringify({
-          tutor_id: tutorIdentity,
           session_type: sessionType,
           media_provider: 'livekit',
         }),
@@ -519,68 +507,83 @@ export default function Home() {
     router.push(buildSessionHref(normalizedSessionId, normalizedToken))
   }
 
+  // Role label for display
+  const roleLabel =
+    userRole === 'student' ? 'Student' : userRole === 'guest' ? 'Guest' : 'Tutor'
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-10 lg:px-8">
+        {/* Hero section */}
         <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.18),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(139,92,246,0.22),_transparent_30%),linear-gradient(180deg,_rgba(15,23,42,0.96),_rgba(2,6,23,0.98))] p-8 shadow-[0_28px_120px_rgba(2,6,23,0.55)]">
+          {/* UserMenu in the hero section top-right */}
+          <div className="mb-4 flex justify-end">
+            <UserMenu />
+          </div>
           <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.24em] text-slate-300">
-                Tutor workspace · {tutorId || 'loading'}
+                {roleLabel} workspace
               </div>
               <div>
                 <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
                   Live Session Analysis
                 </h1>
                 <p className="mt-4 text-2xl font-semibold text-slate-100">
-                  {tutorName.trim()
-                    ? `Welcome back, ${tutorName.trim()}`
-                    : 'Welcome, tutor'}
+                  {userName ? `Welcome back, ${userName}` : 'Welcome'}
                 </p>
                 <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 md:text-lg">
-                  Launch a new tutoring room, rejoin an active session from this browser, and jump straight into recent analytics reviews from one dark-theme dashboard.
+                  {isStudent
+                    ? 'Join your tutoring session below using the link your tutor shared with you.'
+                    : 'Launch a new tutoring room, rejoin an active session from this browser, and jump straight into recent analytics reviews from one dark-theme dashboard.'}
                 </p>
               </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
+              {/* Auth identity card */}
               <div className="rounded-3xl border border-white/10 bg-white/5 px-5 py-5">
                 <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
-                  Tutor identity
+                  Signed in as
                 </p>
                 <p className="mt-3 text-xl font-semibold text-white">
-                  {tutorName.trim() || 'Name not set yet'}
+                  {userName || 'Guest'}
                 </p>
-                <p className="mt-2 text-sm leading-6 text-slate-400">
-                  {tutorName.trim()
-                    ? `Completed sessions are filtered to ${tutorName.trim()} on this landing page.`
-                    : `Add a name to replace local workspace ${tutorId || 'local'} with a tutor-friendly label.`}
-                </p>
+                {userEmail ? (
+                  <p className="mt-1 truncate text-sm text-slate-400">{userEmail}</p>
+                ) : null}
+                <span className="mt-2 inline-flex rounded-full border border-white/10 bg-slate-800 px-2 py-0.5 text-xs text-slate-300">
+                  {roleLabel}
+                </span>
               </div>
 
-              <Link
-                href="/analytics"
-                onClick={handleAnalyticsNavigation}
-                className="rounded-3xl border border-white/10 bg-white/5 px-5 py-5 transition hover:bg-white/10"
-              >
-                <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
-                  Analytics portfolio
-                </p>
-                <p className="mt-3 text-xl font-semibold text-white">
-                  Review every saved session
-                </p>
-                <p className="mt-2 text-sm leading-6 text-slate-400">
-                  Open the full analytics view to compare sessions, inspect trends, and drill into flagged moments.
-                </p>
-                <span className="mt-4 inline-flex text-sm font-medium text-sky-300">
-                  Browse analytics →
-                </span>
-              </Link>
+              {!isStudent ? (
+                <Link
+                  href="/analytics"
+                  onClick={handleAnalyticsNavigation}
+                  className="rounded-3xl border border-white/10 bg-white/5 px-5 py-5 transition hover:bg-white/10"
+                >
+                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                    Analytics portfolio
+                  </p>
+                  <p className="mt-3 text-xl font-semibold text-white">
+                    Review every saved session
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                    Open the full analytics view to compare sessions, inspect trends, and drill into flagged moments.
+                  </p>
+                  <span className="mt-4 inline-flex text-sm font-medium text-sky-300">
+                    Browse analytics →
+                  </span>
+                </Link>
+              ) : null}
             </div>
           </div>
         </section>
 
-        {activeSession ? (
+        {/* Active session banner — tutors/guests only; students join via links,
+            not tutor tokens cached in localStorage from a previous session */}
+        {activeSession && !isStudent ? (
           <section
             data-testid="active-session-banner"
             className="rounded-[28px] border border-emerald-400/30 bg-emerald-500/10 p-5 shadow-[0_20px_70px_rgba(16,185,129,0.12)]"
@@ -626,7 +629,17 @@ export default function Home() {
           </section>
         ) : null}
 
-        {showOnboarding ? (
+        {/* Student view: join only */}
+        {isStudent ? (
+          <StudentDashboard
+            joinSessionId={joinSessionId}
+            joinToken={joinToken}
+            onJoinSessionIdChange={setJoinSessionId}
+            onJoinTokenChange={setJoinToken}
+            onJoin={joinSession}
+          />
+        ) : showOnboarding ? (
+          /* Tutor onboarding — no sessions yet */
           <div className="mx-auto w-full max-w-3xl space-y-6">
             <section className="rounded-[28px] border border-white/10 bg-white/5 p-6 text-center shadow-[0_24px_80px_rgba(2,6,23,0.28)] backdrop-blur md:p-8">
               <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
@@ -636,20 +649,17 @@ export default function Home() {
                 Start your first tutoring session
               </h2>
               <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-                No completed sessions are stored for {tutorScopeLabel} yet. Create a room, teach live, then return here for the saved post-session review.
+                No completed sessions stored yet. Create a room, teach live, then return here for the saved post-session review.
               </p>
             </section>
 
             <SessionCreationCard
               large
-              tutorName={tutorName}
-              tutorId={tutorId}
               sessionType={sessionType}
               creating={creating}
               copiedStudentLink={copiedStudentLink}
               error={error}
               sessionInfo={sessionInfo}
-              onTutorNameChange={setTutorName}
               onSessionTypeChange={setSessionType}
               onCreate={createSession}
               onEnterSession={enterCreatedSession}
@@ -665,6 +675,7 @@ export default function Home() {
             />
           </div>
         ) : (
+          /* Tutor main view — has sessions */
           <div className="grid gap-6 xl:grid-cols-[1.35fr_0.85fr]">
             <div className="space-y-6">
               <section>
@@ -674,10 +685,10 @@ export default function Home() {
                       Recent sessions
                     </p>
                     <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white">
-                      Session history for {tutorName.trim() || 'your local workspace'}
+                      Session history
                     </h2>
                     <p className="mt-2 text-sm leading-6 text-slate-400">
-                      Saved sessions are filtered to {tutorScopeLabel}. Open any card to review the full analytics detail page.
+                      Sessions linked to your account. Open any card to review the full analytics detail page.
                     </p>
                   </div>
                   <p className="text-sm text-slate-500">
@@ -689,12 +700,12 @@ export default function Home() {
                   <StatCard
                     label="Total sessions"
                     value={String(sortedSessions.length)}
-                    detail="Saved completed sessions for this tutor scope."
+                    detail="Saved completed sessions for your account."
                   />
                   <StatCard
                     label="Average engagement"
                     value={formatScore(averageEngagement)}
-                    detail="Across the stored sessions in this browser-linked tutor view."
+                    detail="Across the stored sessions linked to your account."
                   />
                   <StatCard
                     label="Engagement trend"
@@ -715,12 +726,12 @@ export default function Home() {
                 </section>
               ) : (
                 <section className="space-y-4">
-                  {recentSessions.map((session) => {
-                    const health = getSessionHealth(session)
+                  {recentSessions.map((s) => {
+                    const health = getSessionHealth(s)
                     return (
                       <Link
-                        key={session.session_id}
-                        href={`/analytics/${encodeURIComponent(session.session_id)}`}
+                        key={s.session_id}
+                        href={`/analytics/${encodeURIComponent(s.session_id)}`}
                         onClick={handleAnalyticsNavigation}
                         className="group block rounded-[28px] border border-white/10 bg-white/5 p-5 transition hover:-translate-y-1 hover:border-sky-300/30 hover:bg-white/10"
                       >
@@ -734,24 +745,24 @@ export default function Home() {
                                   {health.label}
                                 </span>
                                 <span className="rounded-full border border-white/10 bg-slate-950/50 px-3 py-1 text-xs text-slate-300">
-                                  {getSessionTypeLabel(session.session_type)}
+                                  {getSessionTypeLabel(s.session_type)}
                                 </span>
                               </div>
                               <h3 className="mt-4 text-2xl font-semibold text-white">
-                                {new Date(session.start_time).toLocaleString(undefined, {
+                                {new Date(s.start_time).toLocaleString(undefined, {
                                   dateStyle: 'medium',
                                   timeStyle: 'short',
                                 })}
                               </h3>
                               <p className="mt-2 text-sm text-slate-400">
-                                Duration {formatMinutes(session.duration_seconds)} · Session {truncateSessionId(session.session_id)}
+                                Duration {formatMinutes(s.duration_seconds)} · Session {truncateSessionId(s.session_id)}
                               </p>
                             </div>
 
                             <div className="text-left sm:text-right">
                               <p className="text-sm text-slate-400">Engagement</p>
                               <p className="mt-2 text-4xl font-semibold text-white">
-                                {formatScore(session.engagement_score)}
+                                {formatScore(s.engagement_score)}
                               </p>
                             </div>
                           </div>
@@ -762,7 +773,7 @@ export default function Home() {
 
                           <div className="flex items-center justify-between gap-4 text-sm text-slate-400">
                             <span>
-                              {session.flagged_moments.length} flagged moment{session.flagged_moments.length === 1 ? '' : 's'} · {session.nudges_sent} live nudge{session.nudges_sent === 1 ? '' : 's'}
+                              {s.flagged_moments.length} flagged moment{s.flagged_moments.length === 1 ? '' : 's'} · {s.nudges_sent} live nudge{s.nudges_sent === 1 ? '' : 's'}
                             </span>
                             <span className="text-slate-200 transition group-hover:translate-x-1">
                               Open analytics →
@@ -778,14 +789,11 @@ export default function Home() {
 
             <aside className="space-y-6">
               <SessionCreationCard
-                tutorName={tutorName}
-                tutorId={tutorId}
                 sessionType={sessionType}
                 creating={creating}
                 copiedStudentLink={copiedStudentLink}
                 error={error}
                 sessionInfo={sessionInfo}
-                onTutorNameChange={setTutorName}
                 onSessionTypeChange={setSessionType}
                 onCreate={createSession}
                 onEnterSession={enterCreatedSession}
@@ -804,5 +812,13 @@ export default function Home() {
         )}
       </div>
     </main>
+  )
+}
+
+export default function Home() {
+  return (
+    <AuthGuard>
+      <HomeContent />
+    </AuthGuard>
   )
 }
