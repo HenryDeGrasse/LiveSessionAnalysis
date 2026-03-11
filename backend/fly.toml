@@ -1,0 +1,62 @@
+# Fly.io deployment configuration for LSA backend
+#
+# MANUAL OPERATOR STEPS (run once before first deploy):
+#
+#   (a) Install flyctl CLI:
+#       curl -L https://fly.io/install.sh | sh
+#
+#   (b) Create the Fly app:
+#       fly apps create lsa-backend
+#
+#   (c) Create a persistent volume (1 GB is sufficient for temp/cache data;
+#       session summaries and auth live in Postgres, traces in R2):
+#       fly volumes create lsa_data --region ord --size 1
+#
+#   (d) Set all required secrets (replace placeholder values):
+#       fly secrets set \
+#         LSA_JWT_SECRET=<strong-random-secret> \
+#         LSA_DATABASE_URL=<postgres-connection-string> \
+#         LSA_LIVEKIT_API_KEY=<livekit-cloud-api-key> \
+#         LSA_LIVEKIT_API_SECRET=<livekit-cloud-api-secret> \
+#         LSA_LIVEKIT_URL=<wss://your-project.livekit.cloud> \
+#         LSA_SENTRY_DSN=<sentry-dsn-url> \
+#         LSA_S3_ENDPOINT_URL=<https://your-account-id.r2.cloudflarestorage.com> \
+#         LSA_S3_ACCESS_KEY_ID=<r2-access-key-id> \
+#         LSA_S3_SECRET_ACCESS_KEY=<r2-secret-access-key> \
+#         LSA_S3_BUCKET_NAME=<r2-bucket-name> \
+#         LSA_STORAGE_BACKEND=postgres \
+#         LSA_TRACE_STORAGE_BACKEND=s3 \
+#         LSA_GOOGLE_CLIENT_ID=<google-oauth-client-id>
+#
+#   (e) Deploy from the backend/ directory:
+#       fly deploy
+#
+# NOTE: The backend process is CPU-heavy due to MediaPipe/OpenCV; a
+# performance-2x machine (4 vCPU / 8 GB RAM) is recommended.
+
+app = "lsa-backend"
+primary_region = "ord"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_start_machines = true
+  auto_stop_machines = false
+  min_machines_running = 1
+
+[[vm]]
+  size = "performance-2x"
+
+[mounts]
+  source = "lsa_data"
+  destination = "/app/data"
+
+[checks.health]
+  type = "http"
+  port = 8000
+  path = "/health"
+  interval = "15s"
+  timeout = "5s"
