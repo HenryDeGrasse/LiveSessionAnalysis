@@ -13,9 +13,19 @@ services:
     environment:
       - LSA_CORS_ORIGINS=["http://localhost:3000"]
       - LSA_ENABLE_LIVEKIT=true
-      - LSA_LIVEKIT_URL=ws://localhost:7880
-      - LSA_LIVEKIT_API_KEY=devkey
-      - LSA_LIVEKIT_API_SECRET=secret
+      - LSA_LIVEKIT_URL=ws://livekit:7880
+      - LSA_LIVEKIT_PUBLIC_URL=ws://localhost:7880
+      - LSA_LIVEKIT_API_KEY=${LSA_LIVEKIT_API_KEY:-devkey}
+      - LSA_LIVEKIT_API_SECRET=${LSA_LIVEKIT_API_SECRET:-secret}
+      # Auth — JWT secret (from .env).
+      - LSA_JWT_SECRET=${LSA_JWT_SECRET:-dev-secret-change-in-production}
+      # Auth DB path — SQLite file for user accounts.
+      - LSA_AUTH_DB_PATH=data/auth.db
+      # Google OAuth client ID — must match frontend GOOGLE_CLIENT_ID.
+      - LSA_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      # Sentry (optional).
+      - LSA_SENTRY_DSN=${LSA_SENTRY_DSN:-}
+      - LSA_SENTRY_ENVIRONMENT=${LSA_SENTRY_ENVIRONMENT:-development}
     volumes:
       - session-data:/app/data
     depends_on:
@@ -29,6 +39,20 @@ services:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
       - NEXT_PUBLIC_WS_URL=ws://localhost:8000
       - NEXT_PUBLIC_LIVEKIT_URL=ws://localhost:7880
+      # NextAuth / Auth.js v5.
+      - NEXTAUTH_URL=http://localhost:3000
+      - AUTH_SECRET=${AUTH_SECRET:-change-me-in-production}
+      # Server-to-server backend URL (container-to-container).
+      - NEXTAUTH_BACKEND_URL=http://backend:8000
+      # Google OAuth credentials (from .env).
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      # Sentry (optional).
+      - NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN:-}
+      - NEXT_PUBLIC_SENTRY_ENVIRONMENT=${NEXT_PUBLIC_SENTRY_ENVIRONMENT:-development}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
     depends_on:
       - backend
       - livekit

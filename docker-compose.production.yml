@@ -1,0 +1,183 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# LiveSessionAnalysis — Production topology for local integration testing
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# PURPOSE
+#   Mirror the production storage stack (Postgres + S3-compatible object
+#   storage) locally, so you can validate the full data path before deploying
+#   to Fly.io.  MinIO provides an S3-compatible API that stands in for
+#   Cloudflare R2.
+#
+# QUICK START
+#   docker compose -f docker-compose.production.yml up --build
+#
+#   Then open:
+#     Frontend  → http://localhost:3000
+#     Backend   → http://localhost:8000/health
+#     MinIO UI  → http://localhost:9001  (user: minioadmin / pass: minioadmin)
+#
+# LIVEKIT OPTIONS
+#   By default the local LiveKit dev server is used so you can test offline.
+#   To test against LiveKit Cloud instead, export these before running:
+#
+#     export LSA_LIVEKIT_URL=wss://your-project.livekit.cloud
+#     export LSA_LIVEKIT_API_KEY=your-livekit-api-key
+#     export LSA_LIVEKIT_API_SECRET=your-livekit-api-secret
+#
+#   Then start only the non-LiveKit services:
+#
+#     docker compose -f docker-compose.production.yml \
+#       up --build postgres minio minio-init backend frontend
+#
+# NOTES
+#   • This file is NOT for production deployment — use fly.toml and Fly
+#     secrets for that.  See docs/production-deployment-guide.md.
+#   • Secrets here are intentionally simple local-only values.  Replace them
+#     with real values only in your actual secrets manager (Fly.io, Doppler, …).
+# ══════════════════════════════════════════════════════════════════════════════
+
+services:
+
+  # ── Postgres 16 ────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lsa
+      POSTGRES_PASSWORD: lsa
+      POSTGRES_DB: lsa
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lsa -d lsa"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── MinIO (S3-compatible — stands in for Cloudflare R2) ───────────────────
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # MinIO web console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── MinIO bucket initialiser (runs once then exits) ───────────────────────
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 minioadmin minioadmin &&
+        mc mb --ignore-existing local/lsa-traces &&
+        echo 'Bucket lsa-traces ready.'
+      "
+    restart: "no"
+
+  # ── LiveKit dev server (offline testing — skip when using LiveKit Cloud) ───
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --dev --bind 0.0.0.0
+    ports:
+      - "7880:7880"
+      - "7881:7881/udp"
+
+  # ── Backend ────────────────────────────────────────────────────────────────
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # ── Storage: Postgres ─────────────────────────────────────────────────
+      LSA_STORAGE_BACKEND: postgres
+      LSA_DATABASE_URL: postgresql://lsa:lsa@postgres:5432/lsa
+
+      # ── Trace storage: MinIO / S3-compatible ──────────────────────────────
+      LSA_TRACE_STORAGE_BACKEND: s3
+      LSA_S3_ENDPOINT_URL: http://minio:9000
+      LSA_S3_BUCKET_NAME: lsa-traces
+      LSA_S3_ACCESS_KEY_ID: minioadmin
+      LSA_S3_SECRET_ACCESS_KEY: minioadmin
+
+      # ── Auth ──────────────────────────────────────────────────────────────
+      LSA_JWT_SECRET: ${LSA_JWT_SECRET:-local-integration-test-jwt-secret}
+
+      # ── CORS ──────────────────────────────────────────────────────────────
+      LSA_CORS_ORIGINS: '["http://localhost:3000"]'
+
+      # ── LiveKit (default: local dev server; override for LiveKit Cloud) ───
+      LSA_ENABLE_LIVEKIT: "true"
+      LSA_LIVEKIT_URL: ${LSA_LIVEKIT_URL:-ws://livekit:7880}
+      LSA_LIVEKIT_API_KEY: ${LSA_LIVEKIT_API_KEY:-devkey}
+      LSA_LIVEKIT_API_SECRET: ${LSA_LIVEKIT_API_SECRET:-secret}
+
+      # ── Google OAuth (optional) ───────────────────────────────────────────
+      LSA_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+
+      # ── Sentry (optional) ─────────────────────────────────────────────────
+      LSA_SENTRY_DSN: ${LSA_SENTRY_DSN:-}
+      LSA_SENTRY_ENVIRONMENT: ${LSA_SENTRY_ENVIRONMENT:-local-integration}
+    volumes:
+      - backend-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+  # ── Frontend ───────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Build-time Next.js public variables — injected into the client bundle.
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_WS_URL: ws://localhost:8000
+        NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL:-ws://localhost:7880}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+        NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${NEXT_PUBLIC_SENTRY_ENVIRONMENT:-local-integration}
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # NextAuth
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_SECRET: ${AUTH_SECRET:-local-integration-test-auth-secret}
+      # Server-to-server (container network)
+      NEXTAUTH_BACKEND_URL: http://backend:8000
+      # Google OAuth (optional)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      # Sentry (optional)
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+      NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${NEXT_PUBLIC_SENTRY_ENVIRONMENT:-local-integration}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-local-integration}
+    depends_on:
+      - backend
+
+# ── Named volumes ──────────────────────────────────────────────────────────
+volumes:
+  postgres-data:
+  minio-data:
+  backend-data:
