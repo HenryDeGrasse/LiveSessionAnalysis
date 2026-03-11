@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { API_URL } from '@/lib/constants'
+import { useSession } from 'next-auth/react'
+import { apiFetch } from '@/lib/api-client'
+import { AuthGuard } from '@/components/auth/AuthGuard'
 import type { SessionSummary } from '@/lib/types'
 import {
   LineChart,
@@ -25,6 +27,10 @@ import {
   getTrendLabel,
   getTrendTone,
 } from '@/lib/analytics'
+import {
+  getAnalyticsPortfolioDescription,
+  getAnalyticsPortfolioHeading,
+} from '@/lib/analytics-view'
 
 type FocusMetric = 'engagement' | 'studentEye' | 'tutorTalk' | 'interruptions'
 
@@ -124,17 +130,26 @@ function TrendBadge({
 }
 
 export default function AnalyticsPage() {
+  const { data: authSession, status: authStatus } = useSession()
+  const userRole = authSession?.user?.role
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [selectedTutor, setSelectedTutor] = useState('all')
   const [selectedType, setSelectedType] = useState('all')
   const [focusMetric, setFocusMetric] = useState<FocusMetric>('engagement')
 
   useEffect(() => {
+    // Do not issue any request while NextAuth is still resolving the session.
+    // Firing before status is resolved sends an unauthenticated request that
+    // the backend correctly rejects (returns []) but causes a misleading flash
+    // of "no sessions" before the real authenticated fetch completes.
+    if (authStatus === 'loading') return
+
     let cancelled = false
 
-    fetch(`${API_URL}/api/analytics/sessions`)
+    apiFetch('/api/analytics/sessions', {
+      accessToken: authSession?.user?.accessToken,
+    })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error('Failed to load analytics sessions')
@@ -165,27 +180,14 @@ export default function AnalyticsPage() {
     return () => {
       cancelled = true
     }
-  }, [])
-
-  const tutorOptions = useMemo(() => {
-    return Array.from(
-      new Set(
-        sessions
-          .map((session) => session.tutor_id.trim())
-          .filter(Boolean)
-      )
-    )
-  }, [sessions])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authStatus, authSession?.user?.accessToken])
 
   const filteredSessions = useMemo(() => {
     return sessions.filter((session) => {
-      const tutorMatches =
-        selectedTutor === 'all' || session.tutor_id === selectedTutor
-      const typeMatches =
-        selectedType === 'all' || session.session_type === selectedType
-      return tutorMatches && typeMatches
+      return selectedType === 'all' || session.session_type === selectedType
     })
-  }, [selectedTutor, selectedType, sessions])
+  }, [selectedType, sessions])
 
   const overview = useMemo(
     () => deriveDashboardOverview(filteredSessions),
@@ -224,6 +226,7 @@ export default function AnalyticsPage() {
   const emptyForFilter = !loading && sessions.length > 0 && filteredSessions.length === 0
 
   return (
+    <AuthGuard>
     <main className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-8 px-6 py-10 lg:px-8">
         <section
@@ -233,17 +236,14 @@ export default function AnalyticsPage() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.24em] text-slate-300">
-                Tutor review room
+                {userRole === 'student' ? 'Student session history' : 'Tutor review room'}
               </div>
               <div>
                 <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
-                  Post-session analytics redesigned for actual coaching follow-up.
+                  {getAnalyticsPortfolioHeading(userRole)}
                 </h1>
                 <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 md:text-lg">
-                  Scan risk hotspots, compare recent sessions, and drill into
-                  recommendations without turning the live call into a dashboard.
-                  Student-level filtering is not stored yet, so this review view is
-                  tutor-centric for now.
+                  {getAnalyticsPortfolioDescription(userRole)}
                 </p>
               </div>
             </div>
@@ -263,8 +263,7 @@ export default function AnalyticsPage() {
                   Current filter
                 </p>
                 <p data-testid="analytics-scope-label" className="mt-2 text-lg font-semibold text-white">
-                  {selectedTutor === 'all' ? 'All tutors' : selectedTutor}
-                  {selectedType === 'all' ? '' : ` · ${getSessionTypeLabel(selectedType)}`}
+                  {selectedType === 'all' ? 'All session types' : getSessionTypeLabel(selectedType)}
                 </p>
                 <p className="text-sm text-slate-400">
                   {filteredSessions.length} session{filteredSessions.length === 1 ? '' : 's'} in the current review set.
@@ -274,26 +273,7 @@ export default function AnalyticsPage() {
           </div>
         </section>
 
-        <section className="grid gap-4 rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur lg:grid-cols-[1fr_220px_220px]">
-          <label className="space-y-2 text-sm text-slate-300">
-            <span className="text-xs uppercase tracking-[0.22em] text-slate-400">
-              Tutor scope
-            </span>
-            <select
-              data-testid="analytics-tutor-filter"
-              value={selectedTutor}
-              onChange={(event) => setSelectedTutor(event.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none ring-0 transition focus:border-sky-400"
-            >
-              <option value="all">All tutors</option>
-              {tutorOptions.map((tutorId) => (
-                <option key={tutorId} value={tutorId}>
-                  {tutorId}
-                </option>
-              ))}
-            </select>
-          </label>
-
+        <section className="grid gap-4 rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur lg:grid-cols-[1fr_220px]">
           <label className="space-y-2 text-sm text-slate-300">
             <span className="text-xs uppercase tracking-[0.22em] text-slate-400">
               Session type
@@ -620,5 +600,6 @@ export default function AnalyticsPage() {
         )}
       </div>
     </main>
+    </AuthGuard>
   )
 }

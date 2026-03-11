@@ -13,7 +13,8 @@ import {
   ReferenceDot,
   ResponsiveContainer,
 } from 'recharts'
-import { API_URL } from '@/lib/constants'
+import { useSession } from 'next-auth/react'
+import { apiFetch } from '@/lib/api-client'
 import type { SessionSummary } from '@/lib/types'
 import {
   ATTENTION_STATES,
@@ -33,8 +34,13 @@ import {
   getTrendLabel,
   getTrendTone,
 } from '@/lib/analytics'
+import {
+  getAnalyticsDetailTitle,
+  isStudentAnalyticsView,
+} from '@/lib/analytics-view'
 import { DonutChart, NudgeHistoryItem } from '@/components/charts'
 import type { DonutSegment } from '@/components/charts'
+import { AuthGuard } from '@/components/auth/AuthGuard'
 
 type DetailSeriesKey =
   | 'engagement'
@@ -151,6 +157,7 @@ function ScoreBar({
 export default function SessionDetailPage() {
   const routeParams = useParams<{ id: string }>()
   const sessionId = routeParams.id
+  const { data: authSession, status: authStatus } = useSession()
   const [session, setSession] = useState<SessionSummary | null>(null)
   const [recommendations, setRecommendations] = useState<string[]>([])
   const [peerSessions, setPeerSessions] = useState<SessionSummary[]>([])
@@ -161,20 +168,41 @@ export default function SessionDetailPage() {
     'studentEnergy',
   ])
 
+  const accessToken = authSession?.user?.accessToken
+  const isStudentView = isStudentAnalyticsView(authSession?.user?.role)
+
   useEffect(() => {
+    // Only fetch when the user is fully authenticated. Guarding against
+    // 'loading' alone is insufficient — 'unauthenticated' users must also be
+    // blocked because the backend serves detail and recommendation requests
+    // without auth in backward-compat mode (200 OK), which would expose
+    // session data before the AuthGuard redirect fires.
+    if (authStatus !== 'authenticated') return
+
     let cancelled = false
 
     Promise.all([
-      fetch(`${API_URL}/api/analytics/sessions/${sessionId}`).then(async (response) => {
+      apiFetch(`/api/analytics/sessions/${sessionId}`, { accessToken }).then(async (response) => {
         if (!response.ok) return null
-        return response.json()
-      }),
-      fetch(`${API_URL}/api/analytics/sessions/${sessionId}/recommendations`).then(
-        async (response) => {
-          if (!response.ok) return []
-          return response.json()
+        const data = await response.json()
+        // Strip tutor-only coaching payload for student viewers so that
+        // nudge details are never exposed in the browser even if the backend
+        // returns them (defensive measure while backend role-filtering matures).
+        if (isStudentView && data) {
+          data.nudge_details = []
         }
-      ),
+        return data
+      }),
+      // Students should not receive the recommendations endpoint response —
+      // recommendations are coaching-specific, tutor-only content.
+      isStudentView
+        ? Promise.resolve([])
+        : apiFetch(`/api/analytics/sessions/${sessionId}/recommendations`, { accessToken }).then(
+            async (response) => {
+              if (!response.ok) return []
+              return response.json()
+            }
+          ),
     ])
       .then(([sessionData, recs]) => {
         if (cancelled) return
@@ -196,7 +224,8 @@ export default function SessionDetailPage() {
     return () => {
       cancelled = true
     }
-  }, [sessionId])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, authStatus, accessToken, isStudentView])
 
   useEffect(() => {
     if (!session) {
@@ -204,13 +233,16 @@ export default function SessionDetailPage() {
       return
     }
 
+    // Same guard: require full authentication, not just non-loading.
+    if (authStatus !== 'authenticated') return
+
     let cancelled = false
     const params = new URLSearchParams({ last_n: '8' })
     if (session.tutor_id) {
       params.set('tutor_id', session.tutor_id)
     }
 
-    fetch(`${API_URL}/api/analytics/sessions?${params.toString()}`)
+    apiFetch(`/api/analytics/sessions?${params.toString()}`, { accessToken })
       .then(async (response) => {
         if (!response.ok) return []
         return response.json()
@@ -229,7 +261,8 @@ export default function SessionDetailPage() {
     return () => {
       cancelled = true
     }
-  }, [session])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, authStatus, accessToken])
 
   const sessionHealth = useMemo(
     () => (session ? getSessionHealth(session) : null),
@@ -337,33 +370,41 @@ export default function SessionDetailPage() {
     })
   }
 
+  // AuthGuard must be the outermost wrapper — including the loading and
+  // not-found states — so unauthenticated users always get redirected to
+  // /login instead of being stuck on a loading or blank screen.
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-950 px-6 py-10 text-slate-300">
-        Loading session review…
-      </main>
+      <AuthGuard>
+        <main className="min-h-screen bg-slate-950 px-6 py-10 text-slate-300">
+          Loading session review…
+        </main>
+      </AuthGuard>
     )
   }
 
   if (!session || !sessionHealth) {
     return (
-      <main className="min-h-screen bg-slate-950 px-6 py-10 text-slate-300">
-        <div className="mx-auto max-w-4xl rounded-[28px] border border-white/10 bg-white/5 p-8">
-          <p className="text-2xl font-semibold text-white">
-            Session not found or not yet available.
-          </p>
-          <Link
-            href="/analytics"
-            className="mt-4 inline-flex rounded-full border border-white/10 px-4 py-2 text-sm text-white transition hover:bg-white/10"
-          >
-            Back to analytics
-          </Link>
-        </div>
-      </main>
+      <AuthGuard>
+        <main className="min-h-screen bg-slate-950 px-6 py-10 text-slate-300">
+          <div className="mx-auto max-w-4xl rounded-[28px] border border-white/10 bg-white/5 p-8">
+            <p className="text-2xl font-semibold text-white">
+              Session not found or not yet available.
+            </p>
+            <Link
+              href="/analytics"
+              className="mt-4 inline-flex rounded-full border border-white/10 px-4 py-2 text-sm text-white transition hover:bg-white/10"
+            >
+              Back to analytics
+            </Link>
+          </div>
+        </main>
+      </AuthGuard>
     )
   }
 
   return (
+    <AuthGuard>
     <main className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-10 lg:px-8">
         <section
@@ -384,7 +425,7 @@ export default function SessionDetailPage() {
                 data-testid="analytics-detail-title"
                 className="mt-4 text-4xl font-semibold tracking-tight text-white md:text-5xl"
               >
-                {session.tutor_id || 'Unassigned tutor'} · session review
+                {getAnalyticsDetailTitle(authSession?.user?.role, session.tutor_id)}
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 md:text-lg">
                 {sessionHealth.summary} This review keeps the live-call UI clean,
@@ -459,6 +500,7 @@ export default function SessionDetailPage() {
           />
         </section>
 
+        {!isStudentView && (
         <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
           <div
             data-testid="analytics-detail-rubric"
@@ -545,6 +587,7 @@ export default function SessionDetailPage() {
             )}
           </div>
         </section>
+        )}
 
         {/* Talk time & attention distribution donuts */}
         <section
@@ -718,7 +761,9 @@ export default function SessionDetailPage() {
           </div>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+        {/* Recommendations (tutor) + Flagged moments (both) */}
+        <section className={`grid gap-6 ${!isStudentView ? 'xl:grid-cols-[0.9fr_1.1fr]' : ''}`}>
+          {!isStudentView && (
           <div
             data-testid="analytics-detail-recommendations"
             className="rounded-[28px] border border-white/10 bg-white/5 p-6"
@@ -753,6 +798,7 @@ export default function SessionDetailPage() {
               </div>
             )}
           </div>
+          )}
 
           <div
             data-testid="analytics-detail-flagged-moments"
@@ -763,7 +809,7 @@ export default function SessionDetailPage() {
                 Flagged moments
               </p>
               <h2 className="mt-2 text-2xl font-semibold text-white">
-                The exact moments worth revisiting.
+                {isStudentView ? 'Engagement dips during session' : 'The exact moments worth revisiting.'}
               </h2>
             </div>
             {session.flagged_moments.length > 0 ? (
@@ -798,7 +844,8 @@ export default function SessionDetailPage() {
           </div>
         </section>
 
-        {/* Nudge history */}
+        {/* Nudge history — tutor-only */}
+        {!isStudentView && (
         <section
           data-testid="analytics-detail-nudge-history"
           className="rounded-[28px] border border-white/10 bg-white/5 p-6"
@@ -830,6 +877,7 @@ export default function SessionDetailPage() {
             </div>
           )}
         </section>
+        )}
 
         <section
           data-testid="analytics-detail-metadata"
@@ -872,5 +920,6 @@ export default function SessionDetailPage() {
         </section>
       </div>
     </main>
+    </AuthGuard>
   )
 }
