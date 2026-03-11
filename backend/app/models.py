@@ -109,6 +109,7 @@ class FlaggedMoment(BaseModel):
 class SessionSummary(BaseModel):
     session_id: str
     tutor_id: str = ""
+    student_user_id: str = ""
     start_time: datetime
     end_time: datetime
     duration_seconds: float
@@ -131,6 +132,12 @@ class SessionSummary(BaseModel):
     nudge_details: list[dict] = Field(default_factory=list)
     turn_counts: dict[str, int] = Field(default_factory=dict)
 
+    def is_owner(self, user_id: str) -> bool:
+        """Return True if user_id matches the tutor or the student of this session."""
+        if not user_id:
+            return False
+        return self.tutor_id == user_id or self.student_user_id == user_id
+
 
 class TrendData(BaseModel):
     tutor_id: str
@@ -142,6 +149,7 @@ class TrendData(BaseModel):
 
 class SessionCreateRequest(BaseModel):
     tutor_id: str = ""
+    student_user_id: str = ""
     session_type: str = "general"
     media_provider: Optional[MediaProvider] = None
 
