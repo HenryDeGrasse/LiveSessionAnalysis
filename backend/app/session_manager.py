@@ -10,6 +10,7 @@ from fastapi import WebSocket
 
 from .config import settings
 from .models import (
+    CoachingIntensity,
     LatencyStats,
     MediaProvider,
     MetricsSnapshot,
@@ -58,6 +59,8 @@ class SessionRoom:
     tutor_id: str = ""
     student_user_id: str = ""  # Authenticated student user ID (set via first-message auth)
     session_type: str = "general"
+    coaching_intensity: str = "normal"
+    max_students: int = 1
     media_provider: MediaProvider = MediaProvider.CUSTOM_WEBRTC
     livekit_room_name: str = ""
     livekit_room_started_at: float | None = None
@@ -72,6 +75,10 @@ class SessionRoom:
     started_at: float | None = None
     ended_at: float | None = None
     participants: dict[Role, ParticipantState] = field(default_factory=dict)
+    # Multi-student support: all student tokens (index 0 == student_token).
+    # Extra participants for indices 1..N-1 are in extra_student_participants.
+    student_tokens: list[str] = field(default_factory=list)
+    extra_student_participants: dict[int, ParticipantState] = field(default_factory=dict)
     interruption_count: int = 0
     interruption_timestamps: list[float] = field(default_factory=list)
     nudges_sent: list[Nudge] = field(default_factory=list)
@@ -99,6 +106,14 @@ class SessionRoom:
     def __post_init__(self):
         self.participants[Role.TUTOR] = ParticipantState(role=Role.TUTOR)
         self.participants[Role.STUDENT] = ParticipantState(role=Role.STUDENT)
+
+        # Build student_tokens: index 0 is always the primary student_token.
+        self.student_tokens = [self.student_token]
+        for i in range(1, max(1, self.max_students)):
+            extra_token = secrets.token_urlsafe(16)
+            self.student_tokens.append(extra_token)
+            self.extra_student_participants[i] = ParticipantState(role=Role.STUDENT)
+
         if settings.enable_session_tracing:
             from .observability.trace_recorder import SessionTraceRecorder
 
@@ -112,15 +127,48 @@ class SessionRoom:
     def get_role_for_token(self, token: str) -> Role | None:
         if token == self.tutor_token:
             return Role.TUTOR
-        elif token == self.student_token:
+        if token in self.student_tokens:
             return Role.STUDENT
         return None
 
+    def get_student_index_for_token(self, token: str) -> int | None:
+        """Return the student index for a given token, or None if not a student token."""
+        try:
+            return self.student_tokens.index(token)
+        except ValueError:
+            return None
+
+    def get_student_participant(self, index: int) -> ParticipantState:
+        """Return the ParticipantState for the given student index.
+
+        Index 0 is the primary student (``participants[Role.STUDENT]``).
+        Indices 1+ are stored in ``extra_student_participants``.
+        """
+        if index == 0:
+            return self.participants[Role.STUDENT]
+        return self.extra_student_participants[index]
+
+    def all_student_participants(self) -> list[tuple[int, ParticipantState]]:
+        """Return all (index, ParticipantState) pairs for every student slot."""
+        result: list[tuple[int, ParticipantState]] = [
+            (0, self.participants[Role.STUDENT])
+        ]
+        for idx, ps in sorted(self.extra_student_participants.items()):
+            result.append((idx, ps))
+        return result
+
     def both_connected(self) -> bool:
-        return all(p.connected for p in self.participants.values())
+        """Return True when the tutor and at least one student are connected."""
+        if not self.participants[Role.TUTOR].connected:
+            return False
+        if self.participants[Role.STUDENT].connected:
+            return True
+        return any(ps.connected for ps in self.extra_student_participants.values())
 
     def any_connected(self) -> bool:
-        return any(p.connected for p in self.participants.values())
+        if any(p.connected for p in self.participants.values()):
+            return True
+        return any(p.connected for p in self.extra_student_participants.values())
 
     def elapsed_seconds(self) -> float:
         if self.started_at is None:
@@ -252,9 +300,9 @@ class SessionRoom:
             degradation_level=self.degradation_level,
         )
 
-    def cancel_grace_task(self, role: Role):
-        """Cancel any pending grace-period finalization for this role."""
-        key = role.value
+    def cancel_grace_task(self, role_or_key: Role | str):
+        """Cancel any pending grace-period finalization for this participant."""
+        key = role_or_key.value if isinstance(role_or_key, Role) else role_or_key
         task = self._grace_tasks.pop(key, None)
         if task and not task.done():
             task.cancel()
@@ -270,6 +318,8 @@ class SessionManager:
         student_user_id: str = "",
         session_type: str = "general",
         media_provider: MediaProvider | None = None,
+        coaching_intensity: str = "normal",
+        max_students: int = 1,
     ) -> SessionCreateResponse:
         if media_provider is None:
             media_provider = MediaProvider(settings.default_media_provider)
@@ -287,6 +337,8 @@ class SessionManager:
             tutor_id=tutor_id,
             student_user_id=student_user_id,
             session_type=session_type,
+            coaching_intensity=coaching_intensity,
+            max_students=max(1, max_students),
             media_provider=media_provider,
             livekit_room_name=livekit_room_name,
         )
@@ -295,9 +347,13 @@ class SessionManager:
         return SessionCreateResponse(
             session_id=session_id,
             tutor_token=tutor_token,
-            student_token=student_token,
+            # Expose the full list (generated in __post_init__); index 0 ==
+            # the primary student_token that was passed in.
+            student_tokens=room.student_tokens,
+            max_students=room.max_students,
             media_provider=media_provider,
             livekit_room_name=livekit_room_name or None,
+            coaching_intensity=CoachingIntensity(coaching_intensity),
         )
 
     def get_session(self, session_id: str) -> SessionRoom | None:

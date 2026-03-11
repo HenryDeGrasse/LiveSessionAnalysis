@@ -28,13 +28,26 @@ def get_or_create_resources(room: SessionRoom) -> dict:
     """Get or create processing resources for a session."""
     sid = room.session_id
     if sid not in _session_resources:
-        _session_resources[sid] = {
+        resources: dict = {
             "video_tutor": VideoProcessor(),
             "video_student": VideoProcessor(),
             "audio_tutor": AudioProcessor(),
             "audio_student": AudioProcessor(),
             "metrics_engine": MetricsEngine(sid),
         }
+        # Dynamically create per-student processors for extra students (index 1+).
+        for idx in room.extra_student_participants:
+            resources[f"video_student_{idx}"] = VideoProcessor()
+            resources[f"audio_student_{idx}"] = AudioProcessor()
+        _session_resources[sid] = resources
+    else:
+        # If extra students were added after initial resource creation,
+        # create any missing per-student processors.
+        resources = _session_resources[sid]
+        for idx in room.extra_student_participants:
+            if f"video_student_{idx}" not in resources:
+                resources[f"video_student_{idx}"] = VideoProcessor()
+                resources[f"audio_student_{idx}"] = AudioProcessor()
     return _session_resources[sid]
 
 
@@ -42,8 +55,10 @@ def cleanup_resources(session_id: str):
     """Clean up processing resources for a session."""
     resources = _session_resources.pop(session_id, None)
     if resources:
-        resources["video_tutor"].close()
-        resources["video_student"].close()
+        for value in resources.values():
+            close = getattr(value, "close", None)
+            if callable(close):
+                close()
 
 
 def reset_session_resources():
@@ -122,7 +137,11 @@ def finalize_session(room: SessionRoom):
     logger.info(f"Session {room.session_id}: finalized")
 
     async def _notify():
-        for participant in room.participants.values():
+        # Collect all participants: tutor + primary student + extra students.
+        all_participants = list(room.participants.values()) + list(
+            room.extra_student_participants.values()
+        )
+        for participant in all_participants:
             if participant.connected and participant.websocket:
                 try:
                     await participant.websocket.send_json({
@@ -209,7 +228,10 @@ async def emit_metrics_snapshot(
 
             coach = resources.get("coach")
             if coach is None:
-                coach = Coach(session_type=room.session_type)
+                coach = Coach(
+                    session_type=room.session_type,
+                    intensity=room.coaching_intensity,
+                )
                 resources["coach"] = coach
             evaluation = coach.evaluate(snapshot, room.elapsed_seconds())
 
@@ -221,6 +243,9 @@ async def emit_metrics_snapshot(
                     "emitted_nudge": evaluation.emitted_nudge_type,
                     "trigger_features": evaluation.trigger_features,
                     "session_type": coach.session_type,
+                    "coaching_intensity": coach.intensity,
+                    "candidates_evaluated": evaluation.candidates_evaluated,
+                    "fired_rule": evaluation.fired_rule,
                 }
 
             # Trace recording is unconditional — always record for evals
@@ -232,6 +257,8 @@ async def emit_metrics_snapshot(
                     suppressed_reasons=evaluation.suppressed_reasons,
                     metrics_index=metrics_index,
                     trigger_features=evaluation.trigger_features,
+                    candidates_evaluated=evaluation.candidates_evaluated,
+                    fired_rule=evaluation.fired_rule,
                 )
 
             for nudge in evaluation.nudges:
@@ -323,13 +350,23 @@ async def metrics_emit_loop(room: SessionRoom):
         pass
 
 
-async def process_video_frame_bytes(room: SessionRoom, role: Role, payload: bytes):
+async def process_video_frame_bytes(
+    room: SessionRoom,
+    role: Role,
+    payload: bytes,
+    student_index: int = 0,
+):
     """Process a JPEG video frame through the full pipeline."""
     if not room.should_process_video_frame(role):
         return
 
     resources = get_or_create_resources(room)
-    processor = resources[f"video_{role.value}"]
+    if role == Role.STUDENT and student_index > 0:
+        processor = resources.get(f"video_student_{student_index}")
+        if processor is None:
+            return
+    else:
+        processor = resources[f"video_{role.value}"]
     engine: MetricsEngine = resources["metrics_engine"]
 
     deg_level = room.degradation_level
@@ -342,16 +379,26 @@ async def process_video_frame_bytes(room: SessionRoom, role: Role, payload: byte
         skip_gaze=skip_gaze,
     )
 
-    _apply_video_result(room, role, engine, result)
+    _apply_video_result(room, role, engine, result, student_index=student_index)
 
 
-async def process_video_frame_array(room: SessionRoom, role: Role, frame_bgr: np.ndarray):
+async def process_video_frame_array(
+    room: SessionRoom,
+    role: Role,
+    frame_bgr: np.ndarray,
+    student_index: int = 0,
+):
     """Process a decoded BGR video frame through the full pipeline."""
     if not room.should_process_video_frame(role):
         return
 
     resources = get_or_create_resources(room)
-    processor = resources[f"video_{role.value}"]
+    if role == Role.STUDENT and student_index > 0:
+        processor = resources.get(f"video_student_{student_index}")
+        if processor is None:
+            return
+    else:
+        processor = resources[f"video_{role.value}"]
     engine: MetricsEngine = resources["metrics_engine"]
 
     deg_level = room.degradation_level
@@ -364,7 +411,7 @@ async def process_video_frame_array(room: SessionRoom, role: Role, frame_bgr: np
         skip_gaze=skip_gaze,
     )
 
-    _apply_video_result(room, role, engine, result)
+    _apply_video_result(room, role, engine, result, student_index=student_index)
 
 
 def _apply_video_result(
@@ -372,6 +419,7 @@ def _apply_video_result(
     role: Role,
     engine: MetricsEngine,
     result,
+    student_index: int = 0,
 ):
     now = time.time()
     if result.gaze is not None:
@@ -381,15 +429,17 @@ def _apply_video_result(
             result.gaze.on_camera,
             result.gaze.horizontal_angle_deg,
             result.gaze.vertical_angle_deg,
+            student_index=student_index,
         )
     else:
         engine.update_visual_observation(
             role,
             now,
             face_detected=result.face_detected,
+            student_index=student_index,
         )
     if result.expression is not None:
-        engine.update_expression(role, result.expression.valence)
+        engine.update_expression(role, result.expression.valence, student_index=student_index)
 
     recorder = trace_recorder(room)
     if recorder is not None:
@@ -422,13 +472,24 @@ def _apply_video_result(
         )
 
 
-async def process_audio_chunk(room: SessionRoom, role: Role, payload: bytes):
+async def process_audio_chunk(
+    room: SessionRoom,
+    role: Role,
+    payload: bytes,
+    student_index: int = 0,
+):
     """Process an audio chunk through VAD and prosody."""
     resources = get_or_create_resources(room)
-    processor = resources[f"audio_{role.value}"]
+    if role == Role.STUDENT and student_index > 0:
+        processor = resources.get(f"audio_student_{student_index}")
+        if processor is None:
+            return
+        participant = room.get_student_participant(student_index)
+    else:
+        processor = resources[f"audio_{role.value}"]
+        participant = room.participants[role]
     engine: MetricsEngine = resources["metrics_engine"]
 
-    participant = room.participants[role]
     result = processor.process_chunk(
         payload,
         force_muted=participant.audio_muted,
@@ -442,6 +503,7 @@ async def process_audio_chunk(room: SessionRoom, role: Role, payload: bytes):
         result.prosody.rms_energy,
         result.prosody.speech_rate_proxy,
         rms_db=result.prosody.rms_db,
+        student_index=student_index,
     )
 
     recorder = trace_recorder(room)

@@ -57,7 +57,15 @@ def livekit_room_name_for_session(session_id: str) -> str:
 
 
 
-def livekit_identity(session_id: str, role: Role) -> str:
+def livekit_identity(session_id: str, role: Role, student_index: int = 0) -> str:
+    """Return the LiveKit participant identity string for a session role.
+
+    Students are identified as ``{session_id}:student:{index}`` so that
+    multiple students in the same room can be distinguished.
+    Tutors remain ``{session_id}:tutor`` (no index).
+    """
+    if role == Role.STUDENT:
+        return f"{session_id}:student:{student_index}"
     return f"{session_id}:{role.value}"
 
 
@@ -67,21 +75,48 @@ def livekit_worker_identity(session_id: str) -> str:
 
 
 
-def livekit_role_for_identity(session_id: str, identity: str) -> Role | None:
+def livekit_role_for_identity(
+    session_id: str, identity: str
+) -> tuple[Role, int] | None:
+    """Parse a LiveKit identity string and return ``(role, student_index)``.
+
+    For tutors the index is always 0.
+    For students the index is extracted from the ``student:{N}`` suffix.
+    The legacy plain ``student`` suffix (pre-multi-participant) maps to index 0
+    for backward compatibility.
+
+    Returns ``None`` when the identity does not belong to this session.
+    """
     prefix = f"{session_id}:"
     if not identity.startswith(prefix):
         return None
 
     suffix = identity[len(prefix):]
     if suffix == Role.TUTOR.value:
-        return Role.TUTOR
+        return (Role.TUTOR, 0)
+    # New format: "student:{index}"
+    if suffix.startswith("student:"):
+        index_str = suffix[len("student:"):]
+        try:
+            return (Role.STUDENT, int(index_str))
+        except ValueError:
+            return None
+    # Legacy format: plain "student" (backward compat)
     if suffix == Role.STUDENT.value:
-        return Role.STUDENT
+        return (Role.STUDENT, 0)
     return None
 
 
 
-def build_livekit_join_payload(room: SessionRoom, role: Role) -> dict[str, Any]:
+def build_livekit_join_payload(
+    room: SessionRoom, role: Role, student_index: int = 0
+) -> dict[str, Any]:
+    """Build the LiveKit JWT join payload for a participant.
+
+    ``student_index`` is only meaningful when ``role == Role.STUDENT``.
+    It distinguishes multiple students in the same room; index 0 is the
+    primary (first) student.
+    """
     if room.media_provider != MediaProvider.LIVEKIT:
         raise LiveKitConfigError("Session is not configured for LiveKit")
 
@@ -89,13 +124,14 @@ def build_livekit_join_payload(room: SessionRoom, role: Role) -> dict[str, Any]:
         raise LiveKitConfigError("LiveKit is not configured")
 
     room_name = room.livekit_room_name or livekit_room_name_for_session(room.session_id)
+    identity = livekit_identity(room.session_id, role, student_index)
     now = int(time.time())
     exp = now + settings.livekit_token_ttl_seconds
 
     token = jwt.encode(
         {
             "iss": settings.livekit_api_key,
-            "sub": livekit_identity(room.session_id, role),
+            "sub": identity,
             "nbf": now - 5,
             "exp": exp,
             "name": role.value,
@@ -103,6 +139,7 @@ def build_livekit_join_payload(room: SessionRoom, role: Role) -> dict[str, Any]:
                 {
                     "session_id": room.session_id,
                     "role": role.value,
+                    "student_index": student_index if role == Role.STUDENT else None,
                     "tutor_id": room.tutor_id,
                     "session_type": room.session_type,
                 }
@@ -126,7 +163,7 @@ def build_livekit_join_payload(room: SessionRoom, role: Role) -> dict[str, Any]:
     return {
         "url": public_url,
         "room_name": room_name,
-        "identity": livekit_identity(room.session_id, role),
+        "identity": identity,
         "token": token,
         "expires_at": exp,
     }
@@ -309,12 +346,18 @@ def apply_livekit_webhook_event(payload: dict[str, Any]) -> dict[str, Any]:
         if isinstance(participant_payload, dict)
         else ""
     )
-    role = (
+    role_result = (
         livekit_role_for_identity(room.session_id, participant_identity)
         if participant_identity
         else None
     )
-    participant = room.participants[role] if role is not None else None
+    role: Role | None = role_result[0] if role_result is not None else None
+    student_index: int = role_result[1] if role_result is not None else 0
+    participant = (
+        room.get_student_participant(student_index)
+        if role == Role.STUDENT
+        else (room.participants[role] if role is not None else None)
+    )
 
     if participant is not None:
         participant.livekit_identity = participant_identity

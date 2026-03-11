@@ -20,6 +20,7 @@ from .livekit import (
     verify_livekit_webhook,
 )
 from .models import MediaProvider, Role, SessionCreateRequest, SessionCreateResponse
+from .session_manager import SessionRoom
 from .session_manager import session_manager
 from .ws import router as ws_router
 from .analytics.router import router as analytics_router
@@ -188,6 +189,8 @@ async def create_session(
         student_user_id = ""
     session_type = body.session_type if body else "general"
     media_provider = body.media_provider if body and body.media_provider else default_media_provider()
+    coaching_intensity = body.coaching_intensity.value if body and body.coaching_intensity else "normal"
+    max_students = body.max_students if body else 1
     if media_provider == MediaProvider.LIVEKIT and not settings.enable_livekit:
         raise HTTPException(status_code=400, detail="LiveKit provider is not enabled")
     return session_manager.create_session(
@@ -195,6 +198,8 @@ async def create_session(
         student_user_id=student_user_id,
         session_type=session_type,
         media_provider=media_provider,
+        coaching_intensity=coaching_intensity,
+        max_students=max_students,
     )
 
 
@@ -207,7 +212,9 @@ async def session_info(session_id: str, token: str = ""):
     return {
         "session_id": room.session_id,
         "tutor_connected": room.participants[Role.TUTOR].connected,
-        "student_connected": room.participants[Role.STUDENT].connected,
+        "student_connected": any(
+            participant.connected for _idx, participant in room.all_student_participants()
+        ),
         "started": room.started_at is not None,
         "ended": room.ended_at is not None,
         "elapsed_seconds": room.elapsed_seconds(),
@@ -224,7 +231,10 @@ async def session_info(session_id: str, token: str = ""):
             "room_finished": room.livekit_room_ended_at is not None,
             "last_event": room.livekit_last_webhook_event,
             "tutor_joined": room.participants[Role.TUTOR].livekit_connected,
-            "student_joined": room.participants[Role.STUDENT].livekit_connected,
+            "student_joined": any(
+                participant.livekit_connected
+                for _idx, participant in room.all_student_participants()
+            ),
             "worker_started": room.livekit_worker_started_at is not None,
             "worker_connected": room.livekit_worker_connected_at is not None,
             "worker_last_error": room.livekit_worker_last_error,
@@ -244,14 +254,69 @@ async def create_livekit_token(session_id: str, token: str = "", debug: str = ""
     if room.ended_at is not None:
         raise HTTPException(status_code=409, detail="Session already ended")
 
+    student_index = room.get_student_index_for_token(token) if role == Role.STUDENT else 0
+
     # Enable debug mode when tutor requests token with ?debug=1
     if role == Role.TUTOR and debug == "1":
         room.debug_mode = True
 
     try:
-        return build_livekit_join_payload(room, role)
+        return build_livekit_join_payload(room, role, student_index=student_index or 0)
     except LiveKitConfigError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/api/sessions/{session_id}/student-token")
+async def allocate_student_token(session_id: str):
+    """Allocate a LiveKit token for the next available student slot.
+
+    This endpoint is intended for multi-student sessions where additional
+    students (beyond the first, whose token is returned at session creation)
+    need to join.  It iterates over the pre-generated student token list and
+    returns the first slot whose participant has not yet connected.
+
+    Returns:
+        token: The app-level student token (used for WebSocket auth).
+        student_index: Zero-based index of the allocated slot.
+        livekit: LiveKit join payload dict (only present when the session
+                 uses the LiveKit media provider and LiveKit is configured).
+    """
+    room = session_manager.get_session(session_id)
+    if room is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if room.ended_at is not None:
+        raise HTTPException(status_code=409, detail="Session already ended")
+
+    # Find the next student slot that has not yet connected.
+    allocated_index: int | None = None
+    allocated_token: str | None = None
+    for idx, token in enumerate(room.student_tokens):
+        participant = room.get_student_participant(idx)
+        if not participant.connected:
+            allocated_index = idx
+            allocated_token = token
+            break
+
+    if allocated_index is None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"All {room.max_students} student slot(s) are already occupied",
+        )
+
+    response: dict = {
+        "token": allocated_token,
+        "student_index": allocated_index,
+    }
+
+    if room.media_provider == MediaProvider.LIVEKIT:
+        try:
+            response["livekit"] = build_livekit_join_payload(
+                room, Role.STUDENT, student_index=allocated_index
+            )
+        except LiveKitConfigError:
+            pass  # LiveKit not fully configured — omit the livekit key
+
+    return response
 
 
 @app.post("/api/livekit/webhooks")

@@ -28,38 +28,40 @@ def _browser_analytics_ingest_enabled(room: SessionRoom) -> bool:
     return not livekit_analytics_worker_enabled(room)
 
 
-async def _grace_period_finalize(room: SessionRoom, role: Role):
+def _participant_key(role: Role, student_index: int = 0) -> str:
+    if role == Role.TUTOR:
+        return role.value
+    return f"student:{student_index}"
+
+
+def _participant_for(room: SessionRoom, role: Role, student_index: int = 0):
+    if role == Role.STUDENT:
+        return room.get_student_participant(student_index)
+    return room.participants[role]
+
+
+async def _grace_period_finalize(room: SessionRoom, role: Role, student_index: int = 0):
     """Wait for reconnect grace period, then finalize if still disconnected."""
     try:
         await asyncio.sleep(settings.reconnect_grace_seconds)
-        participant = room.participants[role]
+        participant = _participant_for(room, role, student_index)
         if not participant.connected and room.ended_at is None:
             if not room.any_connected():
                 logger.info(
-                    f"Session {room.session_id}: grace period expired for {role.value}, "
-                    "no participants connected — finalizing"
+                    f"Session {room.session_id}: grace period expired for "
+                    f"{_participant_key(role, student_index)}, no participants connected — finalizing"
                 )
                 _finalize_session(room)
             else:
                 logger.info(
-                    f"Session {room.session_id}: {role.value} did not reconnect, "
-                    "but other participant still connected"
+                    f"Session {room.session_id}: {_participant_key(role, student_index)} "
+                    "did not reconnect, but other participant still connected"
                 )
     except asyncio.CancelledError:
         pass
 
 
-def _opposite_role(role: Role) -> Role:
-    return Role.STUDENT if role == Role.TUTOR else Role.TUTOR
-
-
-async def _send_json_to_role(
-    room: SessionRoom,
-    role: Role,
-    message_type: str,
-    data: dict,
-):
-    participant = room.participants[role]
+async def _send_json_to_participant(participant, message_type: str, data: dict):
     if participant.connected and participant.websocket:
         try:
             await participant.websocket.send_json({
@@ -70,21 +72,51 @@ async def _send_json_to_role(
             pass
 
 
-async def _send_json_to_other_participant(
+async def _send_json_to_role(
+    room: SessionRoom,
+    role: Role,
+    message_type: str,
+    data: dict,
+    *,
+    student_index: int = 0,
+):
+    await _send_json_to_participant(
+        _participant_for(room, role, student_index),
+        message_type,
+        data,
+    )
+
+
+async def _send_json_to_other_participants(
     room: SessionRoom,
     source_role: Role,
     message_type: str,
     data: dict,
+    *,
+    source_student_index: int = 0,
 ):
-    await _send_json_to_role(room, _opposite_role(source_role), message_type, data)
+    source_key = _participant_key(source_role, source_student_index)
+    if source_key != Role.TUTOR.value:
+        await _send_json_to_role(room, Role.TUTOR, message_type, data)
+    for student_index, participant in room.all_student_participants():
+        if _participant_key(Role.STUDENT, student_index) == source_key:
+            continue
+        await _send_json_to_participant(participant, message_type, data)
 
 
 async def _broadcast_json(room: SessionRoom, message_type: str, data: dict):
-    for role in (Role.TUTOR, Role.STUDENT):
-        await _send_json_to_role(room, role, message_type, data)
+    await _send_json_to_role(room, Role.TUTOR, message_type, data)
+    for _student_index, participant in room.all_student_participants():
+        await _send_json_to_participant(participant, message_type, data)
 
 
-async def _handle_text_message(room: SessionRoom, role: Role, text: str):
+async def _handle_text_message(
+    room: SessionRoom,
+    role: Role,
+    text: str,
+    *,
+    student_index: int = 0,
+):
     """Handle JSON control messages on the session websocket.
 
     Text frames are reserved for signaling/control. Binary frames continue to carry
@@ -124,10 +156,11 @@ async def _handle_text_message(room: SessionRoom, role: Role, text: str):
                             f"{role.value} — user {user_id!r} not found in DB"
                         )
                     else:
-                        participant = room.participants[role]
+                        participant = _participant_for(room, role, student_index)
                         participant.user_id = user_id
-                        # For students, propagate to the room so it ends up in the summary
-                        if role == Role.STUDENT:
+                        # For students, propagate the first authenticated student's
+                        # user ID to the room-level summary field for backward compatibility.
+                        if role == Role.STUDENT and student_index == 0:
                             room.student_user_id = user_id
                         logger.info(
                             f"Session {room.session_id}: {role.value} authenticated as user {user_id}"
@@ -139,7 +172,7 @@ async def _handle_text_message(room: SessionRoom, role: Role, text: str):
         return
 
     if message_type == "client_status":
-        participant = room.participants[role]
+        participant = _participant_for(room, role, student_index)
         if "audio_muted" in data:
             participant.audio_muted = bool(data["audio_muted"])
         if "video_enabled" in data:
@@ -168,10 +201,11 @@ async def websocket_endpoint(
         await websocket.close(code=4001, reason="Invalid token")
         return
 
-    participant = room.participants[role]
+    student_index = room.get_student_index_for_token(token) if role == Role.STUDENT else 0
+    participant = _participant_for(room, role, student_index)
 
     if participant.connected:
-        await websocket.close(code=4002, reason="Role already connected")
+        await websocket.close(code=4002, reason="Participant already connected")
         return
 
     if room.ended_at is not None:
@@ -190,22 +224,29 @@ async def websocket_endpoint(
     participant.disconnected_at = None
     participant.last_speech_update = time.time()
 
-    room.cancel_grace_task(role)
+    participant_key = _participant_key(role, student_index)
+    room.cancel_grace_task(participant_key)
 
-    logger.info(f"Session {session_id}: {role.value} connected")
+    logger.info(f"Session {session_id}: {participant_key} connected")
     recorder = _trace_recorder(room)
     if recorder is not None:
-        recorder.record_event(f"{role.value}_connected", role=role.value)
+        recorder.record_event(
+            f"{role.value}_connected",
+            role=role.value,
+            data={"student_index": student_index if role == Role.STUDENT else None},
+        )
 
     if was_reconnecting:
-        await _send_json_to_other_participant(
+        await _send_json_to_other_participants(
             room,
             role,
             "participant_reconnected",
             {
                 "role": role.value,
                 "session_id": session_id,
+                "student_index": student_index if role == Role.STUDENT else None,
             },
+            source_student_index=student_index,
         )
         if recorder is not None:
             recorder.record_event(
@@ -233,6 +274,7 @@ async def websocket_endpoint(
             "role": role.value,
             "session_id": session_id,
             "reconnected": was_reconnecting,
+            "student_index": student_index if role == Role.STUDENT else None,
         }
         if recorder is not None:
             recorder.record_event(
@@ -259,20 +301,29 @@ async def websocket_endpoint(
                 payload = data[1:]
 
                 if msg_type == 0x01:
-                    await _process_video_frame(room, role, payload)
+                    await _process_video_frame(
+                        room, role, payload, student_index=student_index
+                    )
                 elif msg_type == 0x02:
-                    await _process_audio_chunk(room, role, payload)
+                    await _process_audio_chunk(
+                        room, role, payload, student_index=student_index
+                    )
                 continue
 
             text = message.get("text")
             if text is not None:
-                await _handle_text_message(room, role, text)
+                await _handle_text_message(
+                    room,
+                    role,
+                    text,
+                    student_index=student_index,
+                )
                 continue
 
     except WebSocketDisconnect:
-        logger.info(f"Session {session_id}: {role.value} disconnected")
+        logger.info(f"Session {session_id}: {participant_key} disconnected")
     except Exception as exc:
-        logger.error(f"Session {session_id}: error for {role.value}: {exc}")
+        logger.error(f"Session {session_id}: error for {participant_key}: {exc}")
     finally:
         participant.connected = False
         participant.websocket = None
@@ -283,6 +334,7 @@ async def websocket_endpoint(
                 "role": role.value,
                 "session_id": session_id,
                 "grace_seconds": settings.reconnect_grace_seconds,
+                "student_index": student_index if role == Role.STUDENT else None,
             }
             recorder = _trace_recorder(room)
             if recorder is not None:
@@ -292,12 +344,15 @@ async def websocket_endpoint(
                     data=disconnect_payload,
                 )
 
-            grace_task = asyncio.create_task(_grace_period_finalize(room, role))
-            room._grace_tasks[role.value] = grace_task
+            grace_task = asyncio.create_task(
+                _grace_period_finalize(room, role, student_index)
+            )
+            room._grace_tasks[participant_key] = grace_task
 
-            await _send_json_to_other_participant(
+            await _send_json_to_other_participants(
                 room,
                 role,
                 "participant_disconnected",
                 disconnect_payload,
+                source_student_index=student_index,
             )

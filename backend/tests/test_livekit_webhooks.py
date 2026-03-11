@@ -7,6 +7,7 @@ import time
 import jwt
 
 from app.config import settings
+from app.livekit import livekit_identity, livekit_role_for_identity
 from app.models import Role
 from app.session_manager import session_manager
 
@@ -177,3 +178,67 @@ def test_livekit_webhook_is_idempotent(client, monkeypatch):
     assert second.json()["status"] == "duplicate"
     assert room.participants[Role.TUTOR].livekit_connected is True
     assert "evt-duplicate" in room.livekit_webhook_event_ids
+
+
+def test_livekit_identity_for_multi_students():
+    """livekit_identity with student_index=2 produces '{sid}:student:2'."""
+    sid = "test-session-abc"
+    assert livekit_identity(sid, Role.STUDENT, student_index=0) == f"{sid}:student:0"
+    assert livekit_identity(sid, Role.STUDENT, student_index=2) == f"{sid}:student:2"
+    # Tutor has no index suffix
+    assert livekit_identity(sid, Role.TUTOR) == f"{sid}:tutor"
+
+
+def test_livekit_role_for_identity_multi_students():
+    """livekit_role_for_identity returns (Role.STUDENT, 1) for '{sid}:student:1'."""
+    sid = "test-session-xyz"
+    result = livekit_role_for_identity(sid, f"{sid}:student:1")
+    assert result == (Role.STUDENT, 1)
+
+    result_2 = livekit_role_for_identity(sid, f"{sid}:student:2")
+    assert result_2 == (Role.STUDENT, 2)
+
+    # Tutor returns (Role.TUTOR, 0)
+    tutor_result = livekit_role_for_identity(sid, f"{sid}:tutor")
+    assert tutor_result == (Role.TUTOR, 0)
+
+    # Unknown session returns None
+    assert livekit_role_for_identity(sid, "other-session:student:1") is None
+
+
+def test_webhook_participant_joined_extra_student(client, monkeypatch):
+    """A participant_joined webhook for identity '{sid}:student:1' updates extra_student_participants."""
+    _configure_livekit(monkeypatch)
+
+    create = client.post(
+        "/api/sessions",
+        json={"media_provider": "livekit", "max_students": 2},
+    )
+    assert create.status_code == 200
+    data = create.json()
+    sid = data["session_id"]
+
+    room = session_manager.get_session(sid)
+    assert room is not None
+    assert 1 in room.extra_student_participants
+
+    event = {
+        "id": "evt-extra-student-joined",
+        "event": "participant_joined",
+        "room": {"name": data["livekit_room_name"]},
+        "participant": {"identity": f"{sid}:student:1"},
+    }
+    body, headers = _signed_webhook(event)
+    response = client.post("/api/livekit/webhooks", content=body, headers=headers)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "processed"
+
+    # Extra student participant (index 1) should now show as livekit_connected
+    extra = room.extra_student_participants[1]
+    assert extra.livekit_connected is True
+    assert extra.livekit_identity == f"{sid}:student:1"
+
+    # Primary student (index 0) should be unaffected
+    assert room.participants[Role.STUDENT].livekit_connected is False

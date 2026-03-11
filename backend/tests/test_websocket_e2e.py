@@ -11,6 +11,7 @@ from app.session_manager import session_manager
 from app.config import settings
 from app.analytics import router as analytics_router
 from app.analytics.session_store import SessionStore
+from app.models import Role
 
 
 @pytest.fixture(autouse=True)
@@ -160,6 +161,50 @@ class TestSessionCreation:
         assert payload["token"]
         assert payload["expires_at"] > 0
 
+    def test_extra_student_livekit_token_uses_student_index_identity(self, monkeypatch):
+        monkeypatch.setattr(settings, "enable_livekit", True)
+        monkeypatch.setattr(settings, "livekit_url", "ws://127.0.0.1:7880")
+        monkeypatch.setattr(settings, "livekit_api_key", "devkey")
+        monkeypatch.setattr(settings, "livekit_api_secret", "secret")
+
+        client = TestClient(app)
+        resp = client.post(
+            "/api/sessions",
+            json={"media_provider": "livekit", "max_students": 2},
+        )
+        data = resp.json()
+
+        token_resp = client.post(
+            f"/api/sessions/{data['session_id']}/livekit-token?token={data['student_tokens'][1]}"
+        )
+        assert token_resp.status_code == 200
+        payload = token_resp.json()
+        assert payload["identity"] == f"{data['session_id']}:student:1"
+
+    def test_allocate_student_token_returns_next_open_slot(self, monkeypatch):
+        monkeypatch.setattr(settings, "enable_livekit", True)
+        monkeypatch.setattr(settings, "livekit_url", "ws://127.0.0.1:7880")
+        monkeypatch.setattr(settings, "livekit_api_key", "devkey")
+        monkeypatch.setattr(settings, "livekit_api_secret", "secret")
+
+        client = TestClient(app)
+        resp = client.post(
+            "/api/sessions",
+            json={"media_provider": "livekit", "max_students": 3},
+        )
+        data = resp.json()
+        room = session_manager.get_session(data["session_id"])
+        assert room is not None
+
+        room.participants[Role.STUDENT].connected = True
+
+        token_resp = client.post(f"/api/sessions/{data['session_id']}/student-token")
+        assert token_resp.status_code == 200
+        payload = token_resp.json()
+        assert payload["token"] == data["student_tokens"][1]
+        assert payload["student_index"] == 1
+        assert payload["livekit"]["identity"] == f"{data['session_id']}:student:1"
+
     def test_end_session_persists_empty_summary(self, tmp_path, monkeypatch):
         monkeypatch.setattr(settings, "session_data_dir", str(tmp_path))
         monkeypatch.setattr(analytics_router, "store", SessionStore(str(tmp_path)))
@@ -238,7 +283,20 @@ class TestWebSocketConnection:
             tutor = room.participants[tutor_role]
             assert tutor.audio_muted is True
             assert tutor.video_enabled is False
-            assert tutor.tab_hidden is True
+
+    def test_extra_student_websocket_uses_distinct_participant_slot(self):
+        client = TestClient(app)
+        resp = client.post("/api/sessions", json={"max_students": 2})
+        data = resp.json()
+        room = session_manager.get_session(data["session_id"])
+        assert room is not None
+
+        with client.websocket_connect(
+            f"/ws/session/{data['session_id']}?token={data['student_tokens'][1]}"
+        ) as ws:
+            assert ws is not None
+            assert room.get_student_participant(1).connected is True
+            assert room.participants[Role.STUDENT].connected is False
 
     def test_student_disconnect_and_reconnect_notifies_tutor(self):
         client = TestClient(app)

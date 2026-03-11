@@ -45,6 +45,121 @@ def test_both_connected():
     assert room.both_connected()
 
 
+def test_multi_student_tokens_and_participants():
+    mgr = SessionManager()
+    resp = mgr.create_session(max_students=3)
+    room = mgr.get_session(resp.session_id)
+
+    assert room is not None
+    assert resp.max_students == 3
+    assert len(resp.student_tokens) == 3
+    assert resp.student_token == resp.student_tokens[0]
+    assert room.get_student_index_for_token(resp.student_tokens[0]) == 0
+    assert room.get_student_index_for_token(resp.student_tokens[1]) == 1
+    assert room.get_student_index_for_token(resp.student_tokens[2]) == 2
+    assert room.get_student_participant(1).role == Role.STUDENT
+    assert [idx for idx, _participant in room.all_student_participants()] == [0, 1, 2]
+
+
+def test_any_connected_counts_extra_students():
+    room = SessionRoom(
+        session_id="test",
+        tutor_token="t",
+        student_token="s",
+        max_students=2,
+    )
+
+    assert room.any_connected() is False
+    room.get_student_participant(1).connected = True
+    assert room.any_connected() is True
+
+
+def test_both_connected_accepts_extra_student_connection():
+    room = SessionRoom(
+        session_id="test",
+        tutor_token="t",
+        student_token="s",
+        max_students=2,
+    )
+
+    room.participants[Role.TUTOR].connected = True
+    room.get_student_participant(1).connected = True
+
+    assert room.both_connected() is True
+
+
+def test_create_session_with_max_students_generates_tokens():
+    """Creating a session with max_students=3 produces 3 distinct student tokens."""
+    mgr = SessionManager()
+    resp = mgr.create_session(max_students=3)
+    room = mgr.get_session(resp.session_id)
+
+    assert room is not None
+    assert resp.max_students == 3
+    assert len(resp.student_tokens) == 3
+    # All tokens must be distinct
+    assert len(set(resp.student_tokens)) == 3
+    # Primary student_token is index 0
+    assert resp.student_token == resp.student_tokens[0]
+    # Room should have primary + 2 extra participants (indices 1 and 2)
+    assert len(room.extra_student_participants) == 2
+    assert 1 in room.extra_student_participants
+    assert 2 in room.extra_student_participants
+    # Each extra participant has the STUDENT role
+    assert room.extra_student_participants[1].role == Role.STUDENT
+    assert room.extra_student_participants[2].role == Role.STUDENT
+
+
+def test_get_student_index_for_token():
+    """Each token maps to the correct student index (0, 1, 2)."""
+    mgr = SessionManager()
+    resp = mgr.create_session(max_students=3)
+    room = mgr.get_session(resp.session_id)
+
+    assert room.get_student_index_for_token(resp.student_tokens[0]) == 0
+    assert room.get_student_index_for_token(resp.student_tokens[1]) == 1
+    assert room.get_student_index_for_token(resp.student_tokens[2]) == 2
+    # Non-student token returns None
+    assert room.get_student_index_for_token(resp.tutor_token) is None
+    assert room.get_student_index_for_token("invalid-token") is None
+
+
+def test_get_role_for_token_multi_student():
+    """All student tokens return Role.STUDENT; tutor token returns Role.TUTOR."""
+    mgr = SessionManager()
+    resp = mgr.create_session(max_students=3)
+    room = mgr.get_session(resp.session_id)
+
+    for token in resp.student_tokens:
+        assert room.get_role_for_token(token) == Role.STUDENT
+    assert room.get_role_for_token(resp.tutor_token) == Role.TUTOR
+    assert room.get_role_for_token("invalid") is None
+
+
+def test_both_connected_requires_one_student():
+    """With max_students=3, both_connected() returns True when tutor + any one student connected."""
+    mgr = SessionManager()
+    resp = mgr.create_session(max_students=3)
+    room = mgr.get_session(resp.session_id)
+
+    # Tutor alone — not connected
+    room.participants[Role.TUTOR].connected = True
+    assert not room.both_connected()
+
+    # Tutor + any extra student is sufficient
+    room.extra_student_participants[2].connected = True
+    assert room.both_connected()
+
+    # Disconnect that extra student; connect primary instead
+    room.extra_student_participants[2].connected = False
+    room.participants[Role.STUDENT].connected = True
+    assert room.both_connected()
+
+    # Tutor disconnects — no longer both connected
+    room.participants[Role.TUTOR].connected = False
+    assert not room.both_connected()
+
+
 def test_degradation_levels():
     mgr = SessionManager()
     resp = mgr.create_session()
