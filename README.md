@@ -80,6 +80,58 @@ NEXT_PUBLIC_LIVEKIT_VIDEO_CODEC=h264
 NEXT_PUBLIC_LIVEKIT_VIDEO_MAX_BITRATE=4500000
 ```
 
+## Authentication Setup
+
+The app supports three sign-in methods: **Google OAuth**, **email/password**, and **guest** (for students joining via a link with no account required).
+
+### Required environment variables
+
+**Backend** (`LSA_` prefix, set via docker-compose or shell):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LSA_JWT_SECRET` | `dev-secret-change-in-production` | HMAC-SHA256 signing key for access tokens. Generate with `openssl rand -base64 32`. **Change before production.** |
+| `LSA_AUTH_DB_PATH` | `data/auth.db` | SQLite file for user accounts. Created automatically on first run. Lives inside the `session-data` Docker volume. |
+| `LSA_GOOGLE_CLIENT_ID` | *(empty)* | Google OAuth client ID. Leave empty to disable Google sign-in. |
+| `LSA_JWT_EXPIRY_HOURS` | `24` | Access token lifetime in hours. |
+
+**Frontend** (env vars or `frontend/.env.local`):
+
+| Variable | Description |
+|----------|-------------|
+| `AUTH_SECRET` | NextAuth session encryption key. Generate with `openssl rand -base64 32`. **Change before production.** |
+| `NEXTAUTH_URL` | Public URL of the frontend (e.g. `http://localhost:3000`). Required for OAuth callbacks. |
+| `NEXTAUTH_BACKEND_URL` | Server-to-server backend URL used inside NextAuth callbacks (e.g. `http://backend:8000` in Docker, `http://localhost:8000` locally). |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID. Must match `LSA_GOOGLE_CLIENT_ID`. |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret. |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Exposes the client ID to the browser for the Google One Tap / sign-in button. |
+
+### Setting up Google OAuth (optional)
+
+Google sign-in is optional. Email/password and guest accounts work without it.
+
+To enable Google sign-in:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials.
+2. Create an **OAuth 2.0 Client ID** of type **Web application**.
+3. Add `http://localhost:3000/api/auth/callback/google` (and your production URL) as an **Authorized redirect URI**.
+4. Copy the **Client ID** and **Client Secret**.
+5. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in the frontend environment.
+6. Set `LSA_GOOGLE_CLIENT_ID` to the same Client ID in the backend environment.
+7. Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` to the same Client ID for the browser-side button.
+
+### Sign-in methods
+
+| Method | Path | Notes |
+|--------|------|-------|
+| Email / password | `/login` | Register at `/register` first. Passwords are hashed with PBKDF2-HMAC-SHA256 (260,000 iterations, OWASP 2023 recommendation). |
+| Google OAuth | `/login` → "Sign in with Google" | Requires Google credentials above. |
+| Guest (student) | Automatic on student link join | No account required. Anonymous UUID identity. No expiry enforced yet (periodic cleanup is planned but not implemented). |
+
+### Local development without auth
+
+For quick local development, auth can be bypassed by hitting backend endpoints directly. The session WebSocket still uses per-session `tutor_token`/`student_token` for room access (unchanged). User-level auth is only required for REST API calls (session creation, analytics listing).
+
 Optional backend envs for LiveKit sessions:
 ```bash
 LSA_ENABLE_LIVEKIT=true
@@ -94,6 +146,8 @@ Notes:
 - for real deployment, add TURN-capable ICE servers instead of relying only on public STUN
 - `livekit-server --dev` uses the `devkey` / `secret` pair expected by the current local setup and Playwright harness
 - for local high-quality LiveKit testing on a stable connection, the defaults should give Zoom/Meet-class quality: 1080p capture, H.264 codec, 4.5 Mbps, no simulcast. Set `NEXT_PUBLIC_LIVEKIT_ADAPTIVE_STREAM=false` and `NEXT_PUBLIC_LIVEKIT_DYNACAST=false` to prevent adaptive downscaling. For 1:N scenarios, re-enable simulcast with `NEXT_PUBLIC_LIVEKIT_SIMULCAST=true`
+- production LiveKit Cloud setup steps are documented in `docs/livekit-cloud-setup.md`
+- `LSA_CORS_ORIGINS` accepts either a JSON array or a comma-separated list (for example: `https://lsa-frontend.fly.dev,https://staging.example.com`)
 
 ### Running Tests
 ```bash
@@ -137,14 +191,15 @@ When `LSA_ENABLE_LIVEKIT_ANALYTICS_WORKER=true`, LiveKit sessions stop using bro
 
 ## Usage
 
-1. Open http://localhost:3000
-2. Click "Create Session" - you'll get a session ID and student join link
-3. Share the student link with the student
-4. Both participants grant camera/mic access via the consent modal
-5. The session page opens a role-aware live tutor↔student call surface while still uploading analytics to the backend
-6. Tutor sees a minimal private coaching overlay and can end the session for everyone; students get a cleaner call-first view and can leave locally without seeing tutor metrics
-7. Detailed live diagnostics stay behind the tutor `Coach debug` toggle (or `?debug=1` for explicit debug/test sessions)
-8. After the session, visit /analytics for post-session analysis
+1. Open http://localhost:3000 — unauthenticated users are redirected to `/login`
+2. Sign in with Google, email/password (register at `/register` first), or continue as a guest (students joining via a student link are auto-authenticated as guests)
+3. Once signed in, click "Create Session" on the home page — you'll get a session ID and student join link
+4. Share the student link with the student
+5. Both participants grant camera/mic access via the consent modal
+6. The session page opens a role-aware live tutor↔student call surface while still uploading analytics to the backend
+7. Tutor sees a minimal private coaching overlay and can end the session for everyone; students get a cleaner call-first view and can leave locally without seeing tutor metrics
+8. Detailed live diagnostics stay behind the tutor `Coach debug` toggle (or `?debug=1` for explicit debug/test sessions)
+9. After the session, visit /analytics for post-session analysis
 
 ## Key Features
 
@@ -187,10 +242,68 @@ frontend/
   playwright.config.ts      # Isolated browser E2E harness
 ```
 
+## Production Deployment
+
+The production stack is **Fly.io** (app hosting) + **LiveKit Cloud** (media) +
+**Neon Postgres** (relational data) + **Cloudflare R2** (trace/artifact storage) +
+**Sentry** (observability).
+
+| Service | URL |
+|---------|-----|
+| Frontend | https://lsa-frontend.fly.dev |
+| Backend | https://lsa-backend.fly.dev |
+| Backend health | https://lsa-backend.fly.dev/health |
+
+See **[docs/production-deployment-guide.md](docs/production-deployment-guide.md)**
+for the full deployment guide, including:
+
+- account creation steps for every external service
+- secrets generation commands (`openssl rand -base64 32`)
+- step-by-step deployment sequence for backend and frontend
+- DNS and custom-domain setup
+- smoke test checklist
+- rollback procedure
+
+The annotated environment variable template is at
+**[.env.production.example](.env.production.example)** — every variable is
+documented with its purpose and a generation command.
+
+For local development, use the lighter **[.env.example](.env.example)** with
+localhost defaults.
+
+### CI/CD
+
+Pushing to `main` triggers an automatic deployment via GitHub Actions
+(`.github/workflows/deploy.yml`):
+
+1. **Frontend tests** — TypeScript check + unit tests
+2. **Backend tests** — pytest (fast subset, excludes slow/replay)
+3. **Deploy backend** → `fly deploy --app lsa-backend`
+4. **Deploy frontend** → `fly deploy --app lsa-frontend` with `NEXT_PUBLIC_*` build args
+
+Backend and frontend deploy in parallel after tests pass.
+
+**Required GitHub Secrets** (already configured):
+
+| Secret | Value |
+|--------|-------|
+| `FLY_API_TOKEN` | Fly.io org deploy token |
+| `NEXT_PUBLIC_API_URL` | `https://lsa-backend.fly.dev` |
+| `NEXT_PUBLIC_WS_URL` | `wss://lsa-backend.fly.dev` |
+| `NEXT_PUBLIC_LIVEKIT_URL` | LiveKit Cloud WSS URL |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth client ID |
+
+Optional: `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_ENVIRONMENT`
+
+You can also trigger a deploy manually from the GitHub Actions tab
+(**"Run workflow"** button).
+
 ## Documentation
 
+- [Production Deployment Guide](docs/production-deployment-guide.md) - Full Fly.io + LiveKit Cloud + Postgres + R2 deployment walkthrough
 - [Decision Log](docs/decision-log.md) - Architecture choices and rationale
 - [Web Production MVP Plan](docs/web-production-mvp-plan.md) - Recommended production deployment posture for the web pilot
+- [LiveKit Cloud Setup](docs/livekit-cloud-setup.md) - Manual operator steps for LiveKit Cloud
 - [LiveKit Migration Plan](docs/livekit-migration-plan.md) - Test-first migration from custom WebRTC to LiveKit
 - [Privacy Analysis](docs/privacy-analysis.md) - Data handling and consent
 - [API Reference](docs/api-reference.md) - REST and WebSocket endpoints
