@@ -126,3 +126,40 @@
 **Decision**: Replace separate `tutor_overtalk` and `student_silence` rules with a single `check_for_understanding` rule that fires when the tutor's recent talk percentage exceeds the profile's overtalk ceiling.
 
 **Rationale**: The profile-aware overtalk ceiling already encodes session-type norms, making the rule both simpler and more precise. One well-tuned rule is better than two overlapping ones.
+
+---
+
+## Authentication Decisions
+
+### Backend-Authoritative Authentication (Not Frontend-Only)
+**Decision**: User identity and JWT issuance are handled entirely by the FastAPI backend (`app/auth/`). The frontend (NextAuth.js) delegates all credential validation and token minting to backend endpoints; it never stores raw passwords or issues tokens on its own.
+
+**Rationale**: Backend-authoritative auth ensures that any API call—from browsers, curl, tests, or future native clients—goes through the same identity pipeline. Frontend-only auth (e.g., JWT issued by NextAuth from a secrets-only config) creates a divergent identity model where the backend cannot independently verify who is making API calls. Keeping the source of truth in the backend also makes it straightforward to add role checks, audit logs, and token revocation later.
+
+**Trade-offs**: Adds one round-trip for NextAuth's CredentialsProvider (browser → NextAuth API route → backend). This is negligible for auth flows and not on the hot path.
+
+### SQLite for User Store (Not Postgres or an External Service)
+**Decision**: User accounts are stored in a SQLite database (`data/auth.db`) managed directly by the backend using the standard library `sqlite3` module.
+
+**Rationale**: Consistent with the existing project philosophy of minimal external dependencies (JSON file session storage, no database for analytics). SQLite handles concurrent reads well and supports the expected pilot-scale traffic (one tutor per server instance). The auth DB path is configurable (`LSA_AUTH_DB_PATH`) so it can be replaced with a Postgres connection string when the product grows. No ORM is introduced — raw SQL with parameterised queries keeps the dependency footprint small and the behaviour auditable.
+
+**Alternatives considered**: Postgres (deferred: adds an infra dependency before it's needed), Auth0/Clerk (deferred: adds a vendor dependency and billing complexity for a pilot system).
+
+### NextAuth.js (Auth.js v5) as the Frontend Auth Layer
+**Decision**: The frontend uses NextAuth.js as the session/cookie management layer, with two providers: Google (OAuth) and Credentials (email/password and guest token). NextAuth does not issue its own JWTs for API calls; instead, it stores the backend-issued access token inside the NextAuth session and forwards it on every API request via an `Authorization: Bearer` header.
+
+**Rationale**: NextAuth is the standard auth library for Next.js and handles the OAuth callback complexity, CSRF protection, session cookies, and the credentials form pattern out of the box. Using it as a thin wrapper around the backend identity system gives a production-quality auth UI without building PKCE flows from scratch. The pattern of storing an external token inside a NextAuth session is explicitly documented in the NextAuth ecosystem.
+
+**Trade-offs**: NextAuth adds ~4 npm packages and a `/api/auth/[...nextauth]` route. The session object has a slightly non-standard shape (adds a `backendToken` field). These are minor and well-understood.
+
+### Guest Accounts for Low-Friction Student Join
+**Decision**: Students can join a session by clicking the student link without creating a full account. The frontend auto-creates a guest account via `POST /api/auth/guest` (backed by the auth router), which returns a short-lived access token and an anonymous user identity. Guests can optionally upgrade to a full account (email/password or Google) after the session.
+
+**Rationale**: Requiring students to register before joining a tutoring session would significantly increase abandonment and friction. The session-token model (tutor shares a `student_token` link) already implies a trusted join path; the guest auth layer adds a server-side identity to that join so the student's participation is attributable (to the anonymous guest ID) in post-session analytics. Guest identity cleanup is not yet implemented; a periodic deletion job for inactive guest accounts is planned as future work.
+
+**Privacy note**: Guest accounts are assigned a random UUID and an optional display name. No email or password is stored. If the guest later signs in with Google or creates an account, session history is not currently migrated across (future work).
+
+### Separation of User Auth from Session Auth
+**Decision**: The existing per-session `tutor_token` / `student_token` system is retained and operates independently of user-level auth. Session creation requires a valid user JWT; session joining (via the student token link) works with a guest JWT. The two token types serve different purposes and have different lifetimes.
+
+**Rationale**: Session tokens are short-lived, role-specific, and tied to a single session room. They are the right granularity for WebSocket auth and LiveKit room access. User JWTs are longer-lived, identity-scoped, and used for REST API calls (analytics listing, session creation). Merging the two would require session tokens to carry full identity claims, complicating the analytics query model and making token revocation harder. Keeping them separate also means the analytics worker can still join rooms with a server-side LiveKit token that carries no user identity.
