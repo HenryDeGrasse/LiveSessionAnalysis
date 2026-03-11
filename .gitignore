@@ -7,6 +7,8 @@
 .env
 .env.*
 !.env.example
+!.env.production.example
+.tmp-real-media/
 
 # Python
 **/__pycache__/
@@ -27,9 +29,18 @@ frontend/tsconfig.tsbuildinfo
 backend/data/sessions/
 backend/data/playwright-sessions/
 backend/data/traces/
+backend/data/auth.db
 
-# Generated reports (regenerated via `make accuracy-report`)
+# Generated reports (regenerated via `make accuracy-report` / `make real-media-accuracy`)
 docs/accuracy-report.md
+docs/real-media-accuracy-report.md
+
+# Real media test clips (too large for git; labels are OK to commit)
+data/real-media-clips/*.mp4
+data/real-media-clips/*.avi
+data/real-media-clips/*.mov
+data/real-media-clips/*.mkv
+data/real-media-clips/*.webm
 
 # Logs
 *.log
