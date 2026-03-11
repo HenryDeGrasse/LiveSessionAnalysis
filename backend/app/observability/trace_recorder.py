@@ -18,7 +18,7 @@ from .trace_models import (
     SessionTrace,
     VisualSignalPoint,
 )
-from .trace_store import SessionTraceStore
+from . import get_trace_store, TraceStore
 
 
 def default_config_hash() -> str:
@@ -43,7 +43,7 @@ class SessionTraceRecorder:
         tutor_id: str = "",
         session_type: str = "general",
         *,
-        store: Optional[SessionTraceStore] = None,
+        store: Optional[TraceStore] = None,
         now_fn: Optional[Callable[[], datetime]] = None,
         monotonic_fn: Optional[Callable[[], float]] = None,
         capture_mode: str = "prod",
@@ -57,7 +57,7 @@ class SessionTraceRecorder:
         self.session_id = session_id
         self.tutor_id = tutor_id
         self.session_type = session_type
-        self._store = store or SessionTraceStore()
+        self._store = store if store is not None else get_trace_store()
         self._now_fn = now_fn or datetime.utcnow
         self._monotonic_fn = monotonic_fn or time.monotonic
         self._origin_monotonic = self._monotonic_fn()
