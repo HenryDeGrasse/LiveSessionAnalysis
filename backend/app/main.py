@@ -4,7 +4,8 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 import mediapipe as mp
-from fastapi import FastAPI, HTTPException, Request
+import sentry_sdk
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
@@ -22,10 +23,21 @@ from .models import MediaProvider, Role, SessionCreateRequest, SessionCreateResp
 from .session_manager import session_manager
 from .ws import router as ws_router
 from .analytics.router import router as analytics_router
+from .auth.router import router as auth_router
+from .auth.dependencies import get_optional_user
+from .auth.models import User
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize Sentry when a DSN is configured (no-op when empty)
+    if settings.sentry_dsn:
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            environment=settings.sentry_environment,
+            traces_sample_rate=0.1,
+        )
+
     # Pre-load MediaPipe Face Mesh model on startup
     face_mesh = mp.solutions.face_mesh.FaceMesh(
         max_num_faces=1,
@@ -35,6 +47,8 @@ async def lifespan(app: FastAPI):
     )
     app.state.face_mesh_warmup = True
     face_mesh.close()
+
+    app.state.db_connected = None
 
     # Run retention cleanup on startup
     try:
@@ -69,25 +83,116 @@ app.add_middleware(
 
 app.include_router(ws_router)
 app.include_router(analytics_router, prefix="/api/analytics")
+app.include_router(auth_router, prefix="/api/auth")
+
+
+async def _check_db_connectivity() -> bool | None:
+    """Return live database connectivity state.
+
+    - ``None``: no database configured
+    - ``True``: configured and reachable
+    - ``False``: configured but unreachable
+    """
+    if not settings.database_url:
+        return None
+
+    try:
+        from .db import get_pool
+
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            await conn.fetchval("SELECT 1")
+        return True
+    except Exception:
+        return False
+
+
+def _health_payload(*, db_connected: bool | None) -> dict[str, object]:
+    return {
+        "status": "ok" if db_connected is not False else "degraded",
+        "mediapipe_loaded": getattr(app.state, "face_mesh_warmup", False),
+        "db_connected": db_connected,
+        "db_configured": bool(settings.database_url),
+        "storage_backend": settings.storage_backend,
+        "trace_storage": settings.trace_storage_backend,
+        "livekit_configured": bool(
+            settings.livekit_url
+            and settings.livekit_api_key
+            and settings.livekit_api_secret
+        ),
+        "sentry_enabled": bool(settings.sentry_dsn),
+    }
 
 
 @app.get("/health")
 async def health():
-    return {
-        "status": "ok",
-        "mediapipe_loaded": getattr(app.state, "face_mesh_warmup", False),
-    }
+    """Fast liveness probe — returns 200 as long as the process is alive.
+
+    No external I/O is performed here. ``db_connected`` reports the most recent
+    readiness result cached on the app state, or ``null`` if no readiness check
+    has run yet (or no database is configured).
+    """
+    cached_db_connected = getattr(app.state, "db_connected", None)
+    if not settings.database_url:
+        cached_db_connected = None
+    return _health_payload(db_connected=cached_db_connected)
+
+
+@app.get("/health/ready")
+async def health_ready():
+    """Deep readiness probe — tests actual database connectivity.
+
+    Returns 200 when all required backends are reachable.
+    Returns 503 when Postgres is configured but unreachable, so Fly.io (or
+    any other orchestrator) can hold traffic until the app is truly ready.
+
+    When ``database_url`` is not set the app is running in local/file-backed
+    mode; ``db_connected`` is ``null`` (not applicable) and the check passes.
+    """
+    from fastapi.responses import JSONResponse
+
+    db_connected = await _check_db_connectivity()
+    app.state.db_connected = db_connected
+    payload = _health_payload(db_connected=db_connected)
+
+    if db_connected is False:
+        return JSONResponse(status_code=503, content=payload)
+
+    return payload
 
 
 @app.post("/api/sessions", response_model=SessionCreateResponse)
-async def create_session(body: Optional[SessionCreateRequest] = None):
-    tutor_id = body.tutor_id if body else ""
+async def create_session(
+    body: Optional[SessionCreateRequest] = None,
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    # If the caller is authenticated, their user ID is stored in the appropriate
+    # field based on their role.  Students creating a session record themselves
+    # in student_user_id; tutors (and admins) are recorded as tutor_id.
+    # Unauthenticated clients fall back to the explicit body fields for backward compat.
+    if current_user is not None and current_user.role == "student":
+        # Authenticated student: bind student_user_id to their own identity.
+        # Ignore body.tutor_id — an authenticated student cannot forge the tutor.
+        student_user_id = current_user.id
+        tutor_id = ""
+    elif current_user is not None:
+        # Authenticated tutor or admin: bind tutor_id to their own identity.
+        # Ignore body.student_user_id — an authenticated tutor cannot forge the student.
+        tutor_id = current_user.id
+        student_user_id = ""
+    else:
+        # Unauthenticated: only honour the explicit tutor_id for backward compat.
+        # Ignore body.student_user_id — accepting it from unauthenticated callers
+        # would let guests forge student ownership of any session they create.
+        tutor_id = body.tutor_id if body else ""
+        student_user_id = ""
     session_type = body.session_type if body else "general"
     media_provider = body.media_provider if body and body.media_provider else default_media_provider()
     if media_provider == MediaProvider.LIVEKIT and not settings.enable_livekit:
         raise HTTPException(status_code=400, detail="LiveKit provider is not enabled")
     return session_manager.create_session(
         tutor_id=tutor_id,
+        student_user_id=student_user_id,
         session_type=session_type,
         media_provider=media_provider,
     )

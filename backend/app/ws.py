@@ -98,6 +98,46 @@ async def _handle_text_message(room: SessionRoom, role: Role, text: str):
     message_type = message.get("type")
     data = message.get("data") or {}
 
+    if message_type == "user_auth":
+        # First-message user authentication over the WebSocket.
+        # The client sends its JWT here rather than as a query parameter to
+        # avoid leaking credentials into server logs and browser history.
+        access_token = data.get("access_token", "")
+        if access_token:
+            try:
+                from .auth import get_user_store
+                from .auth.jwt_utils import decode_access_token
+
+                payload = decode_access_token(access_token)
+                user_id = payload.get("sub", "")
+                if user_id:
+                    # Verify the user actually exists in the configured user store
+                    # so WebSocket auth follows the same backend-selection logic as
+                    # HTTP auth dependencies (SQLite locally, Postgres in production).
+                    user_store = get_user_store()
+                    user = await asyncio.get_event_loop().run_in_executor(
+                        None, user_store.get_by_id, user_id
+                    )
+                    if user is None:
+                        logger.warning(
+                            f"Session {room.session_id}: user_auth rejected for "
+                            f"{role.value} — user {user_id!r} not found in DB"
+                        )
+                    else:
+                        participant = room.participants[role]
+                        participant.user_id = user_id
+                        # For students, propagate to the room so it ends up in the summary
+                        if role == Role.STUDENT:
+                            room.student_user_id = user_id
+                        logger.info(
+                            f"Session {room.session_id}: {role.value} authenticated as user {user_id}"
+                        )
+            except Exception as exc:
+                logger.warning(
+                    f"Session {room.session_id}: user_auth failed for {role.value}: {exc}"
+                )
+        return
+
     if message_type == "client_status":
         participant = room.participants[role]
         if "audio_muted" in data:
