@@ -1,0 +1,10 @@
+{
+  "max_recommendations": 0,
+  "forbidden_recommendation_keywords": [
+    [
+      "question",
+      "participation",
+      "talk time"
+    ]
+  ]
+}

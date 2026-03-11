@@ -1,0 +1,23 @@
+{
+  "session_id": "rec-good-session-01",
+  "tutor_id": "tutor-1",
+  "start_time": "2025-01-01T12:00:00Z",
+  "end_time": "2025-01-01T12:30:00Z",
+  "duration_seconds": 1800.0,
+  "session_type": "general",
+  "talk_time_ratio": {
+    "tutor": 0.58,
+    "student": 0.42
+  },
+  "avg_eye_contact": {
+    "tutor": 0.86,
+    "student": 0.62
+  },
+  "avg_energy": {
+    "tutor": 0.74,
+    "student": 0.63
+  },
+  "total_interruptions": 2,
+  "engagement_score": 78.0,
+  "flagged_moments": []
+}

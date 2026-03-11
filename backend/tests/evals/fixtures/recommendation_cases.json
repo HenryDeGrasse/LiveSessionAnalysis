@@ -1,0 +1,66 @@
+[
+  {
+    "id": "rec-good-session-01",
+    "stage": "golden",
+    "category": "recommendations",
+    "subcategory": "quality",
+    "fixture": "summaries/rec-good-session-01.json",
+    "expectation": "expectations/rec-good-session-01.json"
+  },
+  {
+    "id": "rec-tutor-overtalk-general-01",
+    "stage": "golden",
+    "category": "recommendations",
+    "subcategory": "talk-balance",
+    "fixture": "summaries/rec-tutor-overtalk-general-01.json",
+    "expectation": "expectations/rec-tutor-overtalk-general-01.json"
+  },
+  {
+    "id": "rec-tutor-overtalk-lecture-01",
+    "stage": "golden",
+    "category": "recommendations",
+    "subcategory": "session-type-thresholds",
+    "fixture": "summaries/rec-tutor-overtalk-lecture-01.json",
+    "expectation": "expectations/rec-tutor-overtalk-lecture-01.json"
+  },
+  {
+    "id": "rec-low-student-eye-01",
+    "stage": "golden",
+    "category": "recommendations",
+    "subcategory": "attention",
+    "fixture": "summaries/rec-low-student-eye-01.json",
+    "expectation": "expectations/rec-low-student-eye-01.json"
+  },
+  {
+    "id": "rec-high-interruptions-01",
+    "stage": "golden",
+    "category": "recommendations",
+    "subcategory": "interruptions",
+    "fixture": "summaries/rec-high-interruptions-01.json",
+    "expectation": "expectations/rec-high-interruptions-01.json"
+  },
+  {
+    "id": "rec-low-energy-01",
+    "stage": "golden",
+    "category": "recommendations",
+    "subcategory": "energy",
+    "fixture": "summaries/rec-low-energy-01.json",
+    "expectation": "expectations/rec-low-energy-01.json"
+  },
+  {
+    "id": "rec-all-bad-01",
+    "stage": "golden",
+    "category": "recommendations",
+    "subcategory": "multi-factor",
+    "fixture": "summaries/rec-all-bad-01.json",
+    "expectation": "expectations/rec-all-bad-01.json"
+  },
+  {
+    "id": "rec-short-session-01",
+    "stage": "golden",
+    "category": "recommendations",
+    "subcategory": "short-session",
+    "fixture": "summaries/rec-short-session-01.json",
+    "expectation": "expectations/rec-short-session-01.json"
+  }
+]

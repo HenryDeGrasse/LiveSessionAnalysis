@@ -91,6 +91,16 @@ def replay_trace_signals(trace: SessionTrace) -> ReplayResult:
                     horizontal_angle_deg=horizontal,
                     vertical_angle_deg=vertical,
                 )
+            # Track attention state transitions during replay so that
+            # time_in_current_state() produces realistic values.  In the
+            # live system state() is polled every metric-emit cycle; here
+            # we poll after each visual update for the same effect.
+            tracker = (
+                engine.tutor_attention_state
+                if point.role == "tutor"
+                else engine.student_attention_state
+            )
+            tracker.state(timestamp_s)
             continue
 
         assert isinstance(point, AudioSignalPoint)

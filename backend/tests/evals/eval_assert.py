@@ -44,6 +44,41 @@ def _assert_value_assertions(subject: Any, expectation: EvalExpectation) -> None
         assert actual == assertion.equals
 
 
+def _recommendation_matches_keywords(
+    recommendations: list[str],
+    keywords: list[str],
+) -> bool:
+    normalized_keywords = [keyword.lower() for keyword in keywords]
+    normalized_recommendations = [recommendation.lower() for recommendation in recommendations]
+    return any(
+        any(keyword in recommendation for keyword in normalized_keywords)
+        for recommendation in normalized_recommendations
+    )
+
+
+def assert_recommendations(
+    recommendations: list[str],
+    expectation: EvalExpectation,
+) -> None:
+    if expectation.min_recommendations is not None:
+        assert len(recommendations) >= expectation.min_recommendations
+
+    if expectation.max_recommendations is not None:
+        assert len(recommendations) <= expectation.max_recommendations
+
+    for keywords in expectation.required_recommendation_keywords:
+        assert _recommendation_matches_keywords(
+            recommendations,
+            keywords,
+        ), f"Missing recommendation matching keywords: {keywords}"
+
+    for keywords in expectation.forbidden_recommendation_keywords:
+        assert not _recommendation_matches_keywords(
+            recommendations,
+            keywords,
+        ), f"Unexpected recommendation matching keywords: {keywords}"
+
+
 def assert_trace_matches_expectation(trace: SessionTrace, expectation: EvalExpectation) -> None:
     _assert_nudges([nudge.nudge_type for nudge in trace.nudges], expectation)
 
@@ -55,6 +90,7 @@ def assert_trace_matches_expectation(trace: SessionTrace, expectation: EvalExpec
             tolerance = matcher.tolerance or 0.0
             assert abs(float(actual) - matcher.approx) <= tolerance
 
+    assert_recommendations(trace.summary.recommendations, expectation)
     _assert_value_assertions(trace, expectation)
 
     event_types = [event.event_type for event in trace.events]

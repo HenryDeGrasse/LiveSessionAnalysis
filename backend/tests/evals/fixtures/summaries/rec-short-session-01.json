@@ -1,0 +1,23 @@
+{
+  "session_id": "rec-short-session-01",
+  "tutor_id": "tutor-1",
+  "start_time": "2025-01-01T12:00:00Z",
+  "end_time": "2025-01-01T12:00:25Z",
+  "duration_seconds": 25.0,
+  "session_type": "general",
+  "talk_time_ratio": {
+    "tutor": 0.97,
+    "student": 0.03
+  },
+  "avg_eye_contact": {
+    "tutor": 0.8,
+    "student": 0.1
+  },
+  "avg_energy": {
+    "tutor": 0.71,
+    "student": 0.12
+  },
+  "total_interruptions": 9,
+  "engagement_score": 18.0,
+  "flagged_moments": []
+}

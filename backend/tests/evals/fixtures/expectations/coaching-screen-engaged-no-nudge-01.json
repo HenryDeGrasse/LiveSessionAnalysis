@@ -1,0 +1,16 @@
+{
+  "required_nudges": [],
+  "forbidden_nudges": ["student_off_task", "energy_drop"],
+  "max_nudges": 0,
+  "summary_fields": {
+    "session_type": {
+      "equals": "general"
+    }
+  },
+  "value_assertions": [
+    {
+      "path": "metrics_history.0.student.attention_state",
+      "equals": "SCREEN_ENGAGED"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "required_nudges": [],
+  "forbidden_nudges": ["check_for_understanding", "student_off_task", "let_them_finish", "tech_check", "energy_drop"],
+  "max_nudges": 0
+}

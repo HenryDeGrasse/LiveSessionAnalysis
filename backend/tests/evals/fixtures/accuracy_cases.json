@@ -70,5 +70,45 @@
     "subcategory": "interruptions",
     "fixture": "traces/accuracy-echo-suspected-01.json",
     "expectation": "expectations/accuracy-echo-suspected-01.json"
+  },
+  {
+    "id": "coaching-student-off-task-replay",
+    "stage": "golden",
+    "category": "coaching",
+    "subcategory": "off-task",
+    "fixture": "traces/coaching-student-off-task-01.json",
+    "expectation": "expectations/coaching-student-off-task-01.json"
+  },
+  {
+    "id": "coaching-let-them-finish-replay",
+    "stage": "golden",
+    "category": "coaching",
+    "subcategory": "interruptions",
+    "fixture": "traces/coaching-let-them-finish-01.json",
+    "expectation": "expectations/coaching-let-them-finish-01.json"
+  },
+  {
+    "id": "coaching-tech-check-replay",
+    "stage": "golden",
+    "category": "coaching",
+    "subcategory": "tech-check",
+    "fixture": "traces/coaching-tech-check-01.json",
+    "expectation": "expectations/coaching-tech-check-01.json"
+  },
+  {
+    "id": "coaching-lecture-no-overtalk-replay",
+    "stage": "golden",
+    "category": "coaching",
+    "subcategory": "talk-balance-suppression",
+    "fixture": "traces/coaching-lecture-no-overtalk-01.json",
+    "expectation": "expectations/replay-coaching-lecture-no-overtalk-01.json"
+  },
+  {
+    "id": "coaching-screen-engaged-no-nudge-replay",
+    "stage": "golden",
+    "category": "coaching",
+    "subcategory": "attention-suppression",
+    "fixture": "traces/coaching-screen-engaged-no-nudge-01.json",
+    "expectation": "expectations/replay-coaching-screen-engaged-no-nudge-01.json"
   }
 ]

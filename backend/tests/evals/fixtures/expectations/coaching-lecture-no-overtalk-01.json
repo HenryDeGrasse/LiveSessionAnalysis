@@ -1,0 +1,17 @@
+{
+  "required_nudges": [],
+  "forbidden_nudges": ["check_for_understanding", "student_off_task", "let_them_finish", "tech_check", "energy_drop"],
+  "max_nudges": 0,
+  "summary_fields": {
+    "session_type": {
+      "equals": "lecture"
+    }
+  },
+  "metric_bounds": [
+    {
+      "path": "metrics_history.0.session.recent_tutor_talk_percent",
+      "min": 0.85,
+      "max": 0.92
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "required_nudges": ["tech_check"],
+  "forbidden_nudges": ["energy_drop"],
+  "max_nudges": 1,
+  "summary_fields": {
+    "session_type": {
+      "equals": "general"
+    }
+  }
+}

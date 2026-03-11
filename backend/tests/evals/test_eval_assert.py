@@ -4,6 +4,7 @@ from app.models import MetricsSnapshot, ParticipantMetrics, SessionMetrics, Sess
 from app.observability.trace_models import SessionEvent, SessionTrace
 
 from .eval_assert import (
+    assert_recommendations,
     assert_replay_matches_expectation,
     assert_replay_matches_trace,
     assert_trace_matches_expectation,
@@ -126,3 +127,38 @@ def test_replay_assertions_support_comparison_to_recorded_trace():
     )
 
     assert_replay_matches_trace(replay, trace, expectation)
+
+
+def test_recommendation_assertions_support_keyword_groups_and_bounds():
+    expectation = EvalExpectation.model_validate(
+        {
+            "required_recommendation_keywords": [
+                ["question", "participation"],
+                ["engagement"],
+            ],
+            "min_recommendations": 2,
+            "max_recommendations": 3,
+        }
+    )
+
+    assert_recommendations(
+        [
+            "Try asking more open-ended questions to encourage student participation.",
+            "Overall engagement was low; add more interactive checks.",
+        ],
+        expectation,
+    )
+
+
+def test_recommendation_assertions_support_forbidden_keyword_groups():
+    expectation = EvalExpectation.model_validate(
+        {
+            "forbidden_recommendation_keywords": [["interrupt", "turn-taking"]],
+            "max_recommendations": 1,
+        }
+    )
+
+    assert_recommendations(
+        ["Student eye contact was low. Try varying your presentation."],
+        expectation,
+    )

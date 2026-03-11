@@ -1,0 +1,1399 @@
+{
+  "trace_version": 1,
+  "session_id": "coaching-screen-engaged-no-nudge-01",
+  "tutor_id": "alice",
+  "session_type": "general",
+  "created_at": "2025-01-01T12:00:00",
+  "started_at": "2025-01-01T12:00:05",
+  "ended_at": "2025-01-01T12:05:05",
+  "duration_seconds": 300.0,
+  "build": {
+    "git_sha": "fixture",
+    "app_version": "1.0.0",
+    "models_version": "fixture"
+  },
+  "config_hash": "fixture-config",
+  "capture_mode": "eval",
+  "env": {},
+  "events": [],
+  "visual_signals": [
+    {
+      "seq": 1,
+      "t_ms": 0,
+      "timestamp": "2025-01-01T12:00:05",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 2,
+      "t_ms": 0,
+      "timestamp": "2025-01-01T12:00:05",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 3,
+      "t_ms": 2000,
+      "timestamp": "2025-01-01T12:00:07",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 4,
+      "t_ms": 2000,
+      "timestamp": "2025-01-01T12:00:07",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 5,
+      "t_ms": 4000,
+      "timestamp": "2025-01-01T12:00:09",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 6,
+      "t_ms": 4000,
+      "timestamp": "2025-01-01T12:00:09",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 7,
+      "t_ms": 6000,
+      "timestamp": "2025-01-01T12:00:11",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 8,
+      "t_ms": 6000,
+      "timestamp": "2025-01-01T12:00:11",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 9,
+      "t_ms": 8000,
+      "timestamp": "2025-01-01T12:00:13",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 10,
+      "t_ms": 8000,
+      "timestamp": "2025-01-01T12:00:13",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 11,
+      "t_ms": 10000,
+      "timestamp": "2025-01-01T12:00:15",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 12,
+      "t_ms": 10000,
+      "timestamp": "2025-01-01T12:00:15",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 13,
+      "t_ms": 12000,
+      "timestamp": "2025-01-01T12:00:17",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 14,
+      "t_ms": 12000,
+      "timestamp": "2025-01-01T12:00:17",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 15,
+      "t_ms": 14000,
+      "timestamp": "2025-01-01T12:00:19",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 16,
+      "t_ms": 14000,
+      "timestamp": "2025-01-01T12:00:19",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 17,
+      "t_ms": 16000,
+      "timestamp": "2025-01-01T12:00:21",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 18,
+      "t_ms": 16000,
+      "timestamp": "2025-01-01T12:00:21",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 19,
+      "t_ms": 18000,
+      "timestamp": "2025-01-01T12:00:23",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 20,
+      "t_ms": 18000,
+      "timestamp": "2025-01-01T12:00:23",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 21,
+      "t_ms": 20000,
+      "timestamp": "2025-01-01T12:00:25",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 22,
+      "t_ms": 20000,
+      "timestamp": "2025-01-01T12:00:25",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 23,
+      "t_ms": 22000,
+      "timestamp": "2025-01-01T12:00:27",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 24,
+      "t_ms": 22000,
+      "timestamp": "2025-01-01T12:00:27",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 25,
+      "t_ms": 24000,
+      "timestamp": "2025-01-01T12:00:29",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 26,
+      "t_ms": 24000,
+      "timestamp": "2025-01-01T12:00:29",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 27,
+      "t_ms": 26000,
+      "timestamp": "2025-01-01T12:00:31",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 28,
+      "t_ms": 26000,
+      "timestamp": "2025-01-01T12:00:31",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 29,
+      "t_ms": 28000,
+      "timestamp": "2025-01-01T12:00:33",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 30,
+      "t_ms": 28000,
+      "timestamp": "2025-01-01T12:00:33",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 31,
+      "t_ms": 30000,
+      "timestamp": "2025-01-01T12:00:35",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 32,
+      "t_ms": 30000,
+      "timestamp": "2025-01-01T12:00:35",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 33,
+      "t_ms": 32000,
+      "timestamp": "2025-01-01T12:00:37",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 34,
+      "t_ms": 32000,
+      "timestamp": "2025-01-01T12:00:37",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 35,
+      "t_ms": 34000,
+      "timestamp": "2025-01-01T12:00:39",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 36,
+      "t_ms": 34000,
+      "timestamp": "2025-01-01T12:00:39",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 37,
+      "t_ms": 36000,
+      "timestamp": "2025-01-01T12:00:41",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 38,
+      "t_ms": 36000,
+      "timestamp": "2025-01-01T12:00:41",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 39,
+      "t_ms": 38000,
+      "timestamp": "2025-01-01T12:00:43",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 40,
+      "t_ms": 38000,
+      "timestamp": "2025-01-01T12:00:43",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 41,
+      "t_ms": 40000,
+      "timestamp": "2025-01-01T12:00:45",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 42,
+      "t_ms": 40000,
+      "timestamp": "2025-01-01T12:00:45",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 43,
+      "t_ms": 42000,
+      "timestamp": "2025-01-01T12:00:47",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 44,
+      "t_ms": 42000,
+      "timestamp": "2025-01-01T12:00:47",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 45,
+      "t_ms": 44000,
+      "timestamp": "2025-01-01T12:00:49",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 46,
+      "t_ms": 44000,
+      "timestamp": "2025-01-01T12:00:49",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 47,
+      "t_ms": 46000,
+      "timestamp": "2025-01-01T12:00:51",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 48,
+      "t_ms": 46000,
+      "timestamp": "2025-01-01T12:00:51",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 49,
+      "t_ms": 48000,
+      "timestamp": "2025-01-01T12:00:53",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 50,
+      "t_ms": 48000,
+      "timestamp": "2025-01-01T12:00:53",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 51,
+      "t_ms": 50000,
+      "timestamp": "2025-01-01T12:00:55",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 52,
+      "t_ms": 50000,
+      "timestamp": "2025-01-01T12:00:55",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 53,
+      "t_ms": 52000,
+      "timestamp": "2025-01-01T12:00:57",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 54,
+      "t_ms": 52000,
+      "timestamp": "2025-01-01T12:00:57",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 55,
+      "t_ms": 54000,
+      "timestamp": "2025-01-01T12:00:59",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 56,
+      "t_ms": 54000,
+      "timestamp": "2025-01-01T12:00:59",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 57,
+      "t_ms": 56000,
+      "timestamp": "2025-01-01T12:01:01",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 58,
+      "t_ms": 56000,
+      "timestamp": "2025-01-01T12:01:01",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 59,
+      "t_ms": 58000,
+      "timestamp": "2025-01-01T12:01:03",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 60,
+      "t_ms": 58000,
+      "timestamp": "2025-01-01T12:01:03",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 61,
+      "t_ms": 60000,
+      "timestamp": "2025-01-01T12:01:05",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 62,
+      "t_ms": 60000,
+      "timestamp": "2025-01-01T12:01:05",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 63,
+      "t_ms": 62000,
+      "timestamp": "2025-01-01T12:01:07",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 64,
+      "t_ms": 62000,
+      "timestamp": "2025-01-01T12:01:07",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 65,
+      "t_ms": 64000,
+      "timestamp": "2025-01-01T12:01:09",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 66,
+      "t_ms": 64000,
+      "timestamp": "2025-01-01T12:01:09",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 67,
+      "t_ms": 66000,
+      "timestamp": "2025-01-01T12:01:11",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 68,
+      "t_ms": 66000,
+      "timestamp": "2025-01-01T12:01:11",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 69,
+      "t_ms": 68000,
+      "timestamp": "2025-01-01T12:01:13",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 70,
+      "t_ms": 68000,
+      "timestamp": "2025-01-01T12:01:13",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 71,
+      "t_ms": 70000,
+      "timestamp": "2025-01-01T12:01:15",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 72,
+      "t_ms": 70000,
+      "timestamp": "2025-01-01T12:01:15",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 73,
+      "t_ms": 72000,
+      "timestamp": "2025-01-01T12:01:17",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 74,
+      "t_ms": 72000,
+      "timestamp": "2025-01-01T12:01:17",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 75,
+      "t_ms": 74000,
+      "timestamp": "2025-01-01T12:01:19",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 76,
+      "t_ms": 74000,
+      "timestamp": "2025-01-01T12:01:19",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 77,
+      "t_ms": 76000,
+      "timestamp": "2025-01-01T12:01:21",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 78,
+      "t_ms": 76000,
+      "timestamp": "2025-01-01T12:01:21",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 79,
+      "t_ms": 78000,
+      "timestamp": "2025-01-01T12:01:23",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 80,
+      "t_ms": 78000,
+      "timestamp": "2025-01-01T12:01:23",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 81,
+      "t_ms": 80000,
+      "timestamp": "2025-01-01T12:01:25",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 82,
+      "t_ms": 80000,
+      "timestamp": "2025-01-01T12:01:25",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 83,
+      "t_ms": 82000,
+      "timestamp": "2025-01-01T12:01:27",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 84,
+      "t_ms": 82000,
+      "timestamp": "2025-01-01T12:01:27",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 85,
+      "t_ms": 84000,
+      "timestamp": "2025-01-01T12:01:29",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 86,
+      "t_ms": 84000,
+      "timestamp": "2025-01-01T12:01:29",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 87,
+      "t_ms": 86000,
+      "timestamp": "2025-01-01T12:01:31",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 88,
+      "t_ms": 86000,
+      "timestamp": "2025-01-01T12:01:31",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 89,
+      "t_ms": 88000,
+      "timestamp": "2025-01-01T12:01:33",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 90,
+      "t_ms": 88000,
+      "timestamp": "2025-01-01T12:01:33",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    },
+    {
+      "seq": 91,
+      "t_ms": 90000,
+      "timestamp": "2025-01-01T12:01:35",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 92,
+      "t_ms": 90000,
+      "timestamp": "2025-01-01T12:01:35",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "SCREEN_ENGAGED",
+      "confidence": 0.87
+    }
+  ],
+  "audio_signals": [
+    {
+      "seq": 93,
+      "t_ms": 0,
+      "timestamp": "2025-01-01T12:00:05",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 94,
+      "t_ms": 0,
+      "timestamp": "2025-01-01T12:00:05",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 95,
+      "t_ms": 300,
+      "timestamp": "2025-01-01T12:00:05.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 96,
+      "t_ms": 300,
+      "timestamp": "2025-01-01T12:00:05.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 97,
+      "t_ms": 600,
+      "timestamp": "2025-01-01T12:00:05.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 98,
+      "t_ms": 600,
+      "timestamp": "2025-01-01T12:00:05.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 99,
+      "t_ms": 900,
+      "timestamp": "2025-01-01T12:00:05.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 100,
+      "t_ms": 900,
+      "timestamp": "2025-01-01T12:00:05.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 101,
+      "t_ms": 1200,
+      "timestamp": "2025-01-01T12:00:06.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 102,
+      "t_ms": 1200,
+      "timestamp": "2025-01-01T12:00:06.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 103,
+      "t_ms": 1500,
+      "timestamp": "2025-01-01T12:00:06.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 104,
+      "t_ms": 1500,
+      "timestamp": "2025-01-01T12:00:06.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 105,
+      "t_ms": 1800,
+      "timestamp": "2025-01-01T12:00:06.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 106,
+      "t_ms": 1800,
+      "timestamp": "2025-01-01T12:00:06.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 107,
+      "t_ms": 2100,
+      "timestamp": "2025-01-01T12:00:07.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 108,
+      "t_ms": 2100,
+      "timestamp": "2025-01-01T12:00:07.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 109,
+      "t_ms": 2400,
+      "timestamp": "2025-01-01T12:00:07.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 110,
+      "t_ms": 2400,
+      "timestamp": "2025-01-01T12:00:07.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 111,
+      "t_ms": 2700,
+      "timestamp": "2025-01-01T12:00:07.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 112,
+      "t_ms": 2700,
+      "timestamp": "2025-01-01T12:00:07.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 113,
+      "t_ms": 3000,
+      "timestamp": "2025-01-01T12:00:08",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 114,
+      "t_ms": 3000,
+      "timestamp": "2025-01-01T12:00:08",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 115,
+      "t_ms": 3300,
+      "timestamp": "2025-01-01T12:00:08.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 116,
+      "t_ms": 3300,
+      "timestamp": "2025-01-01T12:00:08.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 117,
+      "t_ms": 3600,
+      "timestamp": "2025-01-01T12:00:08.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 118,
+      "t_ms": 3600,
+      "timestamp": "2025-01-01T12:00:08.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 119,
+      "t_ms": 3900,
+      "timestamp": "2025-01-01T12:00:08.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 120,
+      "t_ms": 3900,
+      "timestamp": "2025-01-01T12:00:08.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 121,
+      "t_ms": 4200,
+      "timestamp": "2025-01-01T12:00:09.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 122,
+      "t_ms": 4200,
+      "timestamp": "2025-01-01T12:00:09.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 123,
+      "t_ms": 4500,
+      "timestamp": "2025-01-01T12:00:09.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 124,
+      "t_ms": 4500,
+      "timestamp": "2025-01-01T12:00:09.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 125,
+      "t_ms": 4800,
+      "timestamp": "2025-01-01T12:00:09.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 126,
+      "t_ms": 4800,
+      "timestamp": "2025-01-01T12:00:09.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 127,
+      "t_ms": 5100,
+      "timestamp": "2025-01-01T12:00:10.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 128,
+      "t_ms": 5100,
+      "timestamp": "2025-01-01T12:00:10.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 129,
+      "t_ms": 5400,
+      "timestamp": "2025-01-01T12:00:10.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 130,
+      "t_ms": 5400,
+      "timestamp": "2025-01-01T12:00:10.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 131,
+      "t_ms": 5700,
+      "timestamp": "2025-01-01T12:00:10.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 132,
+      "t_ms": 5700,
+      "timestamp": "2025-01-01T12:00:10.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -22.0,
+      "noise_floor_db": -55.0
+    }
+  ],
+  "overlap_segments": [],
+  "metrics_history": [
+    {
+      "timestamp": "2025-01-01T12:03:05",
+      "session_id": "coaching-screen-engaged-no-nudge-01",
+      "tutor": {
+        "eye_contact_score": 0.8,
+        "talk_time_percent": 0.5,
+        "energy_score": 0.6,
+        "energy_drop_from_baseline": 0.0,
+        "is_speaking": false,
+        "attention_state": "CAMERA_FACING",
+        "attention_state_confidence": 0.9,
+        "face_presence_score": 1.0,
+        "visual_attention_score": 1.0,
+        "time_in_attention_state_seconds": 30.0,
+        "talk_time_pct_windowed": 0.5,
+        "time_since_spoke_seconds": 1.0
+      },
+      "student": {
+        "eye_contact_score": 0.0,
+        "talk_time_percent": 0.5,
+        "energy_score": 0.5,
+        "energy_drop_from_baseline": 0.0,
+        "is_speaking": true,
+        "attention_state": "SCREEN_ENGAGED",
+        "attention_state_confidence": 0.87,
+        "face_presence_score": 1.0,
+        "visual_attention_score": 0.85,
+        "time_in_attention_state_seconds": 82.0,
+        "talk_time_pct_windowed": 0.5,
+        "time_since_spoke_seconds": 0.0
+      },
+      "session": {
+        "interruption_count": 0,
+        "recent_interruptions": 0,
+        "hard_interruption_count": 0,
+        "recent_hard_interruptions": 0,
+        "backchannel_overlap_count": 0,
+        "recent_backchannel_overlaps": 0,
+        "echo_suspected": false,
+        "active_overlap_duration_current": 0.0,
+        "active_overlap_state": "none",
+        "tutor_cutoffs": 0,
+        "student_cutoffs": 0,
+        "silence_duration_current": 0.0,
+        "time_since_student_spoke": 0.0,
+        "mutual_silence_duration_current": 0.0,
+        "tutor_monologue_duration_current": 0.0,
+        "tutor_turn_count": 5,
+        "student_turn_count": 5,
+        "student_response_latency_last_seconds": 0.0,
+        "tutor_response_latency_last_seconds": 0.0,
+        "recent_tutor_talk_percent": 0.5,
+        "engagement_trend": "stable",
+        "engagement_score": 72.0
+      },
+      "degraded": false,
+      "gaze_unavailable": false,
+      "server_processing_ms": 110.0,
+      "target_fps": 3
+    }
+  ],
+  "nudges": [],
+  "coaching_decisions": [],
+  "summary": {
+    "session_id": "coaching-screen-engaged-no-nudge-01",
+    "tutor_id": "alice",
+    "start_time": "2025-01-01T12:00:05",
+    "end_time": "2025-01-01T12:05:05",
+    "duration_seconds": 300.0,
+    "session_type": "general",
+    "talk_time_ratio": {
+      "tutor": 0.5,
+      "student": 0.5
+    },
+    "avg_eye_contact": {
+      "tutor": 0.8,
+      "student": 0.5
+    },
+    "avg_energy": {
+      "tutor": 0.6,
+      "student": 0.5
+    },
+    "total_interruptions": 0,
+    "engagement_score": 65.0,
+    "flagged_moments": [],
+    "timeline": {
+      "engagement": [
+        65.0
+      ]
+    },
+    "recommendations": [],
+    "nudges_sent": 0,
+    "degradation_events": 0
+  }
+}

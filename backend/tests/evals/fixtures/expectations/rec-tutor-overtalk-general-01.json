@@ -1,0 +1,11 @@
+{
+  "required_recommendation_keywords": [
+    [
+      "question",
+      "participation",
+      "talk time"
+    ]
+  ],
+  "min_recommendations": 1,
+  "max_recommendations": 1
+}

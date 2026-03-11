@@ -47,6 +47,10 @@ class EvalExpectation(BaseModel):
     value_assertions: List[ValueAssertion] = Field(default_factory=list)
     contains_event_types: List[str] = Field(default_factory=list)
     replay_matches_trace: List[ReplayTraceComparison] = Field(default_factory=list)
+    required_recommendation_keywords: List[List[str]] = Field(default_factory=list)
+    forbidden_recommendation_keywords: List[List[str]] = Field(default_factory=list)
+    min_recommendations: Optional[int] = None
+    max_recommendations: Optional[int] = None
 
     model_config = {"extra": "forbid"}
 

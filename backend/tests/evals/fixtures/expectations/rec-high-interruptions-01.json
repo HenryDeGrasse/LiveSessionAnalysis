@@ -1,0 +1,11 @@
+{
+  "required_recommendation_keywords": [
+    [
+      "interrupt",
+      "turn-taking",
+      "turn taking"
+    ]
+  ],
+  "min_recommendations": 1,
+  "max_recommendations": 1
+}

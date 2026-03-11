@@ -1,0 +1,31 @@
+{
+  "required_recommendation_keywords": [
+    [
+      "question",
+      "participation",
+      "talk time"
+    ],
+    [
+      "eye",
+      "contact",
+      "engage"
+    ],
+    [
+      "interrupt",
+      "turn-taking",
+      "turn taking"
+    ],
+    [
+      "energy",
+      "interactive",
+      "break"
+    ],
+    [
+      "overall engagement",
+      "session pacing",
+      "comprehension"
+    ]
+  ],
+  "min_recommendations": 5,
+  "max_recommendations": 5
+}
