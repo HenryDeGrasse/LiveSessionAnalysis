@@ -3,14 +3,15 @@
 # ──────────────────────────────────────────────────────────────
 .PHONY: setup run dev dev-backend dev-frontend clean \
         test test-backend test-frontend-unit test-e2e test-e2e-livekit \
-        eval eval-fast eval-replay test-all lint
+        eval eval-fast eval-replay test-all lint \
+        accuracy-report real-media-accuracy demo-setup
 
 # ── Infrastructure ───────────────────────────────────────────
 setup:
 	docker compose build
 
 run:
-	docker compose up
+	docker compose up --build
 
 dev: dev-backend dev-frontend
 
@@ -56,6 +57,15 @@ test-e2e-livekit:
 accuracy-report:
 	cd backend && uv run --python 3.11 --with-requirements requirements.txt \
 		python ../scripts/accuracy_report.py
+
+# ── Real media accuracy validation ──────────────────────────
+real-media-accuracy:
+	cd backend && uv run --python 3.11 --with-requirements requirements.txt \
+		python ../scripts/real_media_accuracy.py
+
+# ── Demo setup ──────────────────────────────────────────────
+demo-setup:
+	./scripts/demo-setup.sh
 
 # ── Type checking / lint ─────────────────────────────────────
 lint:
