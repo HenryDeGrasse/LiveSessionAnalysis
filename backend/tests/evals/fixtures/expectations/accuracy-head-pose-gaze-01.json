@@ -1,0 +1,16 @@
+{
+  "forbidden_nudges": ["student_off_task"],
+  "value_assertions": [
+    {
+      "path": "snapshot.student.attention_state",
+      "equals": "CAMERA_FACING"
+    }
+  ],
+  "metric_bounds": [
+    {
+      "path": "attention_state_counts.student.CAMERA_FACING",
+      "min": 8,
+      "max": 10
+    }
+  ]
+}

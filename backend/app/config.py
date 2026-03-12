@@ -58,13 +58,22 @@ class Settings(BaseSettings):
         return init_settings, csv_env, dotenv_settings, file_secret_settings
 
     # Video processing
-    frame_resize_width: int = 320
-    frame_resize_height: int = 240
+    frame_resize_width: int = 480
+    frame_resize_height: int = 360
     default_fps: int = 3
     min_fps: int = 1
 
     # Gaze estimation
-    gaze_threshold_degrees: float = 15.0
+    gaze_threshold_degrees: float = 26.0
+    gaze_iris_weight: float = 0.65
+    gaze_head_pose_weight: float = 0.35
+    gaze_head_pose_ema_alpha: float = 0.30
+    gaze_baseline_min_samples: int = 6
+    gaze_baseline_max_calibration_frames: int = 12
+    gaze_baseline_max_abs_horizontal_deg: float = 30.0
+    gaze_baseline_max_abs_vertical_deg: float = 20.0
+    gaze_recovery_threshold_margin_deg: float = 4.0
+    gaze_recovery_min_consecutive_frames: int = 2
 
     # Metrics
     rolling_window_seconds: float = 30.0
@@ -72,12 +81,12 @@ class Settings(BaseSettings):
     live_metrics_min_emit_interval_seconds: float = 0.25
     attention_drift_window_seconds: float = 60.0
     attention_drift_slope_threshold: float = -0.2
-    attention_state_window_seconds: float = 10.0
-    attention_state_min_samples: int = 5
+    attention_state_window_seconds: float = 3.0
+    attention_state_min_samples: int = 2
     attention_state_face_missing_ratio_threshold: float = 0.35
-    attention_state_min_gaze_samples: int = 3
+    attention_state_min_gaze_samples: int = 2
     attention_state_min_gaze_coverage: float = 0.5
-    attention_state_camera_facing_ratio_threshold: float = 0.6
+    attention_state_camera_facing_ratio_threshold: float = 0.55
     attention_state_screen_horizontal_max_deg: float = 28.0
     attention_state_screen_vertical_max_deg: float = 18.0
     attention_state_down_vertical_min_deg: float = 12.0
@@ -110,25 +119,25 @@ class Settings(BaseSettings):
     echo_suspect_window_seconds: float = 30.0
 
     # Coaching
-    global_nudge_warmup_seconds: int = 120
-    global_nudge_min_interval_seconds: int = 300
-    global_nudge_max_per_session: int = 3
-    min_session_elapsed_for_nudges: int = 60
+    global_nudge_warmup_seconds: int = 30
+    global_nudge_min_interval_seconds: int = 60
+    global_nudge_max_per_session: int = 8
+    min_session_elapsed_for_nudges: int = 45
     student_silence_threshold_seconds: int = 180
     student_silence_talk_percent: float = 0.05
     student_silence_cooldown: int = 120
     low_eye_contact_threshold: float = 0.3
     low_eye_contact_duration: int = 30
-    low_eye_contact_cooldown: int = 60
+    low_eye_contact_cooldown: int = 45
     tutor_overtalk_threshold: float = 0.80
     tutor_overtalk_window: int = 300
-    tutor_overtalk_cooldown: int = 180
+    tutor_overtalk_cooldown: int = 120
     energy_drop_threshold: float = 0.20
     energy_drop_from_baseline_threshold: float = 0.25
     energy_drop_cooldown: int = 120
     interruption_spike_count: int = 3
     interruption_spike_window: int = 120
-    interruption_spike_cooldown: int = 90
+    interruption_spike_cooldown: int = 60
 
     # Adaptive degradation thresholds (rolling avg of last 5 frames)
     degradation_step1_ms: float = 250.0

@@ -229,7 +229,9 @@ def test_snapshot_exposes_attention_state():
 
     snapshot = engine.compute_snapshot()
     assert snapshot.student.attention_state == "SCREEN_ENGAGED"
+    assert snapshot.student.instant_attention_state == "SCREEN_ENGAGED"
     assert snapshot.student.attention_state_confidence > 0.0
+    assert snapshot.student.instant_attention_state_confidence > 0.0
     assert snapshot.student.visual_attention_score > 0.0
 
 

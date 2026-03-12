@@ -110,5 +110,21 @@
     "subcategory": "attention-suppression",
     "fixture": "traces/coaching-screen-engaged-no-nudge-01.json",
     "expectation": "expectations/replay-coaching-screen-engaged-no-nudge-01.json"
+  },
+  {
+    "id": "accuracy-head-pose-gaze-01",
+    "stage": "golden",
+    "category": "accuracy",
+    "subcategory": "gaze-fusion",
+    "fixture": "traces/accuracy-head-pose-gaze-01.json",
+    "expectation": "expectations/accuracy-head-pose-gaze-01.json"
+  },
+  {
+    "id": "coaching-faster-warmup-01",
+    "stage": "golden",
+    "category": "coaching",
+    "subcategory": "off-task-warmup",
+    "fixture": "traces/coaching-faster-warmup-01.json",
+    "expectation": "expectations/coaching-faster-warmup-01.json"
   }
 ]

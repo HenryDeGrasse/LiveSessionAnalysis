@@ -6,10 +6,13 @@ from typing import Optional
 
 import numpy as np
 
+from ..config import settings
 from .face_detector import FaceDetector, FaceDetectionResult
 from .gaze_estimator import estimate_gaze, GazeResult
+from .head_pose import estimate_head_pose, HeadPoseResult
 from .expression_analyzer import analyze_expression, ExpressionResult
 from .frame_utils import decode_frame, resize_frame, to_rgb
+from .live_gaze_filter import LiveGazeFilter
 
 
 @dataclass
@@ -20,6 +23,7 @@ class FrameProcessingResult:
     expression: ExpressionResult | None
     decode_ms: float
     facemesh_ms: float
+    head_pose_ms: float
     gaze_ms: float
     expression_ms: float
     total_ms: float
@@ -30,6 +34,7 @@ class VideoProcessor:
 
     def __init__(self):
         self._detector = FaceDetector(max_num_faces=1, refine_landmarks=True)
+        self._gaze_filter = LiveGazeFilter()
 
     def process_frame(
         self,
@@ -60,6 +65,7 @@ class VideoProcessor:
                 expression=None,
                 decode_ms=decode_ms,
                 facemesh_ms=0,
+                head_pose_ms=0,
                 gaze_ms=0,
                 expression_ms=0,
                 total_ms=(time.time() - total_start) * 1000,
@@ -106,22 +112,46 @@ class VideoProcessor:
         facemesh_ms = (time.time() - facemesh_start) * 1000
 
         if detection is None:
+            self._gaze_filter.mark_face_missing()
             return FrameProcessingResult(
                 face_detected=False,
                 gaze=None,
                 expression=None,
                 decode_ms=decode_ms,
                 facemesh_ms=facemesh_ms,
+                head_pose_ms=0,
                 gaze_ms=0,
                 expression_ms=0,
                 total_ms=(time.time() - total_start) * 1000,
             )
 
-        gaze = None
+        head_pose: HeadPoseResult | None = None
+        head_pose_ms = 0.0
+        gaze: GazeResult | None = None
         gaze_ms = 0.0
+
         if not skip_gaze:
+            # Estimate head pose first so gaze can fuse it
+            head_pose_start = time.time()
+            frame_height, frame_width = frame.shape[:2]
+            raw_head_pose = estimate_head_pose(
+                detection.landmarks,
+                frame_width=frame_width,
+                frame_height=frame_height,
+            )
+            head_pose = self._gaze_filter.smooth_head_pose(raw_head_pose)
+            head_pose_ms = (time.time() - head_pose_start) * 1000
+
             gaze_start = time.time()
-            gaze = estimate_gaze(detection.landmarks)
+            raw_gaze = estimate_gaze(
+                detection.landmarks,
+                threshold_degrees=settings.gaze_threshold_degrees,
+                head_pose=head_pose,
+            )
+            gaze = self._gaze_filter.apply(
+                raw_gaze,
+                threshold_degrees=settings.gaze_threshold_degrees,
+            )
             gaze_ms = (time.time() - gaze_start) * 1000
 
         expression = None
@@ -137,6 +167,7 @@ class VideoProcessor:
             expression=expression,
             decode_ms=decode_ms,
             facemesh_ms=facemesh_ms,
+            head_pose_ms=head_pose_ms,
             gaze_ms=gaze_ms,
             expression_ms=expression_ms,
             total_ms=(time.time() - total_start) * 1000,

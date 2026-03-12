@@ -16,7 +16,7 @@ def detector():
 @pytest.fixture
 def blank_frame():
     """A blank frame with no face."""
-    img = np.zeros((240, 320, 3), dtype=np.uint8)
+    img = np.zeros((360, 480, 3), dtype=np.uint8)
     return img
 
 
@@ -41,7 +41,7 @@ def test_decode_invalid_bytes():
 def test_resize_frame():
     big = np.zeros((480, 640, 3), dtype=np.uint8)
     small = resize_frame(big)
-    assert small.shape == (240, 320, 3)
+    assert small.shape == (360, 480, 3)
 
 
 def test_no_face_on_blank(detector, blank_frame):

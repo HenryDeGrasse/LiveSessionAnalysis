@@ -75,6 +75,7 @@ def generate_session_summary(room: SessionRoom):
         tutor_id=room.tutor_id,
         student_user_id=room.student_user_id,
         session_type=room.session_type,
+        session_title=room.session_title,
         media_provider=room.media_provider,
         nudges=room.nudges_sent,
     )
@@ -235,12 +236,22 @@ async def emit_metrics_snapshot(
                 resources["coach"] = coach
             evaluation = coach.evaluate(snapshot, room.elapsed_seconds())
 
-            # Attach to snapshot only in debug mode (tutor ?debug=1)
+            # Always attach lightweight coaching_status for the UI indicator
+            snapshot.coaching_status = coach.get_status(
+                elapsed_seconds=room.elapsed_seconds(),
+                rules_evaluated=len(evaluation.candidates_evaluated),
+                degraded=snapshot.degraded,
+            )
+
+            # Attach full decision only in debug mode (tutor ?debug=1)
             if room.debug_mode:
                 snapshot.coaching_decision = {
                     "candidate_nudges": evaluation.candidate_nudges,
+                    "candidate_rule_scores": evaluation.candidate_rule_scores,
                     "suppressed_reasons": evaluation.suppressed_reasons,
                     "emitted_nudge": evaluation.emitted_nudge_type,
+                    "emitted_priority": evaluation.emitted_nudge_priority,
+                    "fired_rule_score": evaluation.emitted_rule_score,
                     "trigger_features": evaluation.trigger_features,
                     "session_type": coach.session_type,
                     "coaching_intensity": coach.intensity,
@@ -256,7 +267,12 @@ async def emit_metrics_snapshot(
                     emitted_nudge=evaluation.emitted_nudge_type,
                     suppressed_reasons=evaluation.suppressed_reasons,
                     metrics_index=metrics_index,
-                    trigger_features=evaluation.trigger_features,
+                    trigger_features={
+                        **evaluation.trigger_features,
+                        "candidate_rule_scores": evaluation.candidate_rule_scores,
+                        "emitted_priority": evaluation.emitted_nudge_priority,
+                        "fired_rule_score": evaluation.emitted_rule_score,
+                    },
                     candidates_evaluated=evaluation.candidates_evaluated,
                     fired_rule=evaluation.fired_rule,
                 )
@@ -373,13 +389,31 @@ async def process_video_frame_bytes(
     skip_expression = deg_level >= 2
     skip_gaze = deg_level >= 3
 
+    before_visual = engine.current_visual_signal(
+        role,
+        student_index=student_index,
+    )
     result = processor.process_frame(
         payload,
         skip_expression=skip_expression,
         skip_gaze=skip_gaze,
     )
 
-    _apply_video_result(room, role, engine, result, student_index=student_index)
+    visual_state_changed = _apply_video_result(
+        room,
+        role,
+        engine,
+        result,
+        student_index=student_index,
+        previous_visual_signal=before_visual,
+    )
+    if visual_state_changed:
+        await emit_metrics_snapshot(
+            room,
+            record_history=False,
+            allow_coaching=False,
+            min_interval_seconds=settings.live_metrics_min_emit_interval_seconds,
+        )
 
 
 async def process_video_frame_array(
@@ -405,13 +439,31 @@ async def process_video_frame_array(
     skip_expression = deg_level >= 2
     skip_gaze = deg_level >= 3
 
+    before_visual = engine.current_visual_signal(
+        role,
+        student_index=student_index,
+    )
     result = processor.process_frame_array(
         frame_bgr,
         skip_expression=skip_expression,
         skip_gaze=skip_gaze,
     )
 
-    _apply_video_result(room, role, engine, result, student_index=student_index)
+    visual_state_changed = _apply_video_result(
+        room,
+        role,
+        engine,
+        result,
+        student_index=student_index,
+        previous_visual_signal=before_visual,
+    )
+    if visual_state_changed:
+        await emit_metrics_snapshot(
+            room,
+            record_history=False,
+            allow_coaching=False,
+            min_interval_seconds=settings.live_metrics_min_emit_interval_seconds,
+        )
 
 
 def _apply_video_result(
@@ -420,7 +472,8 @@ def _apply_video_result(
     engine: MetricsEngine,
     result,
     student_index: int = 0,
-):
+    previous_visual_signal: dict | None = None,
+) -> bool:
     now = time.time()
     if result.gaze is not None:
         engine.update_gaze(
@@ -441,9 +494,13 @@ def _apply_video_result(
     if result.expression is not None:
         engine.update_expression(role, result.expression.valence, student_index=student_index)
 
+    visual_signal = engine.current_visual_signal(
+        role,
+        now,
+        student_index=student_index,
+    )
     recorder = trace_recorder(room)
     if recorder is not None:
-        visual_signal = engine.current_visual_signal(role, now)
         recorder.record_visual_signal(
             role=role.value,
             face_present=result.face_detected,
@@ -470,6 +527,16 @@ def _apply_video_result(
                 "target_fps": room.current_fps,
             },
         )
+
+    if previous_visual_signal is None:
+        return False
+
+    return (
+        previous_visual_signal.get("instant_attention_state")
+        != visual_signal.get("instant_attention_state")
+        or previous_visual_signal.get("attention_state")
+        != visual_signal.get("attention_state")
+    )
 
 
 async def process_audio_chunk(

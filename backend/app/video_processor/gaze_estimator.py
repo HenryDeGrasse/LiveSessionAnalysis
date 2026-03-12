@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from ..config import settings
+from .head_pose import HeadPoseResult
 
 
 # MediaPipe Face Mesh landmark indices for iris and eye corners
@@ -32,17 +33,25 @@ class GazeResult:
 def estimate_gaze(
     landmarks: list[tuple[float, float, float]],
     threshold_degrees: float | None = None,
+    head_pose: Optional[HeadPoseResult] = None,
 ) -> GazeResult:
-    """Estimate gaze direction from iris landmarks.
+    """Estimate gaze direction from iris landmarks, optionally fused with head pose.
 
     Uses the position of the iris center relative to the eye corners
-    to determine gaze direction. When the iris is centered, the person
-    is looking approximately at the camera.
+    to determine gaze direction. When an additional ``head_pose`` is provided
+    the final angles are a weighted blend of the iris-only estimate and the
+    head-pose yaw/pitch. The default weights favour iris landmarks because in
+    real webcam sessions they are usually less jittery than solvePnP head pose,
+    while still retaining head pose as a coarse prior for larger head turns.
 
     Args:
         landmarks: List of (x, y, z) normalized landmarks from FaceMesh.
         threshold_degrees: Max angle from center to count as "on camera".
             Defaults to settings.gaze_threshold_degrees.
+        head_pose: Optional HeadPoseResult from estimate_head_pose(). When
+            provided the final horizontal/vertical angles are blended with
+            the head-pose yaw/pitch using weights from settings
+            (default: 0.65 iris, 0.35 head pose).
 
     Returns:
         GazeResult with on_camera flag and angle information.
@@ -112,8 +121,27 @@ def estimate_gaze(
 
     # Convert ratio deviation from center (0.5) to approximate angle
     # Rough mapping: 0.1 ratio deviation ≈ 15 degrees
-    horizontal_angle = (avg_horizontal - 0.5) * 150.0  # degrees
-    vertical_angle = (avg_vertical - 0.5) * 150.0
+    iris_horizontal_angle = (avg_horizontal - 0.5) * 150.0  # degrees
+    iris_vertical_angle = (avg_vertical - 0.5) * 150.0
+
+    # --- Head-pose fusion ---
+    # Blend iris angles with head pose, but favour iris more heavily because it
+    # tends to be less jittery than solvePnP in typical low-resolution webcams.
+    if head_pose is not None:
+        iris_weight = settings.gaze_iris_weight
+        head_pose_weight = settings.gaze_head_pose_weight
+        total_weight = max(1e-6, iris_weight + head_pose_weight)
+        iris_weight /= total_weight
+        head_pose_weight /= total_weight
+        horizontal_angle = (
+            iris_weight * iris_horizontal_angle + head_pose_weight * head_pose.yaw_deg
+        )
+        vertical_angle = (
+            iris_weight * iris_vertical_angle + head_pose_weight * head_pose.pitch_deg
+        )
+    else:
+        horizontal_angle = iris_horizontal_angle
+        vertical_angle = iris_vertical_angle
 
     # Check if within threshold
     on_camera = (

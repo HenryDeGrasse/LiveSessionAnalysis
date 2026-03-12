@@ -158,15 +158,26 @@ class MetricsEngine:
         else:
             self.student_energy.update_expression(valence)
 
-    def current_visual_signal(self, role: Role, now: float | None = None) -> dict:
+    def current_visual_signal(
+        self,
+        role: Role,
+        now: float | None = None,
+        *,
+        student_index: int = 0,
+    ) -> dict:
         if now is None:
             now = time.time()
-        tracker = (
-            self.tutor_attention_state if role == Role.TUTOR else self.student_attention_state
-        )
+        if role == Role.STUDENT and student_index > 0:
+            tracker = self._get_or_create_extra_student_tracker(student_index)["attention_state"]
+        else:
+            tracker = (
+                self.tutor_attention_state if role == Role.TUTOR else self.student_attention_state
+            )
         return {
             "attention_state": tracker.state(now),
             "confidence": tracker.confidence(now),
+            "instant_attention_state": tracker.instant_state(now),
+            "instant_confidence": tracker.instant_confidence(now),
             "face_presence_score": tracker.face_presence_score(now),
             "visual_attention_score": tracker.visual_attention_score(now),
         }
@@ -303,12 +314,16 @@ class MetricsEngine:
 
         tutor_attention_state = self.tutor_attention_state.state(now)
         tutor_attention_confidence = self.tutor_attention_state.confidence(now)
+        tutor_instant_attention_state = self.tutor_attention_state.instant_state(now)
+        tutor_instant_attention_confidence = self.tutor_attention_state.instant_confidence(now)
         tutor_face_presence = self.tutor_attention_state.face_presence_score(now)
         tutor_visual_attention = self.tutor_attention_state.visual_attention_score(now)
         tutor_time_in_state = self.tutor_attention_state.time_in_current_state(now)
 
         student_attention_state = self.student_attention_state.state(now)
         student_attention_confidence = self.student_attention_state.confidence(now)
+        student_instant_attention_state = self.student_attention_state.instant_state(now)
+        student_instant_attention_confidence = self.student_attention_state.instant_confidence(now)
         student_face_presence = self.student_attention_state.face_presence_score(now)
         student_visual_attention = self.student_attention_state.visual_attention_score(now)
         student_time_in_state = self.student_attention_state.time_in_current_state(now)
@@ -364,6 +379,8 @@ class MetricsEngine:
                     is_speaking=s_is_speaking,
                     attention_state=attn_tracker.state(now),
                     attention_state_confidence=attn_tracker.confidence(now),
+                    instant_attention_state=attn_tracker.instant_state(now),
+                    instant_attention_state_confidence=attn_tracker.instant_confidence(now),
                     face_presence_score=attn_tracker.face_presence_score(now),
                     visual_attention_score=attn_tracker.visual_attention_score(now),
                     time_in_attention_state_seconds=attn_tracker.time_in_current_state(now),
@@ -381,6 +398,8 @@ class MetricsEngine:
                 is_speaking=self.speaking_time.tutor_speaking,
                 attention_state=tutor_attention_state,
                 attention_state_confidence=tutor_attention_confidence,
+                instant_attention_state=tutor_instant_attention_state,
+                instant_attention_state_confidence=tutor_instant_attention_confidence,
                 face_presence_score=tutor_face_presence,
                 visual_attention_score=tutor_visual_attention,
                 time_in_attention_state_seconds=tutor_time_in_state,
@@ -395,6 +414,8 @@ class MetricsEngine:
                 is_speaking=self.speaking_time.student_speaking,
                 attention_state=student_attention_state,
                 attention_state_confidence=student_attention_confidence,
+                instant_attention_state=student_instant_attention_state,
+                instant_attention_state_confidence=student_instant_attention_confidence,
                 face_presence_score=student_face_presence,
                 visual_attention_score=student_visual_attention,
                 time_in_attention_state_seconds=student_time_in_state,

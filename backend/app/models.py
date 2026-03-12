@@ -40,6 +40,15 @@ class ParticipantMetrics(BaseModel):
         "OFF_TASK_AWAY",
     ] = "LOW_CONFIDENCE"
     attention_state_confidence: float = 0.0
+    instant_attention_state: Literal[
+        "FACE_MISSING",
+        "LOW_CONFIDENCE",
+        "CAMERA_FACING",
+        "SCREEN_ENGAGED",
+        "DOWN_ENGAGED",
+        "OFF_TASK_AWAY",
+    ] = "LOW_CONFIDENCE"
+    instant_attention_state_confidence: float = 0.0
     face_presence_score: float = 0.0
     visual_attention_score: float = 0.5
     time_in_attention_state_seconds: float = 0.0
@@ -88,6 +97,7 @@ class MetricsSnapshot(BaseModel):
     degradation_reason: str = "normal"
     target_fps: int = 3
     coaching_decision: Optional[dict] = None
+    coaching_status: Optional[dict] = None
     # Per-student metrics for multi-student sessions (indices 1+ students).
     # Keyed by student index as a string for JSON serialization.
     # Not populated for single-student sessions (max_students=1).
@@ -119,6 +129,7 @@ class FlaggedMoment(BaseModel):
 
 class SessionSummary(BaseModel):
     session_id: str
+    session_title: str = ""
     tutor_id: str = ""
     student_user_id: str = ""
     start_time: datetime
@@ -165,13 +176,19 @@ class SessionCreateRequest(BaseModel):
     tutor_id: str = ""
     student_user_id: str = ""
     session_type: str = "general"
+    session_title: str = ""
     media_provider: Optional[MediaProvider] = None
     coaching_intensity: CoachingIntensity = CoachingIntensity.NORMAL
     max_students: int = 1
 
 
+class SessionTitleUpdateRequest(BaseModel):
+    session_title: str
+
+
 class SessionCreateResponse(BaseModel):
     session_id: str
+    session_title: str = ""
     tutor_token: str
     # Primary list of all pre-generated student tokens.
     student_tokens: list[str] = Field(default_factory=list)

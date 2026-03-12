@@ -1,5 +1,7 @@
 import pytest
+from app.config import settings
 from app.video_processor.gaze_estimator import estimate_gaze, GazeResult
+from app.video_processor.head_pose import HeadPoseResult
 
 
 def _make_landmarks(count=478, default=(0.5, 0.5, 0.0)):
@@ -89,3 +91,78 @@ def test_wider_threshold_allows_more():
     result_wide = estimate_gaze(landmarks, threshold_degrees=45.0)
     # Wide threshold should be more permissive
     assert result_wide.on_camera is True
+
+
+# ---------------------------------------------------------------------------
+# Head-pose fusion tests
+# ---------------------------------------------------------------------------
+
+def test_fused_centered_gaze_with_zero_head_pose():
+    """Centered iris + zero head pose should remain on camera."""
+    landmarks = _make_landmarks()
+    landmarks = _set_eye_landmarks(landmarks, left_iris_x=0.4, right_iris_x=0.6)
+    head_pose = HeadPoseResult(yaw_deg=0.0, pitch_deg=0.0, roll_deg=0.0)
+    result = estimate_gaze(landmarks, threshold_degrees=15.0, head_pose=head_pose)
+    assert result.on_camera is True
+    assert abs(result.horizontal_angle_deg) < 15.0
+
+
+def test_large_head_yaw_still_pushes_fusion_off_camera():
+    """A large head yaw should still push the fused angle off camera."""
+    landmarks = _make_landmarks()
+    # Centered iris — iris-only would be on-camera
+    landmarks = _set_eye_landmarks(landmarks, left_iris_x=0.4, right_iris_x=0.6)
+    # But head is turned 60° to the right
+    head_pose = HeadPoseResult(yaw_deg=60.0, pitch_deg=0.0, roll_deg=0.0)
+    result = estimate_gaze(landmarks, threshold_degrees=15.0, head_pose=head_pose)
+    assert result.on_camera is False
+    expected_h = settings.gaze_head_pose_weight * 60.0 / (
+        settings.gaze_iris_weight + settings.gaze_head_pose_weight
+    )
+    assert result.horizontal_angle_deg == pytest.approx(expected_h, abs=0.01)
+    assert result.horizontal_angle_deg > 15.0
+
+
+def test_head_pose_fusion_blending_math():
+    """Verify the numeric blending formula uses the configured weights."""
+    landmarks = _make_landmarks()
+    # Force iris angle to exactly 0 (perfect centre)
+    landmarks = _set_eye_landmarks(landmarks, left_iris_x=0.4, right_iris_x=0.6)
+    iris_result = estimate_gaze(landmarks, threshold_degrees=90.0)
+    iris_h = iris_result.horizontal_angle_deg
+    iris_v = iris_result.vertical_angle_deg
+
+    head_pose = HeadPoseResult(yaw_deg=30.0, pitch_deg=20.0, roll_deg=0.0)
+    fused = estimate_gaze(landmarks, threshold_degrees=90.0, head_pose=head_pose)
+
+    total_weight = settings.gaze_iris_weight + settings.gaze_head_pose_weight
+    expected_h = (
+        settings.gaze_iris_weight * iris_h + settings.gaze_head_pose_weight * 30.0
+    ) / total_weight
+    expected_v = (
+        settings.gaze_iris_weight * iris_v + settings.gaze_head_pose_weight * 20.0
+    ) / total_weight
+
+    assert abs(fused.horizontal_angle_deg - expected_h) < 0.01
+    assert abs(fused.vertical_angle_deg - expected_v) < 0.01
+
+
+def test_no_head_pose_falls_back_to_iris_only():
+    """Without head_pose, the result should match the iris-only baseline."""
+    landmarks = _make_landmarks()
+    landmarks = _set_eye_landmarks(landmarks, left_iris_x=0.4, right_iris_x=0.6)
+    iris_only = estimate_gaze(landmarks, threshold_degrees=15.0)
+    with_none = estimate_gaze(landmarks, threshold_degrees=15.0, head_pose=None)
+    assert iris_only.horizontal_angle_deg == with_none.horizontal_angle_deg
+    assert iris_only.vertical_angle_deg == with_none.vertical_angle_deg
+    assert iris_only.on_camera == with_none.on_camera
+
+
+def test_head_pose_pitch_vertical_fusion():
+    """A large downward head pitch (positive) should push vertical angle off camera."""
+    landmarks = _make_landmarks()
+    landmarks = _set_eye_landmarks(landmarks, left_iris_x=0.4, right_iris_x=0.6)
+    head_pose = HeadPoseResult(yaw_deg=0.0, pitch_deg=45.0, roll_deg=0.0)
+    result = estimate_gaze(landmarks, threshold_degrees=15.0, head_pose=head_pose)
+    assert result.on_camera is False
+    assert result.vertical_angle_deg > 15.0

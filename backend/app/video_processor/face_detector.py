@@ -19,8 +19,8 @@ class FaceDetector:
         self._face_mesh = mp.solutions.face_mesh.FaceMesh(
             max_num_faces=max_num_faces,
             refine_landmarks=refine_landmarks,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5,
+            min_detection_confidence=0.6,
+            min_tracking_confidence=0.6,
         )
 
     def detect(self, rgb_frame: np.ndarray) -> FaceDetectionResult | None:

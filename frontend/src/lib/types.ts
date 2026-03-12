@@ -18,6 +18,8 @@ export interface ParticipantMetrics {
   is_speaking: boolean
   attention_state: AttentionState
   attention_state_confidence: number
+  instant_attention_state: AttentionState
+  instant_attention_state_confidence: number
   face_presence_score: number
   visual_attention_score: number
   time_in_attention_state_seconds: number
@@ -71,13 +73,23 @@ export interface MetricsSnapshot {
   target_fps: number
   coaching_decision?: {
     candidate_nudges: string[]
+    candidate_rule_scores?: Record<string, number>
     suppressed_reasons: string[]
     emitted_nudge: string | null
+    emitted_priority?: NudgePriority | null
     trigger_features: Record<string, unknown>
     session_type: string
     coaching_intensity?: string
     candidates_evaluated?: string[]
     fired_rule?: string | null
+    fired_rule_score?: number | null
+  } | null
+  coaching_status?: {
+    active: boolean
+    warmup_remaining_s: number
+    next_eligible_s: number
+    rules_evaluated: number
+    budget_remaining: number
   } | null
 }
 
@@ -87,7 +99,7 @@ export interface Nudge {
   nudge_type: string
   message: string
   priority: NudgePriority
-  trigger_metrics: Record<string, number>
+  trigger_metrics: Record<string, unknown>
 }
 
 export interface NudgeDetail {
@@ -126,6 +138,7 @@ export interface WSMessage {
 
 export interface SessionInfo {
   session_id: string
+  session_title?: string
   tutor_connected: boolean
   student_connected: boolean
   started: boolean
@@ -148,6 +161,7 @@ export interface FlaggedMoment {
 
 export interface SessionSummary {
   session_id: string
+  session_title?: string
   tutor_id: string
   start_time: string
   end_time: string
