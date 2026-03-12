@@ -335,3 +335,4 @@ class TestSessionCreateEndpointAcceptsIntensity:
         mgr = SessionManager()
         resp = mgr.create_session(coaching_intensity="subtle")
         assert resp.coaching_intensity == CoachingIntensity.SUBTLE
+        assert resp.session_title

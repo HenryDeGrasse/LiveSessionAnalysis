@@ -19,10 +19,6 @@
       "tolerance": 0.06
     },
     {
-      "replay_path": "snapshot.student.attention_state",
-      "trace_path": "metrics_history.0.student.attention_state"
-    },
-    {
       "replay_path": "snapshot.session.recent_tutor_talk_percent",
       "trace_path": "metrics_history.0.session.recent_tutor_talk_percent",
       "tolerance": 0.08

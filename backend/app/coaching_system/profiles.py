@@ -33,6 +33,22 @@ class SessionProfile:
     # Seconds of mutual silence + media anomaly before tech check nudge.
     tech_check_silence_seconds: float
 
+    # Re-engage silence ------------------------------------------------------
+    # Seconds of mutual silence with BOTH participants visually present
+    # before firing a re-engage nudge (distinct from tech_check which
+    # requires a media anomaly).
+    mutual_silence_threshold_seconds: float
+
+    # Encourage student response ---------------------------------------------
+    # Seconds student has been silent while tutor is NOT dominating talk
+    # (i.e. check_for_understanding wouldn't cover it) and student is present.
+    student_long_silence_seconds: float
+
+    # Session momentum loss --------------------------------------------------
+    # Engagement score below which session_momentum_loss can fire
+    # (combined with a declining trend signal).
+    low_engagement_score_threshold: float
+
 
 # ---- Built-in profiles ---------------------------------------------------
 
@@ -42,6 +58,9 @@ LECTURE = SessionProfile(
     interruption_spike_count=3,
     off_task_persistence_seconds=90,      # longer leash — student may be listening
     tech_check_silence_seconds=45,
+    mutual_silence_threshold_seconds=90,  # long gap before nudging in a lecture
+    student_long_silence_seconds=300,     # silence is expected in lecture
+    low_engagement_score_threshold=40.0,  # lower bar — monologue is normal
 )
 
 PRACTICE = SessionProfile(
@@ -50,6 +69,9 @@ PRACTICE = SessionProfile(
     interruption_spike_count=4,          # more interaction → more overlaps tolerated
     off_task_persistence_seconds=60,
     tech_check_silence_seconds=30,
+    mutual_silence_threshold_seconds=45,  # practice should have active back-and-forth
+    student_long_silence_seconds=75,
+    low_engagement_score_threshold=50.0,
 )
 
 SOCRATIC = SessionProfile(
@@ -58,6 +80,9 @@ SOCRATIC = SessionProfile(
     interruption_spike_count=3,
     off_task_persistence_seconds=60,
     tech_check_silence_seconds=30,
+    mutual_silence_threshold_seconds=45,  # question-answer flow should be active
+    student_long_silence_seconds=60,
+    low_engagement_score_threshold=50.0,
 )
 
 GENERAL = SessionProfile(
@@ -66,6 +91,9 @@ GENERAL = SessionProfile(
     interruption_spike_count=3,
     off_task_persistence_seconds=75,
     tech_check_silence_seconds=30,
+    mutual_silence_threshold_seconds=60,  # 60s mutual silence is unusual
+    student_long_silence_seconds=90,
+    low_engagement_score_threshold=50.0,
 )
 
 DISCUSSION = SessionProfile(
@@ -74,6 +102,9 @@ DISCUSSION = SessionProfile(
     interruption_spike_count=4,
     off_task_persistence_seconds=60,
     tech_check_silence_seconds=30,
+    mutual_silence_threshold_seconds=45,  # discussions should be lively
+    student_long_silence_seconds=90,
+    low_engagement_score_threshold=50.0,
 )
 
 _PROFILES: dict[str, SessionProfile] = {

@@ -113,6 +113,7 @@ async def test_coaching_decision_populated_in_debug_mode():
 
     cd = snapshot.coaching_decision
     assert "candidate_nudges" in cd
+    assert "candidate_rule_scores" in cd
     assert "suppressed_reasons" in cd
     assert "emitted_nudge" in cd
     assert "trigger_features" in cd

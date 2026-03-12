@@ -1,0 +1,6232 @@
+{
+  "trace_version": 1,
+  "session_id": "coaching-faster-warmup-01",
+  "tutor_id": "alice",
+  "session_type": "general",
+  "created_at": "2025-01-01T12:00:00",
+  "started_at": "2025-01-01T12:00:00",
+  "ended_at": "2025-01-01T12:01:28",
+  "duration_seconds": 88.0,
+  "build": {
+    "git_sha": "fixture",
+    "app_version": "1.0.0",
+    "models_version": "fixture"
+  },
+  "config_hash": "fixture-config",
+  "capture_mode": "eval",
+  "env": {},
+  "events": [],
+  "visual_signals": [
+    {
+      "seq": 1,
+      "t_ms": 0,
+      "timestamp": "2025-01-01T12:00:00",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 2,
+      "t_ms": 0,
+      "timestamp": "2025-01-01T12:00:00",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 3,
+      "t_ms": 2000,
+      "timestamp": "2025-01-01T12:00:02",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 4,
+      "t_ms": 2000,
+      "timestamp": "2025-01-01T12:00:02",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 5,
+      "t_ms": 4000,
+      "timestamp": "2025-01-01T12:00:04",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 6,
+      "t_ms": 4000,
+      "timestamp": "2025-01-01T12:00:04",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 7,
+      "t_ms": 6000,
+      "timestamp": "2025-01-01T12:00:06",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 8,
+      "t_ms": 6000,
+      "timestamp": "2025-01-01T12:00:06",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 9,
+      "t_ms": 8000,
+      "timestamp": "2025-01-01T12:00:08",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 10,
+      "t_ms": 8000,
+      "timestamp": "2025-01-01T12:00:08",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 11,
+      "t_ms": 10000,
+      "timestamp": "2025-01-01T12:00:10",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 12,
+      "t_ms": 10000,
+      "timestamp": "2025-01-01T12:00:10",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 13,
+      "t_ms": 12000,
+      "timestamp": "2025-01-01T12:00:12",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 14,
+      "t_ms": 12000,
+      "timestamp": "2025-01-01T12:00:12",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 15,
+      "t_ms": 14000,
+      "timestamp": "2025-01-01T12:00:14",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 16,
+      "t_ms": 14000,
+      "timestamp": "2025-01-01T12:00:14",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 17,
+      "t_ms": 16000,
+      "timestamp": "2025-01-01T12:00:16",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 18,
+      "t_ms": 16000,
+      "timestamp": "2025-01-01T12:00:16",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 19,
+      "t_ms": 18000,
+      "timestamp": "2025-01-01T12:00:18",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 20,
+      "t_ms": 18000,
+      "timestamp": "2025-01-01T12:00:18",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 21,
+      "t_ms": 20000,
+      "timestamp": "2025-01-01T12:00:20",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 22,
+      "t_ms": 20000,
+      "timestamp": "2025-01-01T12:00:20",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 23,
+      "t_ms": 22000,
+      "timestamp": "2025-01-01T12:00:22",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 24,
+      "t_ms": 22000,
+      "timestamp": "2025-01-01T12:00:22",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 25,
+      "t_ms": 24000,
+      "timestamp": "2025-01-01T12:00:24",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 26,
+      "t_ms": 24000,
+      "timestamp": "2025-01-01T12:00:24",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 27,
+      "t_ms": 26000,
+      "timestamp": "2025-01-01T12:00:26",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 28,
+      "t_ms": 26000,
+      "timestamp": "2025-01-01T12:00:26",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 29,
+      "t_ms": 28000,
+      "timestamp": "2025-01-01T12:00:28",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 30,
+      "t_ms": 28000,
+      "timestamp": "2025-01-01T12:00:28",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 31,
+      "t_ms": 30000,
+      "timestamp": "2025-01-01T12:00:30",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 32,
+      "t_ms": 30000,
+      "timestamp": "2025-01-01T12:00:30",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 33,
+      "t_ms": 32000,
+      "timestamp": "2025-01-01T12:00:32",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 34,
+      "t_ms": 32000,
+      "timestamp": "2025-01-01T12:00:32",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 35,
+      "t_ms": 34000,
+      "timestamp": "2025-01-01T12:00:34",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 36,
+      "t_ms": 34000,
+      "timestamp": "2025-01-01T12:00:34",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 37,
+      "t_ms": 36000,
+      "timestamp": "2025-01-01T12:00:36",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 38,
+      "t_ms": 36000,
+      "timestamp": "2025-01-01T12:00:36",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 39,
+      "t_ms": 38000,
+      "timestamp": "2025-01-01T12:00:38",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 40,
+      "t_ms": 38000,
+      "timestamp": "2025-01-01T12:00:38",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 41,
+      "t_ms": 40000,
+      "timestamp": "2025-01-01T12:00:40",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 42,
+      "t_ms": 40000,
+      "timestamp": "2025-01-01T12:00:40",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 43,
+      "t_ms": 42000,
+      "timestamp": "2025-01-01T12:00:42",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 44,
+      "t_ms": 42000,
+      "timestamp": "2025-01-01T12:00:42",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 45,
+      "t_ms": 44000,
+      "timestamp": "2025-01-01T12:00:44",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 46,
+      "t_ms": 44000,
+      "timestamp": "2025-01-01T12:00:44",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 47,
+      "t_ms": 46000,
+      "timestamp": "2025-01-01T12:00:46",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 48,
+      "t_ms": 46000,
+      "timestamp": "2025-01-01T12:00:46",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 49,
+      "t_ms": 48000,
+      "timestamp": "2025-01-01T12:00:48",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 50,
+      "t_ms": 48000,
+      "timestamp": "2025-01-01T12:00:48",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 51,
+      "t_ms": 50000,
+      "timestamp": "2025-01-01T12:00:50",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 52,
+      "t_ms": 50000,
+      "timestamp": "2025-01-01T12:00:50",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 53,
+      "t_ms": 52000,
+      "timestamp": "2025-01-01T12:00:52",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 54,
+      "t_ms": 52000,
+      "timestamp": "2025-01-01T12:00:52",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 55,
+      "t_ms": 54000,
+      "timestamp": "2025-01-01T12:00:54",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 56,
+      "t_ms": 54000,
+      "timestamp": "2025-01-01T12:00:54",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 57,
+      "t_ms": 56000,
+      "timestamp": "2025-01-01T12:00:56",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 58,
+      "t_ms": 56000,
+      "timestamp": "2025-01-01T12:00:56",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 59,
+      "t_ms": 58000,
+      "timestamp": "2025-01-01T12:00:58",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 60,
+      "t_ms": 58000,
+      "timestamp": "2025-01-01T12:00:58",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 61,
+      "t_ms": 60000,
+      "timestamp": "2025-01-01T12:01:00",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 62,
+      "t_ms": 60000,
+      "timestamp": "2025-01-01T12:01:00",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 63,
+      "t_ms": 62000,
+      "timestamp": "2025-01-01T12:01:02",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 64,
+      "t_ms": 62000,
+      "timestamp": "2025-01-01T12:01:02",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 65,
+      "t_ms": 64000,
+      "timestamp": "2025-01-01T12:01:04",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 66,
+      "t_ms": 64000,
+      "timestamp": "2025-01-01T12:01:04",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 67,
+      "t_ms": 66000,
+      "timestamp": "2025-01-01T12:01:06",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 68,
+      "t_ms": 66000,
+      "timestamp": "2025-01-01T12:01:06",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 69,
+      "t_ms": 68000,
+      "timestamp": "2025-01-01T12:01:08",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 70,
+      "t_ms": 68000,
+      "timestamp": "2025-01-01T12:01:08",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 71,
+      "t_ms": 70000,
+      "timestamp": "2025-01-01T12:01:10",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 72,
+      "t_ms": 70000,
+      "timestamp": "2025-01-01T12:01:10",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 73,
+      "t_ms": 72000,
+      "timestamp": "2025-01-01T12:01:12",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 74,
+      "t_ms": 72000,
+      "timestamp": "2025-01-01T12:01:12",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 75,
+      "t_ms": 74000,
+      "timestamp": "2025-01-01T12:01:14",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 76,
+      "t_ms": 74000,
+      "timestamp": "2025-01-01T12:01:14",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 77,
+      "t_ms": 76000,
+      "timestamp": "2025-01-01T12:01:16",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 78,
+      "t_ms": 76000,
+      "timestamp": "2025-01-01T12:01:16",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 79,
+      "t_ms": 78000,
+      "timestamp": "2025-01-01T12:01:18",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 80,
+      "t_ms": 78000,
+      "timestamp": "2025-01-01T12:01:18",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 81,
+      "t_ms": 80000,
+      "timestamp": "2025-01-01T12:01:20",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 82,
+      "t_ms": 80000,
+      "timestamp": "2025-01-01T12:01:20",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 83,
+      "t_ms": 82000,
+      "timestamp": "2025-01-01T12:01:22",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 84,
+      "t_ms": 82000,
+      "timestamp": "2025-01-01T12:01:22",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 85,
+      "t_ms": 84000,
+      "timestamp": "2025-01-01T12:01:24",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 86,
+      "t_ms": 84000,
+      "timestamp": "2025-01-01T12:01:24",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 87,
+      "t_ms": 86000,
+      "timestamp": "2025-01-01T12:01:26",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 88,
+      "t_ms": 86000,
+      "timestamp": "2025-01-01T12:01:26",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    },
+    {
+      "seq": 89,
+      "t_ms": 88000,
+      "timestamp": "2025-01-01T12:01:28",
+      "role": "tutor",
+      "face_present": true,
+      "gaze_on_camera": true,
+      "attention_state": "CAMERA_FACING",
+      "confidence": 0.95
+    },
+    {
+      "seq": 90,
+      "t_ms": 88000,
+      "timestamp": "2025-01-01T12:01:28",
+      "role": "student",
+      "face_present": true,
+      "gaze_on_camera": false,
+      "attention_state": "OFF_TASK_AWAY",
+      "confidence": 0.9
+    }
+  ],
+  "audio_signals": [
+    {
+      "seq": 91,
+      "t_ms": 0,
+      "timestamp": "2025-01-01T12:00:00",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 92,
+      "t_ms": 0,
+      "timestamp": "2025-01-01T12:00:00",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 93,
+      "t_ms": 300,
+      "timestamp": "2025-01-01T12:00:00.300000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 94,
+      "t_ms": 300,
+      "timestamp": "2025-01-01T12:00:00.300000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 95,
+      "t_ms": 600,
+      "timestamp": "2025-01-01T12:00:00.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 96,
+      "t_ms": 600,
+      "timestamp": "2025-01-01T12:00:00.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 97,
+      "t_ms": 900,
+      "timestamp": "2025-01-01T12:00:00.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 98,
+      "t_ms": 900,
+      "timestamp": "2025-01-01T12:00:00.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 99,
+      "t_ms": 1200,
+      "timestamp": "2025-01-01T12:00:01.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 100,
+      "t_ms": 1200,
+      "timestamp": "2025-01-01T12:00:01.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 101,
+      "t_ms": 1500,
+      "timestamp": "2025-01-01T12:00:01.500000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 102,
+      "t_ms": 1500,
+      "timestamp": "2025-01-01T12:00:01.500000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 103,
+      "t_ms": 1800,
+      "timestamp": "2025-01-01T12:00:01.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 104,
+      "t_ms": 1800,
+      "timestamp": "2025-01-01T12:00:01.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 105,
+      "t_ms": 2100,
+      "timestamp": "2025-01-01T12:00:02.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 106,
+      "t_ms": 2100,
+      "timestamp": "2025-01-01T12:00:02.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 107,
+      "t_ms": 2400,
+      "timestamp": "2025-01-01T12:00:02.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 108,
+      "t_ms": 2400,
+      "timestamp": "2025-01-01T12:00:02.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 109,
+      "t_ms": 2700,
+      "timestamp": "2025-01-01T12:00:02.700000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 110,
+      "t_ms": 2700,
+      "timestamp": "2025-01-01T12:00:02.700000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 111,
+      "t_ms": 3000,
+      "timestamp": "2025-01-01T12:00:03",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 112,
+      "t_ms": 3000,
+      "timestamp": "2025-01-01T12:00:03",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 113,
+      "t_ms": 3300,
+      "timestamp": "2025-01-01T12:00:03.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 114,
+      "t_ms": 3300,
+      "timestamp": "2025-01-01T12:00:03.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 115,
+      "t_ms": 3600,
+      "timestamp": "2025-01-01T12:00:03.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 116,
+      "t_ms": 3600,
+      "timestamp": "2025-01-01T12:00:03.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 117,
+      "t_ms": 3900,
+      "timestamp": "2025-01-01T12:00:03.900000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 118,
+      "t_ms": 3900,
+      "timestamp": "2025-01-01T12:00:03.900000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 119,
+      "t_ms": 4200,
+      "timestamp": "2025-01-01T12:00:04.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 120,
+      "t_ms": 4200,
+      "timestamp": "2025-01-01T12:00:04.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 121,
+      "t_ms": 4500,
+      "timestamp": "2025-01-01T12:00:04.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 122,
+      "t_ms": 4500,
+      "timestamp": "2025-01-01T12:00:04.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 123,
+      "t_ms": 4800,
+      "timestamp": "2025-01-01T12:00:04.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 124,
+      "t_ms": 4800,
+      "timestamp": "2025-01-01T12:00:04.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 125,
+      "t_ms": 5100,
+      "timestamp": "2025-01-01T12:00:05.100000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 126,
+      "t_ms": 5100,
+      "timestamp": "2025-01-01T12:00:05.100000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 127,
+      "t_ms": 5400,
+      "timestamp": "2025-01-01T12:00:05.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 128,
+      "t_ms": 5400,
+      "timestamp": "2025-01-01T12:00:05.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 129,
+      "t_ms": 5700,
+      "timestamp": "2025-01-01T12:00:05.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 130,
+      "t_ms": 5700,
+      "timestamp": "2025-01-01T12:00:05.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 131,
+      "t_ms": 6000,
+      "timestamp": "2025-01-01T12:00:06",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 132,
+      "t_ms": 6000,
+      "timestamp": "2025-01-01T12:00:06",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 133,
+      "t_ms": 6300,
+      "timestamp": "2025-01-01T12:00:06.300000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 134,
+      "t_ms": 6300,
+      "timestamp": "2025-01-01T12:00:06.300000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 135,
+      "t_ms": 6600,
+      "timestamp": "2025-01-01T12:00:06.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 136,
+      "t_ms": 6600,
+      "timestamp": "2025-01-01T12:00:06.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 137,
+      "t_ms": 6900,
+      "timestamp": "2025-01-01T12:00:06.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 138,
+      "t_ms": 6900,
+      "timestamp": "2025-01-01T12:00:06.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 139,
+      "t_ms": 7200,
+      "timestamp": "2025-01-01T12:00:07.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 140,
+      "t_ms": 7200,
+      "timestamp": "2025-01-01T12:00:07.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 141,
+      "t_ms": 7500,
+      "timestamp": "2025-01-01T12:00:07.500000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 142,
+      "t_ms": 7500,
+      "timestamp": "2025-01-01T12:00:07.500000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 143,
+      "t_ms": 7800,
+      "timestamp": "2025-01-01T12:00:07.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 144,
+      "t_ms": 7800,
+      "timestamp": "2025-01-01T12:00:07.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 145,
+      "t_ms": 8100,
+      "timestamp": "2025-01-01T12:00:08.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 146,
+      "t_ms": 8100,
+      "timestamp": "2025-01-01T12:00:08.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 147,
+      "t_ms": 8400,
+      "timestamp": "2025-01-01T12:00:08.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 148,
+      "t_ms": 8400,
+      "timestamp": "2025-01-01T12:00:08.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 149,
+      "t_ms": 8700,
+      "timestamp": "2025-01-01T12:00:08.700000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 150,
+      "t_ms": 8700,
+      "timestamp": "2025-01-01T12:00:08.700000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 151,
+      "t_ms": 9000,
+      "timestamp": "2025-01-01T12:00:09",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 152,
+      "t_ms": 9000,
+      "timestamp": "2025-01-01T12:00:09",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 153,
+      "t_ms": 9300,
+      "timestamp": "2025-01-01T12:00:09.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 154,
+      "t_ms": 9300,
+      "timestamp": "2025-01-01T12:00:09.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 155,
+      "t_ms": 9600,
+      "timestamp": "2025-01-01T12:00:09.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 156,
+      "t_ms": 9600,
+      "timestamp": "2025-01-01T12:00:09.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 157,
+      "t_ms": 9900,
+      "timestamp": "2025-01-01T12:00:09.900000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 158,
+      "t_ms": 9900,
+      "timestamp": "2025-01-01T12:00:09.900000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 159,
+      "t_ms": 10200,
+      "timestamp": "2025-01-01T12:00:10.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 160,
+      "t_ms": 10200,
+      "timestamp": "2025-01-01T12:00:10.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 161,
+      "t_ms": 10500,
+      "timestamp": "2025-01-01T12:00:10.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 162,
+      "t_ms": 10500,
+      "timestamp": "2025-01-01T12:00:10.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 163,
+      "t_ms": 10800,
+      "timestamp": "2025-01-01T12:00:10.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 164,
+      "t_ms": 10800,
+      "timestamp": "2025-01-01T12:00:10.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 165,
+      "t_ms": 11100,
+      "timestamp": "2025-01-01T12:00:11.100000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 166,
+      "t_ms": 11100,
+      "timestamp": "2025-01-01T12:00:11.100000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 167,
+      "t_ms": 11400,
+      "timestamp": "2025-01-01T12:00:11.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 168,
+      "t_ms": 11400,
+      "timestamp": "2025-01-01T12:00:11.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 169,
+      "t_ms": 11700,
+      "timestamp": "2025-01-01T12:00:11.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 170,
+      "t_ms": 11700,
+      "timestamp": "2025-01-01T12:00:11.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 171,
+      "t_ms": 12000,
+      "timestamp": "2025-01-01T12:00:12",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 172,
+      "t_ms": 12000,
+      "timestamp": "2025-01-01T12:00:12",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 173,
+      "t_ms": 12300,
+      "timestamp": "2025-01-01T12:00:12.300000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 174,
+      "t_ms": 12300,
+      "timestamp": "2025-01-01T12:00:12.300000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 175,
+      "t_ms": 12600,
+      "timestamp": "2025-01-01T12:00:12.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 176,
+      "t_ms": 12600,
+      "timestamp": "2025-01-01T12:00:12.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 177,
+      "t_ms": 12900,
+      "timestamp": "2025-01-01T12:00:12.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 178,
+      "t_ms": 12900,
+      "timestamp": "2025-01-01T12:00:12.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 179,
+      "t_ms": 13200,
+      "timestamp": "2025-01-01T12:00:13.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 180,
+      "t_ms": 13200,
+      "timestamp": "2025-01-01T12:00:13.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 181,
+      "t_ms": 13500,
+      "timestamp": "2025-01-01T12:00:13.500000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 182,
+      "t_ms": 13500,
+      "timestamp": "2025-01-01T12:00:13.500000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 183,
+      "t_ms": 13800,
+      "timestamp": "2025-01-01T12:00:13.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 184,
+      "t_ms": 13800,
+      "timestamp": "2025-01-01T12:00:13.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 185,
+      "t_ms": 14100,
+      "timestamp": "2025-01-01T12:00:14.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 186,
+      "t_ms": 14100,
+      "timestamp": "2025-01-01T12:00:14.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 187,
+      "t_ms": 14400,
+      "timestamp": "2025-01-01T12:00:14.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 188,
+      "t_ms": 14400,
+      "timestamp": "2025-01-01T12:00:14.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 189,
+      "t_ms": 14700,
+      "timestamp": "2025-01-01T12:00:14.700000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 190,
+      "t_ms": 14700,
+      "timestamp": "2025-01-01T12:00:14.700000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 191,
+      "t_ms": 15000,
+      "timestamp": "2025-01-01T12:00:15",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 192,
+      "t_ms": 15000,
+      "timestamp": "2025-01-01T12:00:15",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 193,
+      "t_ms": 15300,
+      "timestamp": "2025-01-01T12:00:15.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 194,
+      "t_ms": 15300,
+      "timestamp": "2025-01-01T12:00:15.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 195,
+      "t_ms": 15600,
+      "timestamp": "2025-01-01T12:00:15.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 196,
+      "t_ms": 15600,
+      "timestamp": "2025-01-01T12:00:15.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 197,
+      "t_ms": 15900,
+      "timestamp": "2025-01-01T12:00:15.900000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 198,
+      "t_ms": 15900,
+      "timestamp": "2025-01-01T12:00:15.900000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 199,
+      "t_ms": 16200,
+      "timestamp": "2025-01-01T12:00:16.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 200,
+      "t_ms": 16200,
+      "timestamp": "2025-01-01T12:00:16.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 201,
+      "t_ms": 16500,
+      "timestamp": "2025-01-01T12:00:16.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 202,
+      "t_ms": 16500,
+      "timestamp": "2025-01-01T12:00:16.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 203,
+      "t_ms": 16800,
+      "timestamp": "2025-01-01T12:00:16.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 204,
+      "t_ms": 16800,
+      "timestamp": "2025-01-01T12:00:16.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 205,
+      "t_ms": 17100,
+      "timestamp": "2025-01-01T12:00:17.100000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 206,
+      "t_ms": 17100,
+      "timestamp": "2025-01-01T12:00:17.100000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 207,
+      "t_ms": 17400,
+      "timestamp": "2025-01-01T12:00:17.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 208,
+      "t_ms": 17400,
+      "timestamp": "2025-01-01T12:00:17.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 209,
+      "t_ms": 17700,
+      "timestamp": "2025-01-01T12:00:17.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 210,
+      "t_ms": 17700,
+      "timestamp": "2025-01-01T12:00:17.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 211,
+      "t_ms": 18000,
+      "timestamp": "2025-01-01T12:00:18",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 212,
+      "t_ms": 18000,
+      "timestamp": "2025-01-01T12:00:18",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 213,
+      "t_ms": 18300,
+      "timestamp": "2025-01-01T12:00:18.300000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 214,
+      "t_ms": 18300,
+      "timestamp": "2025-01-01T12:00:18.300000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 215,
+      "t_ms": 18600,
+      "timestamp": "2025-01-01T12:00:18.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 216,
+      "t_ms": 18600,
+      "timestamp": "2025-01-01T12:00:18.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 217,
+      "t_ms": 18900,
+      "timestamp": "2025-01-01T12:00:18.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 218,
+      "t_ms": 18900,
+      "timestamp": "2025-01-01T12:00:18.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 219,
+      "t_ms": 19200,
+      "timestamp": "2025-01-01T12:00:19.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 220,
+      "t_ms": 19200,
+      "timestamp": "2025-01-01T12:00:19.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 221,
+      "t_ms": 19500,
+      "timestamp": "2025-01-01T12:00:19.500000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 222,
+      "t_ms": 19500,
+      "timestamp": "2025-01-01T12:00:19.500000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 223,
+      "t_ms": 19800,
+      "timestamp": "2025-01-01T12:00:19.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 224,
+      "t_ms": 19800,
+      "timestamp": "2025-01-01T12:00:19.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 225,
+      "t_ms": 20100,
+      "timestamp": "2025-01-01T12:00:20.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 226,
+      "t_ms": 20100,
+      "timestamp": "2025-01-01T12:00:20.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 227,
+      "t_ms": 20400,
+      "timestamp": "2025-01-01T12:00:20.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 228,
+      "t_ms": 20400,
+      "timestamp": "2025-01-01T12:00:20.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 229,
+      "t_ms": 20700,
+      "timestamp": "2025-01-01T12:00:20.700000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 230,
+      "t_ms": 20700,
+      "timestamp": "2025-01-01T12:00:20.700000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 231,
+      "t_ms": 21000,
+      "timestamp": "2025-01-01T12:00:21",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 232,
+      "t_ms": 21000,
+      "timestamp": "2025-01-01T12:00:21",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 233,
+      "t_ms": 21300,
+      "timestamp": "2025-01-01T12:00:21.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 234,
+      "t_ms": 21300,
+      "timestamp": "2025-01-01T12:00:21.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 235,
+      "t_ms": 21600,
+      "timestamp": "2025-01-01T12:00:21.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 236,
+      "t_ms": 21600,
+      "timestamp": "2025-01-01T12:00:21.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 237,
+      "t_ms": 21900,
+      "timestamp": "2025-01-01T12:00:21.900000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 238,
+      "t_ms": 21900,
+      "timestamp": "2025-01-01T12:00:21.900000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 239,
+      "t_ms": 22200,
+      "timestamp": "2025-01-01T12:00:22.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 240,
+      "t_ms": 22200,
+      "timestamp": "2025-01-01T12:00:22.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 241,
+      "t_ms": 22500,
+      "timestamp": "2025-01-01T12:00:22.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 242,
+      "t_ms": 22500,
+      "timestamp": "2025-01-01T12:00:22.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 243,
+      "t_ms": 22800,
+      "timestamp": "2025-01-01T12:00:22.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 244,
+      "t_ms": 22800,
+      "timestamp": "2025-01-01T12:00:22.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 245,
+      "t_ms": 23100,
+      "timestamp": "2025-01-01T12:00:23.100000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 246,
+      "t_ms": 23100,
+      "timestamp": "2025-01-01T12:00:23.100000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 247,
+      "t_ms": 23400,
+      "timestamp": "2025-01-01T12:00:23.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 248,
+      "t_ms": 23400,
+      "timestamp": "2025-01-01T12:00:23.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 249,
+      "t_ms": 23700,
+      "timestamp": "2025-01-01T12:00:23.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 250,
+      "t_ms": 23700,
+      "timestamp": "2025-01-01T12:00:23.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 251,
+      "t_ms": 24000,
+      "timestamp": "2025-01-01T12:00:24",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 252,
+      "t_ms": 24000,
+      "timestamp": "2025-01-01T12:00:24",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 253,
+      "t_ms": 24300,
+      "timestamp": "2025-01-01T12:00:24.300000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 254,
+      "t_ms": 24300,
+      "timestamp": "2025-01-01T12:00:24.300000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 255,
+      "t_ms": 24600,
+      "timestamp": "2025-01-01T12:00:24.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 256,
+      "t_ms": 24600,
+      "timestamp": "2025-01-01T12:00:24.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 257,
+      "t_ms": 24900,
+      "timestamp": "2025-01-01T12:00:24.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 258,
+      "t_ms": 24900,
+      "timestamp": "2025-01-01T12:00:24.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 259,
+      "t_ms": 25200,
+      "timestamp": "2025-01-01T12:00:25.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 260,
+      "t_ms": 25200,
+      "timestamp": "2025-01-01T12:00:25.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 261,
+      "t_ms": 25500,
+      "timestamp": "2025-01-01T12:00:25.500000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 262,
+      "t_ms": 25500,
+      "timestamp": "2025-01-01T12:00:25.500000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 263,
+      "t_ms": 25800,
+      "timestamp": "2025-01-01T12:00:25.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 264,
+      "t_ms": 25800,
+      "timestamp": "2025-01-01T12:00:25.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 265,
+      "t_ms": 26100,
+      "timestamp": "2025-01-01T12:00:26.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 266,
+      "t_ms": 26100,
+      "timestamp": "2025-01-01T12:00:26.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 267,
+      "t_ms": 26400,
+      "timestamp": "2025-01-01T12:00:26.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 268,
+      "t_ms": 26400,
+      "timestamp": "2025-01-01T12:00:26.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 269,
+      "t_ms": 26700,
+      "timestamp": "2025-01-01T12:00:26.700000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 270,
+      "t_ms": 26700,
+      "timestamp": "2025-01-01T12:00:26.700000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 271,
+      "t_ms": 27000,
+      "timestamp": "2025-01-01T12:00:27",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 272,
+      "t_ms": 27000,
+      "timestamp": "2025-01-01T12:00:27",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 273,
+      "t_ms": 27300,
+      "timestamp": "2025-01-01T12:00:27.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 274,
+      "t_ms": 27300,
+      "timestamp": "2025-01-01T12:00:27.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 275,
+      "t_ms": 27600,
+      "timestamp": "2025-01-01T12:00:27.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 276,
+      "t_ms": 27600,
+      "timestamp": "2025-01-01T12:00:27.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 277,
+      "t_ms": 27900,
+      "timestamp": "2025-01-01T12:00:27.900000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 278,
+      "t_ms": 27900,
+      "timestamp": "2025-01-01T12:00:27.900000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 279,
+      "t_ms": 28200,
+      "timestamp": "2025-01-01T12:00:28.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 280,
+      "t_ms": 28200,
+      "timestamp": "2025-01-01T12:00:28.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 281,
+      "t_ms": 28500,
+      "timestamp": "2025-01-01T12:00:28.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 282,
+      "t_ms": 28500,
+      "timestamp": "2025-01-01T12:00:28.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 283,
+      "t_ms": 28800,
+      "timestamp": "2025-01-01T12:00:28.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 284,
+      "t_ms": 28800,
+      "timestamp": "2025-01-01T12:00:28.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 285,
+      "t_ms": 29100,
+      "timestamp": "2025-01-01T12:00:29.100000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 286,
+      "t_ms": 29100,
+      "timestamp": "2025-01-01T12:00:29.100000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 287,
+      "t_ms": 29400,
+      "timestamp": "2025-01-01T12:00:29.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 288,
+      "t_ms": 29400,
+      "timestamp": "2025-01-01T12:00:29.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 289,
+      "t_ms": 29700,
+      "timestamp": "2025-01-01T12:00:29.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 290,
+      "t_ms": 29700,
+      "timestamp": "2025-01-01T12:00:29.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 291,
+      "t_ms": 30000,
+      "timestamp": "2025-01-01T12:00:30",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 292,
+      "t_ms": 30000,
+      "timestamp": "2025-01-01T12:00:30",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 293,
+      "t_ms": 30300,
+      "timestamp": "2025-01-01T12:00:30.300000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 294,
+      "t_ms": 30300,
+      "timestamp": "2025-01-01T12:00:30.300000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 295,
+      "t_ms": 30600,
+      "timestamp": "2025-01-01T12:00:30.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 296,
+      "t_ms": 30600,
+      "timestamp": "2025-01-01T12:00:30.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 297,
+      "t_ms": 30900,
+      "timestamp": "2025-01-01T12:00:30.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 298,
+      "t_ms": 30900,
+      "timestamp": "2025-01-01T12:00:30.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 299,
+      "t_ms": 31200,
+      "timestamp": "2025-01-01T12:00:31.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 300,
+      "t_ms": 31200,
+      "timestamp": "2025-01-01T12:00:31.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 301,
+      "t_ms": 31500,
+      "timestamp": "2025-01-01T12:00:31.500000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 302,
+      "t_ms": 31500,
+      "timestamp": "2025-01-01T12:00:31.500000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 303,
+      "t_ms": 31800,
+      "timestamp": "2025-01-01T12:00:31.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 304,
+      "t_ms": 31800,
+      "timestamp": "2025-01-01T12:00:31.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 305,
+      "t_ms": 32100,
+      "timestamp": "2025-01-01T12:00:32.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 306,
+      "t_ms": 32100,
+      "timestamp": "2025-01-01T12:00:32.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 307,
+      "t_ms": 32400,
+      "timestamp": "2025-01-01T12:00:32.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 308,
+      "t_ms": 32400,
+      "timestamp": "2025-01-01T12:00:32.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 309,
+      "t_ms": 32700,
+      "timestamp": "2025-01-01T12:00:32.700000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 310,
+      "t_ms": 32700,
+      "timestamp": "2025-01-01T12:00:32.700000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 311,
+      "t_ms": 33000,
+      "timestamp": "2025-01-01T12:00:33",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 312,
+      "t_ms": 33000,
+      "timestamp": "2025-01-01T12:00:33",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 313,
+      "t_ms": 33300,
+      "timestamp": "2025-01-01T12:00:33.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 314,
+      "t_ms": 33300,
+      "timestamp": "2025-01-01T12:00:33.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 315,
+      "t_ms": 33600,
+      "timestamp": "2025-01-01T12:00:33.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 316,
+      "t_ms": 33600,
+      "timestamp": "2025-01-01T12:00:33.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 317,
+      "t_ms": 33900,
+      "timestamp": "2025-01-01T12:00:33.900000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 318,
+      "t_ms": 33900,
+      "timestamp": "2025-01-01T12:00:33.900000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 319,
+      "t_ms": 34200,
+      "timestamp": "2025-01-01T12:00:34.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 320,
+      "t_ms": 34200,
+      "timestamp": "2025-01-01T12:00:34.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 321,
+      "t_ms": 34500,
+      "timestamp": "2025-01-01T12:00:34.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 322,
+      "t_ms": 34500,
+      "timestamp": "2025-01-01T12:00:34.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 323,
+      "t_ms": 34800,
+      "timestamp": "2025-01-01T12:00:34.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 324,
+      "t_ms": 34800,
+      "timestamp": "2025-01-01T12:00:34.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 325,
+      "t_ms": 35100,
+      "timestamp": "2025-01-01T12:00:35.100000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 326,
+      "t_ms": 35100,
+      "timestamp": "2025-01-01T12:00:35.100000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 327,
+      "t_ms": 35400,
+      "timestamp": "2025-01-01T12:00:35.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 328,
+      "t_ms": 35400,
+      "timestamp": "2025-01-01T12:00:35.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 329,
+      "t_ms": 35700,
+      "timestamp": "2025-01-01T12:00:35.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 330,
+      "t_ms": 35700,
+      "timestamp": "2025-01-01T12:00:35.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 331,
+      "t_ms": 36000,
+      "timestamp": "2025-01-01T12:00:36",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 332,
+      "t_ms": 36000,
+      "timestamp": "2025-01-01T12:00:36",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 333,
+      "t_ms": 36300,
+      "timestamp": "2025-01-01T12:00:36.300000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 334,
+      "t_ms": 36300,
+      "timestamp": "2025-01-01T12:00:36.300000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 335,
+      "t_ms": 36600,
+      "timestamp": "2025-01-01T12:00:36.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 336,
+      "t_ms": 36600,
+      "timestamp": "2025-01-01T12:00:36.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 337,
+      "t_ms": 36900,
+      "timestamp": "2025-01-01T12:00:36.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 338,
+      "t_ms": 36900,
+      "timestamp": "2025-01-01T12:00:36.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 339,
+      "t_ms": 37200,
+      "timestamp": "2025-01-01T12:00:37.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 340,
+      "t_ms": 37200,
+      "timestamp": "2025-01-01T12:00:37.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 341,
+      "t_ms": 37500,
+      "timestamp": "2025-01-01T12:00:37.500000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 342,
+      "t_ms": 37500,
+      "timestamp": "2025-01-01T12:00:37.500000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 343,
+      "t_ms": 37800,
+      "timestamp": "2025-01-01T12:00:37.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 344,
+      "t_ms": 37800,
+      "timestamp": "2025-01-01T12:00:37.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 345,
+      "t_ms": 38100,
+      "timestamp": "2025-01-01T12:00:38.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 346,
+      "t_ms": 38100,
+      "timestamp": "2025-01-01T12:00:38.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 347,
+      "t_ms": 38400,
+      "timestamp": "2025-01-01T12:00:38.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 348,
+      "t_ms": 38400,
+      "timestamp": "2025-01-01T12:00:38.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 349,
+      "t_ms": 38700,
+      "timestamp": "2025-01-01T12:00:38.700000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 350,
+      "t_ms": 38700,
+      "timestamp": "2025-01-01T12:00:38.700000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 351,
+      "t_ms": 39000,
+      "timestamp": "2025-01-01T12:00:39",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 352,
+      "t_ms": 39000,
+      "timestamp": "2025-01-01T12:00:39",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 353,
+      "t_ms": 39300,
+      "timestamp": "2025-01-01T12:00:39.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 354,
+      "t_ms": 39300,
+      "timestamp": "2025-01-01T12:00:39.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 355,
+      "t_ms": 39600,
+      "timestamp": "2025-01-01T12:00:39.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 356,
+      "t_ms": 39600,
+      "timestamp": "2025-01-01T12:00:39.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 357,
+      "t_ms": 39900,
+      "timestamp": "2025-01-01T12:00:39.900000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 358,
+      "t_ms": 39900,
+      "timestamp": "2025-01-01T12:00:39.900000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 359,
+      "t_ms": 40200,
+      "timestamp": "2025-01-01T12:00:40.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 360,
+      "t_ms": 40200,
+      "timestamp": "2025-01-01T12:00:40.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 361,
+      "t_ms": 40500,
+      "timestamp": "2025-01-01T12:00:40.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 362,
+      "t_ms": 40500,
+      "timestamp": "2025-01-01T12:00:40.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 363,
+      "t_ms": 40800,
+      "timestamp": "2025-01-01T12:00:40.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 364,
+      "t_ms": 40800,
+      "timestamp": "2025-01-01T12:00:40.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 365,
+      "t_ms": 41100,
+      "timestamp": "2025-01-01T12:00:41.100000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 366,
+      "t_ms": 41100,
+      "timestamp": "2025-01-01T12:00:41.100000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 367,
+      "t_ms": 41400,
+      "timestamp": "2025-01-01T12:00:41.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 368,
+      "t_ms": 41400,
+      "timestamp": "2025-01-01T12:00:41.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 369,
+      "t_ms": 41700,
+      "timestamp": "2025-01-01T12:00:41.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 370,
+      "t_ms": 41700,
+      "timestamp": "2025-01-01T12:00:41.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 371,
+      "t_ms": 42000,
+      "timestamp": "2025-01-01T12:00:42",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 372,
+      "t_ms": 42000,
+      "timestamp": "2025-01-01T12:00:42",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 373,
+      "t_ms": 42300,
+      "timestamp": "2025-01-01T12:00:42.300000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 374,
+      "t_ms": 42300,
+      "timestamp": "2025-01-01T12:00:42.300000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 375,
+      "t_ms": 42600,
+      "timestamp": "2025-01-01T12:00:42.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 376,
+      "t_ms": 42600,
+      "timestamp": "2025-01-01T12:00:42.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 377,
+      "t_ms": 42900,
+      "timestamp": "2025-01-01T12:00:42.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 378,
+      "t_ms": 42900,
+      "timestamp": "2025-01-01T12:00:42.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 379,
+      "t_ms": 43200,
+      "timestamp": "2025-01-01T12:00:43.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 380,
+      "t_ms": 43200,
+      "timestamp": "2025-01-01T12:00:43.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 381,
+      "t_ms": 43500,
+      "timestamp": "2025-01-01T12:00:43.500000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 382,
+      "t_ms": 43500,
+      "timestamp": "2025-01-01T12:00:43.500000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 383,
+      "t_ms": 43800,
+      "timestamp": "2025-01-01T12:00:43.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 384,
+      "t_ms": 43800,
+      "timestamp": "2025-01-01T12:00:43.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 385,
+      "t_ms": 44100,
+      "timestamp": "2025-01-01T12:00:44.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 386,
+      "t_ms": 44100,
+      "timestamp": "2025-01-01T12:00:44.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 387,
+      "t_ms": 44400,
+      "timestamp": "2025-01-01T12:00:44.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 388,
+      "t_ms": 44400,
+      "timestamp": "2025-01-01T12:00:44.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 389,
+      "t_ms": 44700,
+      "timestamp": "2025-01-01T12:00:44.700000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 390,
+      "t_ms": 44700,
+      "timestamp": "2025-01-01T12:00:44.700000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 391,
+      "t_ms": 45000,
+      "timestamp": "2025-01-01T12:00:45",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 392,
+      "t_ms": 45000,
+      "timestamp": "2025-01-01T12:00:45",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 393,
+      "t_ms": 45300,
+      "timestamp": "2025-01-01T12:00:45.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 394,
+      "t_ms": 45300,
+      "timestamp": "2025-01-01T12:00:45.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 395,
+      "t_ms": 45600,
+      "timestamp": "2025-01-01T12:00:45.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 396,
+      "t_ms": 45600,
+      "timestamp": "2025-01-01T12:00:45.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 397,
+      "t_ms": 45900,
+      "timestamp": "2025-01-01T12:00:45.900000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 398,
+      "t_ms": 45900,
+      "timestamp": "2025-01-01T12:00:45.900000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 399,
+      "t_ms": 46200,
+      "timestamp": "2025-01-01T12:00:46.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 400,
+      "t_ms": 46200,
+      "timestamp": "2025-01-01T12:00:46.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 401,
+      "t_ms": 46500,
+      "timestamp": "2025-01-01T12:00:46.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 402,
+      "t_ms": 46500,
+      "timestamp": "2025-01-01T12:00:46.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 403,
+      "t_ms": 46800,
+      "timestamp": "2025-01-01T12:00:46.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 404,
+      "t_ms": 46800,
+      "timestamp": "2025-01-01T12:00:46.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 405,
+      "t_ms": 47100,
+      "timestamp": "2025-01-01T12:00:47.100000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 406,
+      "t_ms": 47100,
+      "timestamp": "2025-01-01T12:00:47.100000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 407,
+      "t_ms": 47400,
+      "timestamp": "2025-01-01T12:00:47.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 408,
+      "t_ms": 47400,
+      "timestamp": "2025-01-01T12:00:47.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 409,
+      "t_ms": 47700,
+      "timestamp": "2025-01-01T12:00:47.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 410,
+      "t_ms": 47700,
+      "timestamp": "2025-01-01T12:00:47.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 411,
+      "t_ms": 48000,
+      "timestamp": "2025-01-01T12:00:48",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 412,
+      "t_ms": 48000,
+      "timestamp": "2025-01-01T12:00:48",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 413,
+      "t_ms": 48300,
+      "timestamp": "2025-01-01T12:00:48.300000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 414,
+      "t_ms": 48300,
+      "timestamp": "2025-01-01T12:00:48.300000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 415,
+      "t_ms": 48600,
+      "timestamp": "2025-01-01T12:00:48.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 416,
+      "t_ms": 48600,
+      "timestamp": "2025-01-01T12:00:48.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 417,
+      "t_ms": 48900,
+      "timestamp": "2025-01-01T12:00:48.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 418,
+      "t_ms": 48900,
+      "timestamp": "2025-01-01T12:00:48.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 419,
+      "t_ms": 49200,
+      "timestamp": "2025-01-01T12:00:49.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 420,
+      "t_ms": 49200,
+      "timestamp": "2025-01-01T12:00:49.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 421,
+      "t_ms": 49500,
+      "timestamp": "2025-01-01T12:00:49.500000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 422,
+      "t_ms": 49500,
+      "timestamp": "2025-01-01T12:00:49.500000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 423,
+      "t_ms": 49800,
+      "timestamp": "2025-01-01T12:00:49.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 424,
+      "t_ms": 49800,
+      "timestamp": "2025-01-01T12:00:49.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 425,
+      "t_ms": 50100,
+      "timestamp": "2025-01-01T12:00:50.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 426,
+      "t_ms": 50100,
+      "timestamp": "2025-01-01T12:00:50.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 427,
+      "t_ms": 50400,
+      "timestamp": "2025-01-01T12:00:50.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 428,
+      "t_ms": 50400,
+      "timestamp": "2025-01-01T12:00:50.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 429,
+      "t_ms": 50700,
+      "timestamp": "2025-01-01T12:00:50.700000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 430,
+      "t_ms": 50700,
+      "timestamp": "2025-01-01T12:00:50.700000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 431,
+      "t_ms": 51000,
+      "timestamp": "2025-01-01T12:00:51",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 432,
+      "t_ms": 51000,
+      "timestamp": "2025-01-01T12:00:51",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 433,
+      "t_ms": 51300,
+      "timestamp": "2025-01-01T12:00:51.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 434,
+      "t_ms": 51300,
+      "timestamp": "2025-01-01T12:00:51.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 435,
+      "t_ms": 51600,
+      "timestamp": "2025-01-01T12:00:51.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 436,
+      "t_ms": 51600,
+      "timestamp": "2025-01-01T12:00:51.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 437,
+      "t_ms": 51900,
+      "timestamp": "2025-01-01T12:00:51.900000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 438,
+      "t_ms": 51900,
+      "timestamp": "2025-01-01T12:00:51.900000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 439,
+      "t_ms": 52200,
+      "timestamp": "2025-01-01T12:00:52.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 440,
+      "t_ms": 52200,
+      "timestamp": "2025-01-01T12:00:52.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 441,
+      "t_ms": 52500,
+      "timestamp": "2025-01-01T12:00:52.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 442,
+      "t_ms": 52500,
+      "timestamp": "2025-01-01T12:00:52.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 443,
+      "t_ms": 52800,
+      "timestamp": "2025-01-01T12:00:52.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 444,
+      "t_ms": 52800,
+      "timestamp": "2025-01-01T12:00:52.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 445,
+      "t_ms": 53100,
+      "timestamp": "2025-01-01T12:00:53.100000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 446,
+      "t_ms": 53100,
+      "timestamp": "2025-01-01T12:00:53.100000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 447,
+      "t_ms": 53400,
+      "timestamp": "2025-01-01T12:00:53.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 448,
+      "t_ms": 53400,
+      "timestamp": "2025-01-01T12:00:53.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 449,
+      "t_ms": 53700,
+      "timestamp": "2025-01-01T12:00:53.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 450,
+      "t_ms": 53700,
+      "timestamp": "2025-01-01T12:00:53.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 451,
+      "t_ms": 54000,
+      "timestamp": "2025-01-01T12:00:54",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 452,
+      "t_ms": 54000,
+      "timestamp": "2025-01-01T12:00:54",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 453,
+      "t_ms": 54300,
+      "timestamp": "2025-01-01T12:00:54.300000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 454,
+      "t_ms": 54300,
+      "timestamp": "2025-01-01T12:00:54.300000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 455,
+      "t_ms": 54600,
+      "timestamp": "2025-01-01T12:00:54.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 456,
+      "t_ms": 54600,
+      "timestamp": "2025-01-01T12:00:54.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 457,
+      "t_ms": 54900,
+      "timestamp": "2025-01-01T12:00:54.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 458,
+      "t_ms": 54900,
+      "timestamp": "2025-01-01T12:00:54.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 459,
+      "t_ms": 55200,
+      "timestamp": "2025-01-01T12:00:55.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 460,
+      "t_ms": 55200,
+      "timestamp": "2025-01-01T12:00:55.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 461,
+      "t_ms": 55500,
+      "timestamp": "2025-01-01T12:00:55.500000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 462,
+      "t_ms": 55500,
+      "timestamp": "2025-01-01T12:00:55.500000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 463,
+      "t_ms": 55800,
+      "timestamp": "2025-01-01T12:00:55.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 464,
+      "t_ms": 55800,
+      "timestamp": "2025-01-01T12:00:55.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 465,
+      "t_ms": 56100,
+      "timestamp": "2025-01-01T12:00:56.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 466,
+      "t_ms": 56100,
+      "timestamp": "2025-01-01T12:00:56.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 467,
+      "t_ms": 56400,
+      "timestamp": "2025-01-01T12:00:56.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 468,
+      "t_ms": 56400,
+      "timestamp": "2025-01-01T12:00:56.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 469,
+      "t_ms": 56700,
+      "timestamp": "2025-01-01T12:00:56.700000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 470,
+      "t_ms": 56700,
+      "timestamp": "2025-01-01T12:00:56.700000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 471,
+      "t_ms": 57000,
+      "timestamp": "2025-01-01T12:00:57",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 472,
+      "t_ms": 57000,
+      "timestamp": "2025-01-01T12:00:57",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 473,
+      "t_ms": 57300,
+      "timestamp": "2025-01-01T12:00:57.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 474,
+      "t_ms": 57300,
+      "timestamp": "2025-01-01T12:00:57.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 475,
+      "t_ms": 57600,
+      "timestamp": "2025-01-01T12:00:57.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 476,
+      "t_ms": 57600,
+      "timestamp": "2025-01-01T12:00:57.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 477,
+      "t_ms": 57900,
+      "timestamp": "2025-01-01T12:00:57.900000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 478,
+      "t_ms": 57900,
+      "timestamp": "2025-01-01T12:00:57.900000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 479,
+      "t_ms": 58200,
+      "timestamp": "2025-01-01T12:00:58.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 480,
+      "t_ms": 58200,
+      "timestamp": "2025-01-01T12:00:58.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 481,
+      "t_ms": 58500,
+      "timestamp": "2025-01-01T12:00:58.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 482,
+      "t_ms": 58500,
+      "timestamp": "2025-01-01T12:00:58.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 483,
+      "t_ms": 58800,
+      "timestamp": "2025-01-01T12:00:58.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 484,
+      "t_ms": 58800,
+      "timestamp": "2025-01-01T12:00:58.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 485,
+      "t_ms": 59100,
+      "timestamp": "2025-01-01T12:00:59.100000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 486,
+      "t_ms": 59100,
+      "timestamp": "2025-01-01T12:00:59.100000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 487,
+      "t_ms": 59400,
+      "timestamp": "2025-01-01T12:00:59.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 488,
+      "t_ms": 59400,
+      "timestamp": "2025-01-01T12:00:59.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 489,
+      "t_ms": 59700,
+      "timestamp": "2025-01-01T12:00:59.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 490,
+      "t_ms": 59700,
+      "timestamp": "2025-01-01T12:00:59.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 491,
+      "t_ms": 60000,
+      "timestamp": "2025-01-01T12:01:00",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 492,
+      "t_ms": 60000,
+      "timestamp": "2025-01-01T12:01:00",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 493,
+      "t_ms": 60300,
+      "timestamp": "2025-01-01T12:01:00.300000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 494,
+      "t_ms": 60300,
+      "timestamp": "2025-01-01T12:01:00.300000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 495,
+      "t_ms": 60600,
+      "timestamp": "2025-01-01T12:01:00.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 496,
+      "t_ms": 60600,
+      "timestamp": "2025-01-01T12:01:00.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 497,
+      "t_ms": 60900,
+      "timestamp": "2025-01-01T12:01:00.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 498,
+      "t_ms": 60900,
+      "timestamp": "2025-01-01T12:01:00.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 499,
+      "t_ms": 61200,
+      "timestamp": "2025-01-01T12:01:01.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 500,
+      "t_ms": 61200,
+      "timestamp": "2025-01-01T12:01:01.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 501,
+      "t_ms": 61500,
+      "timestamp": "2025-01-01T12:01:01.500000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 502,
+      "t_ms": 61500,
+      "timestamp": "2025-01-01T12:01:01.500000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 503,
+      "t_ms": 61800,
+      "timestamp": "2025-01-01T12:01:01.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 504,
+      "t_ms": 61800,
+      "timestamp": "2025-01-01T12:01:01.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 505,
+      "t_ms": 62100,
+      "timestamp": "2025-01-01T12:01:02.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 506,
+      "t_ms": 62100,
+      "timestamp": "2025-01-01T12:01:02.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 507,
+      "t_ms": 62400,
+      "timestamp": "2025-01-01T12:01:02.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 508,
+      "t_ms": 62400,
+      "timestamp": "2025-01-01T12:01:02.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 509,
+      "t_ms": 62700,
+      "timestamp": "2025-01-01T12:01:02.700000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 510,
+      "t_ms": 62700,
+      "timestamp": "2025-01-01T12:01:02.700000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 511,
+      "t_ms": 63000,
+      "timestamp": "2025-01-01T12:01:03",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 512,
+      "t_ms": 63000,
+      "timestamp": "2025-01-01T12:01:03",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 513,
+      "t_ms": 63300,
+      "timestamp": "2025-01-01T12:01:03.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 514,
+      "t_ms": 63300,
+      "timestamp": "2025-01-01T12:01:03.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 515,
+      "t_ms": 63600,
+      "timestamp": "2025-01-01T12:01:03.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 516,
+      "t_ms": 63600,
+      "timestamp": "2025-01-01T12:01:03.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 517,
+      "t_ms": 63900,
+      "timestamp": "2025-01-01T12:01:03.900000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 518,
+      "t_ms": 63900,
+      "timestamp": "2025-01-01T12:01:03.900000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 519,
+      "t_ms": 64200,
+      "timestamp": "2025-01-01T12:01:04.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 520,
+      "t_ms": 64200,
+      "timestamp": "2025-01-01T12:01:04.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 521,
+      "t_ms": 64500,
+      "timestamp": "2025-01-01T12:01:04.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 522,
+      "t_ms": 64500,
+      "timestamp": "2025-01-01T12:01:04.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 523,
+      "t_ms": 64800,
+      "timestamp": "2025-01-01T12:01:04.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 524,
+      "t_ms": 64800,
+      "timestamp": "2025-01-01T12:01:04.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 525,
+      "t_ms": 65100,
+      "timestamp": "2025-01-01T12:01:05.100000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 526,
+      "t_ms": 65100,
+      "timestamp": "2025-01-01T12:01:05.100000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 527,
+      "t_ms": 65400,
+      "timestamp": "2025-01-01T12:01:05.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 528,
+      "t_ms": 65400,
+      "timestamp": "2025-01-01T12:01:05.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 529,
+      "t_ms": 65700,
+      "timestamp": "2025-01-01T12:01:05.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 530,
+      "t_ms": 65700,
+      "timestamp": "2025-01-01T12:01:05.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 531,
+      "t_ms": 66000,
+      "timestamp": "2025-01-01T12:01:06",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 532,
+      "t_ms": 66000,
+      "timestamp": "2025-01-01T12:01:06",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 533,
+      "t_ms": 66300,
+      "timestamp": "2025-01-01T12:01:06.300000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 534,
+      "t_ms": 66300,
+      "timestamp": "2025-01-01T12:01:06.300000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 535,
+      "t_ms": 66600,
+      "timestamp": "2025-01-01T12:01:06.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 536,
+      "t_ms": 66600,
+      "timestamp": "2025-01-01T12:01:06.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 537,
+      "t_ms": 66900,
+      "timestamp": "2025-01-01T12:01:06.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 538,
+      "t_ms": 66900,
+      "timestamp": "2025-01-01T12:01:06.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 539,
+      "t_ms": 67200,
+      "timestamp": "2025-01-01T12:01:07.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 540,
+      "t_ms": 67200,
+      "timestamp": "2025-01-01T12:01:07.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 541,
+      "t_ms": 67500,
+      "timestamp": "2025-01-01T12:01:07.500000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 542,
+      "t_ms": 67500,
+      "timestamp": "2025-01-01T12:01:07.500000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 543,
+      "t_ms": 67800,
+      "timestamp": "2025-01-01T12:01:07.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 544,
+      "t_ms": 67800,
+      "timestamp": "2025-01-01T12:01:07.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 545,
+      "t_ms": 68100,
+      "timestamp": "2025-01-01T12:01:08.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 546,
+      "t_ms": 68100,
+      "timestamp": "2025-01-01T12:01:08.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 547,
+      "t_ms": 68400,
+      "timestamp": "2025-01-01T12:01:08.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 548,
+      "t_ms": 68400,
+      "timestamp": "2025-01-01T12:01:08.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 549,
+      "t_ms": 68700,
+      "timestamp": "2025-01-01T12:01:08.700000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 550,
+      "t_ms": 68700,
+      "timestamp": "2025-01-01T12:01:08.700000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 551,
+      "t_ms": 69000,
+      "timestamp": "2025-01-01T12:01:09",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 552,
+      "t_ms": 69000,
+      "timestamp": "2025-01-01T12:01:09",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 553,
+      "t_ms": 69300,
+      "timestamp": "2025-01-01T12:01:09.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 554,
+      "t_ms": 69300,
+      "timestamp": "2025-01-01T12:01:09.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 555,
+      "t_ms": 69600,
+      "timestamp": "2025-01-01T12:01:09.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 556,
+      "t_ms": 69600,
+      "timestamp": "2025-01-01T12:01:09.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 557,
+      "t_ms": 69900,
+      "timestamp": "2025-01-01T12:01:09.900000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 558,
+      "t_ms": 69900,
+      "timestamp": "2025-01-01T12:01:09.900000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 559,
+      "t_ms": 70200,
+      "timestamp": "2025-01-01T12:01:10.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 560,
+      "t_ms": 70200,
+      "timestamp": "2025-01-01T12:01:10.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 561,
+      "t_ms": 70500,
+      "timestamp": "2025-01-01T12:01:10.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 562,
+      "t_ms": 70500,
+      "timestamp": "2025-01-01T12:01:10.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 563,
+      "t_ms": 70800,
+      "timestamp": "2025-01-01T12:01:10.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 564,
+      "t_ms": 70800,
+      "timestamp": "2025-01-01T12:01:10.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 565,
+      "t_ms": 71100,
+      "timestamp": "2025-01-01T12:01:11.100000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 566,
+      "t_ms": 71100,
+      "timestamp": "2025-01-01T12:01:11.100000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 567,
+      "t_ms": 71400,
+      "timestamp": "2025-01-01T12:01:11.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 568,
+      "t_ms": 71400,
+      "timestamp": "2025-01-01T12:01:11.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 569,
+      "t_ms": 71700,
+      "timestamp": "2025-01-01T12:01:11.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 570,
+      "t_ms": 71700,
+      "timestamp": "2025-01-01T12:01:11.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 571,
+      "t_ms": 72000,
+      "timestamp": "2025-01-01T12:01:12",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 572,
+      "t_ms": 72000,
+      "timestamp": "2025-01-01T12:01:12",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 573,
+      "t_ms": 72300,
+      "timestamp": "2025-01-01T12:01:12.300000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 574,
+      "t_ms": 72300,
+      "timestamp": "2025-01-01T12:01:12.300000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 575,
+      "t_ms": 72600,
+      "timestamp": "2025-01-01T12:01:12.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 576,
+      "t_ms": 72600,
+      "timestamp": "2025-01-01T12:01:12.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 577,
+      "t_ms": 72900,
+      "timestamp": "2025-01-01T12:01:12.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 578,
+      "t_ms": 72900,
+      "timestamp": "2025-01-01T12:01:12.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 579,
+      "t_ms": 73200,
+      "timestamp": "2025-01-01T12:01:13.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 580,
+      "t_ms": 73200,
+      "timestamp": "2025-01-01T12:01:13.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 581,
+      "t_ms": 73500,
+      "timestamp": "2025-01-01T12:01:13.500000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 582,
+      "t_ms": 73500,
+      "timestamp": "2025-01-01T12:01:13.500000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 583,
+      "t_ms": 73800,
+      "timestamp": "2025-01-01T12:01:13.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 584,
+      "t_ms": 73800,
+      "timestamp": "2025-01-01T12:01:13.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 585,
+      "t_ms": 74100,
+      "timestamp": "2025-01-01T12:01:14.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 586,
+      "t_ms": 74100,
+      "timestamp": "2025-01-01T12:01:14.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 587,
+      "t_ms": 74400,
+      "timestamp": "2025-01-01T12:01:14.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 588,
+      "t_ms": 74400,
+      "timestamp": "2025-01-01T12:01:14.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 589,
+      "t_ms": 74700,
+      "timestamp": "2025-01-01T12:01:14.700000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 590,
+      "t_ms": 74700,
+      "timestamp": "2025-01-01T12:01:14.700000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 591,
+      "t_ms": 75000,
+      "timestamp": "2025-01-01T12:01:15",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 592,
+      "t_ms": 75000,
+      "timestamp": "2025-01-01T12:01:15",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 593,
+      "t_ms": 75300,
+      "timestamp": "2025-01-01T12:01:15.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 594,
+      "t_ms": 75300,
+      "timestamp": "2025-01-01T12:01:15.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 595,
+      "t_ms": 75600,
+      "timestamp": "2025-01-01T12:01:15.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 596,
+      "t_ms": 75600,
+      "timestamp": "2025-01-01T12:01:15.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 597,
+      "t_ms": 75900,
+      "timestamp": "2025-01-01T12:01:15.900000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 598,
+      "t_ms": 75900,
+      "timestamp": "2025-01-01T12:01:15.900000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 599,
+      "t_ms": 76200,
+      "timestamp": "2025-01-01T12:01:16.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 600,
+      "t_ms": 76200,
+      "timestamp": "2025-01-01T12:01:16.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 601,
+      "t_ms": 76500,
+      "timestamp": "2025-01-01T12:01:16.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 602,
+      "t_ms": 76500,
+      "timestamp": "2025-01-01T12:01:16.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 603,
+      "t_ms": 76800,
+      "timestamp": "2025-01-01T12:01:16.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 604,
+      "t_ms": 76800,
+      "timestamp": "2025-01-01T12:01:16.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 605,
+      "t_ms": 77100,
+      "timestamp": "2025-01-01T12:01:17.100000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 606,
+      "t_ms": 77100,
+      "timestamp": "2025-01-01T12:01:17.100000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 607,
+      "t_ms": 77400,
+      "timestamp": "2025-01-01T12:01:17.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 608,
+      "t_ms": 77400,
+      "timestamp": "2025-01-01T12:01:17.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 609,
+      "t_ms": 77700,
+      "timestamp": "2025-01-01T12:01:17.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 610,
+      "t_ms": 77700,
+      "timestamp": "2025-01-01T12:01:17.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 611,
+      "t_ms": 78000,
+      "timestamp": "2025-01-01T12:01:18",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 612,
+      "t_ms": 78000,
+      "timestamp": "2025-01-01T12:01:18",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 613,
+      "t_ms": 78300,
+      "timestamp": "2025-01-01T12:01:18.300000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 614,
+      "t_ms": 78300,
+      "timestamp": "2025-01-01T12:01:18.300000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 615,
+      "t_ms": 78600,
+      "timestamp": "2025-01-01T12:01:18.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 616,
+      "t_ms": 78600,
+      "timestamp": "2025-01-01T12:01:18.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 617,
+      "t_ms": 78900,
+      "timestamp": "2025-01-01T12:01:18.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 618,
+      "t_ms": 78900,
+      "timestamp": "2025-01-01T12:01:18.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 619,
+      "t_ms": 79200,
+      "timestamp": "2025-01-01T12:01:19.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 620,
+      "t_ms": 79200,
+      "timestamp": "2025-01-01T12:01:19.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 621,
+      "t_ms": 79500,
+      "timestamp": "2025-01-01T12:01:19.500000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 622,
+      "t_ms": 79500,
+      "timestamp": "2025-01-01T12:01:19.500000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 623,
+      "t_ms": 79800,
+      "timestamp": "2025-01-01T12:01:19.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 624,
+      "t_ms": 79800,
+      "timestamp": "2025-01-01T12:01:19.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 625,
+      "t_ms": 80100,
+      "timestamp": "2025-01-01T12:01:20.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 626,
+      "t_ms": 80100,
+      "timestamp": "2025-01-01T12:01:20.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 627,
+      "t_ms": 80400,
+      "timestamp": "2025-01-01T12:01:20.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 628,
+      "t_ms": 80400,
+      "timestamp": "2025-01-01T12:01:20.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 629,
+      "t_ms": 80700,
+      "timestamp": "2025-01-01T12:01:20.700000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 630,
+      "t_ms": 80700,
+      "timestamp": "2025-01-01T12:01:20.700000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 631,
+      "t_ms": 81000,
+      "timestamp": "2025-01-01T12:01:21",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 632,
+      "t_ms": 81000,
+      "timestamp": "2025-01-01T12:01:21",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 633,
+      "t_ms": 81300,
+      "timestamp": "2025-01-01T12:01:21.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 634,
+      "t_ms": 81300,
+      "timestamp": "2025-01-01T12:01:21.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 635,
+      "t_ms": 81600,
+      "timestamp": "2025-01-01T12:01:21.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 636,
+      "t_ms": 81600,
+      "timestamp": "2025-01-01T12:01:21.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 637,
+      "t_ms": 81900,
+      "timestamp": "2025-01-01T12:01:21.900000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 638,
+      "t_ms": 81900,
+      "timestamp": "2025-01-01T12:01:21.900000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 639,
+      "t_ms": 82200,
+      "timestamp": "2025-01-01T12:01:22.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 640,
+      "t_ms": 82200,
+      "timestamp": "2025-01-01T12:01:22.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 641,
+      "t_ms": 82500,
+      "timestamp": "2025-01-01T12:01:22.500000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 642,
+      "t_ms": 82500,
+      "timestamp": "2025-01-01T12:01:22.500000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 643,
+      "t_ms": 82800,
+      "timestamp": "2025-01-01T12:01:22.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 644,
+      "t_ms": 82800,
+      "timestamp": "2025-01-01T12:01:22.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 645,
+      "t_ms": 83100,
+      "timestamp": "2025-01-01T12:01:23.100000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 646,
+      "t_ms": 83100,
+      "timestamp": "2025-01-01T12:01:23.100000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 647,
+      "t_ms": 83400,
+      "timestamp": "2025-01-01T12:01:23.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 648,
+      "t_ms": 83400,
+      "timestamp": "2025-01-01T12:01:23.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 649,
+      "t_ms": 83700,
+      "timestamp": "2025-01-01T12:01:23.700000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 650,
+      "t_ms": 83700,
+      "timestamp": "2025-01-01T12:01:23.700000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 651,
+      "t_ms": 84000,
+      "timestamp": "2025-01-01T12:01:24",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 652,
+      "t_ms": 84000,
+      "timestamp": "2025-01-01T12:01:24",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 653,
+      "t_ms": 84300,
+      "timestamp": "2025-01-01T12:01:24.300000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 654,
+      "t_ms": 84300,
+      "timestamp": "2025-01-01T12:01:24.300000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 655,
+      "t_ms": 84600,
+      "timestamp": "2025-01-01T12:01:24.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 656,
+      "t_ms": 84600,
+      "timestamp": "2025-01-01T12:01:24.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 657,
+      "t_ms": 84900,
+      "timestamp": "2025-01-01T12:01:24.900000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 658,
+      "t_ms": 84900,
+      "timestamp": "2025-01-01T12:01:24.900000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 659,
+      "t_ms": 85200,
+      "timestamp": "2025-01-01T12:01:25.200000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 660,
+      "t_ms": 85200,
+      "timestamp": "2025-01-01T12:01:25.200000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 661,
+      "t_ms": 85500,
+      "timestamp": "2025-01-01T12:01:25.500000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 662,
+      "t_ms": 85500,
+      "timestamp": "2025-01-01T12:01:25.500000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 663,
+      "t_ms": 85800,
+      "timestamp": "2025-01-01T12:01:25.800000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 664,
+      "t_ms": 85800,
+      "timestamp": "2025-01-01T12:01:25.800000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 665,
+      "t_ms": 86100,
+      "timestamp": "2025-01-01T12:01:26.100000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 666,
+      "t_ms": 86100,
+      "timestamp": "2025-01-01T12:01:26.100000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 667,
+      "t_ms": 86400,
+      "timestamp": "2025-01-01T12:01:26.400000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 668,
+      "t_ms": 86400,
+      "timestamp": "2025-01-01T12:01:26.400000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 669,
+      "t_ms": 86700,
+      "timestamp": "2025-01-01T12:01:26.700000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 670,
+      "t_ms": 86700,
+      "timestamp": "2025-01-01T12:01:26.700000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 671,
+      "t_ms": 87000,
+      "timestamp": "2025-01-01T12:01:27",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 672,
+      "t_ms": 87000,
+      "timestamp": "2025-01-01T12:01:27",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 673,
+      "t_ms": 87300,
+      "timestamp": "2025-01-01T12:01:27.300000",
+      "role": "tutor",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 674,
+      "t_ms": 87300,
+      "timestamp": "2025-01-01T12:01:27.300000",
+      "role": "student",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 675,
+      "t_ms": 87600,
+      "timestamp": "2025-01-01T12:01:27.600000",
+      "role": "tutor",
+      "speech_active": true,
+      "rms_db": -20.0,
+      "noise_floor_db": -55.0
+    },
+    {
+      "seq": 676,
+      "t_ms": 87600,
+      "timestamp": "2025-01-01T12:01:27.600000",
+      "role": "student",
+      "speech_active": false,
+      "rms_db": -55.0,
+      "noise_floor_db": -55.0
+    }
+  ],
+  "overlap_segments": [],
+  "metrics_history": [],
+  "nudges": [],
+  "coaching_decisions": [],
+  "summary": {
+    "session_id": "coaching-faster-warmup-01",
+    "tutor_id": "alice",
+    "start_time": "2025-01-01T12:00:00",
+    "end_time": "2025-01-01T12:01:28",
+    "duration_seconds": 88.0,
+    "session_type": "general",
+    "talk_time_ratio": {
+      "tutor": 0.75,
+      "student": 0.25
+    },
+    "avg_eye_contact": {
+      "tutor": 0.9,
+      "student": 0.1
+    },
+    "avg_energy": {
+      "tutor": 0.6,
+      "student": 0.4
+    },
+    "total_interruptions": 0,
+    "engagement_score": 55.0,
+    "flagged_moments": [],
+    "timeline": {
+      "engagement": [
+        55.0
+      ]
+    },
+    "recommendations": [],
+    "nudges_sent": 0,
+    "degradation_events": 0
+  }
+}

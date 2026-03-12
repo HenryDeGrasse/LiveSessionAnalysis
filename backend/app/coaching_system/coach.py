@@ -7,15 +7,18 @@ from typing import Optional
 from ..config import INTENSITY_MULTIPLIERS, settings
 from ..models import MetricsSnapshot, Nudge
 from .profiles import SessionProfile, get_profile
-from .rules import CoachingRule, DEFAULT_RULES
+from .rules import CoachingRule, DEFAULT_RULES, priority_for_severity
 
 
 @dataclass
 class CoachingEvaluation:
     nudges: list[Nudge] = field(default_factory=list)
     candidate_nudges: list[str] = field(default_factory=list)
+    candidate_rule_scores: dict[str, float] = field(default_factory=dict)
     suppressed_reasons: list[str] = field(default_factory=list)
     emitted_nudge_type: Optional[str] = None
+    emitted_nudge_priority: Optional[str] = None
+    emitted_rule_score: Optional[float] = None
     trigger_features: dict = field(default_factory=dict)
     candidates_evaluated: list[str] = field(default_factory=list)
     fired_rule: Optional[str] = None
@@ -81,10 +84,13 @@ class Coach:
             "backchannel_overlaps": snapshot.session.backchannel_overlap_count,
             "recent_backchannel_overlaps": snapshot.session.recent_backchannel_overlaps,
             "echo_suspected": float(snapshot.session.echo_suspected),
+            "active_overlap_state": snapshot.session.active_overlap_state,
+            "active_overlap_duration_current": snapshot.session.active_overlap_duration_current,
             "tutor_cutoffs": snapshot.session.tutor_cutoffs,
             "student_cutoffs": snapshot.session.student_cutoffs,
             "student_attention_state": snapshot.student.attention_state,
             "student_time_in_state": snapshot.student.time_in_attention_state_seconds,
+            "student_recent_talk": snapshot.student.talk_time_pct_windowed,
             "session_type": self._session_type,
         }
 
@@ -119,7 +125,6 @@ class Coach:
         # Global safety rails for minimal, high-precision live coaching.
         if snapshot.degraded:
             evaluation.suppressed_reasons.append("session_degraded")
-            return evaluation
         if elapsed_seconds < effective_warmup:
             evaluation.suppressed_reasons.append("global_warmup")
             return evaluation
@@ -133,9 +138,13 @@ class Coach:
             evaluation.suppressed_reasons.append("global_min_interval")
             return evaluation
 
-        matched_rules: list[CoachingRule] = []
+        matched_rules: list[tuple[CoachingRule, float]] = []
         for rule in self._rules:
             evaluation.candidates_evaluated.append(rule.name)
+
+            if snapshot.degraded and not rule.allow_when_degraded:
+                evaluation.suppressed_reasons.append(f"session_degraded:{rule.name}")
+                continue
 
             if elapsed_seconds < rule.min_session_elapsed:
                 evaluation.suppressed_reasons.append(f"rule_min_elapsed:{rule.name}")
@@ -157,19 +166,33 @@ class Coach:
                     )
                     continue
 
-            if rule.condition(snapshot, elapsed_seconds, self._profile):
-                evaluation.candidate_nudges.append(rule.nudge_type)
-                matched_rules.append(rule)
+            if rule.severity is not None:
+                severity = max(0.0, float(rule.severity(snapshot, elapsed_seconds, self._profile)))
+            else:
+                severity = 1.0 if rule.condition(snapshot, elapsed_seconds, self._profile) else 0.0
+            if severity <= 0.0:
+                continue
+
+            evaluation.candidate_nudges.append(rule.nudge_type)
+            evaluation.candidate_rule_scores[rule.name] = round(severity, 3)
+            matched_rules.append((rule, severity))
 
         if not matched_rules:
             return evaluation
 
-        selected_rule = matched_rules[0]
+        priority_rank = {"low": 0, "medium": 1, "high": 2}
+        selected_rule, selected_score = max(
+            matched_rules,
+            key=lambda item: (item[1], priority_rank[item[0].priority.value]),
+        )
         trigger_features = self._trigger_features(snapshot)
+        trigger_features["candidate_rule_scores"] = evaluation.candidate_rule_scores
+        trigger_features["selected_rule_score"] = round(selected_score, 3)
+        nudge_priority = priority_for_severity(selected_score)
         nudge = Nudge(
             nudge_type=selected_rule.nudge_type,
             message=selected_rule.message_template,
-            priority=selected_rule.priority,
+            priority=nudge_priority,
             trigger_metrics=trigger_features,
         )
         self._last_fired[selected_rule.name] = now
@@ -178,6 +201,8 @@ class Coach:
 
         evaluation.nudges = [nudge]
         evaluation.emitted_nudge_type = nudge.nudge_type
+        evaluation.emitted_nudge_priority = nudge.priority.value
+        evaluation.emitted_rule_score = round(selected_score, 3)
         evaluation.fired_rule = selected_rule.name
         evaluation.trigger_features = trigger_features
         return evaluation
@@ -189,6 +214,63 @@ class Coach:
     ) -> list[Nudge]:
         """Backward-compatible wrapper returning only emitted nudges."""
         return self.evaluate(snapshot, elapsed_seconds).nudges
+
+    def get_status(
+        self,
+        elapsed_seconds: float,
+        rules_evaluated: int = 0,
+        now: float | None = None,
+        degraded: bool = False,
+    ) -> dict:
+        """Return a lightweight coaching status indicator for the UI.
+
+        Keys: active, warmup_remaining_s, next_eligible_s, rules_evaluated,
+        budget_remaining.
+
+        "active" reflects whether coaching is currently eligible to fire for at
+        least some rules. It is false during warmup, while globally
+        rate-limited, or after the session budget is exhausted. Degraded mode
+        does not force it inactive because allow_when_degraded rules may still
+        emit.
+        """
+        now = time.time() if now is None else now
+        multiplier = self._intensity_multiplier
+        if multiplier is None:
+            return {
+                "active": False,
+                "warmup_remaining_s": 0.0,
+                "next_eligible_s": 0.0,
+                "rules_evaluated": rules_evaluated,
+                "budget_remaining": 0,
+            }
+
+        effective_warmup = settings.global_nudge_warmup_seconds * multiplier
+        effective_interval = settings.global_nudge_min_interval_seconds * multiplier
+        if self._intensity == "aggressive":
+            effective_max = settings.global_nudge_max_per_session * 2
+        elif self._intensity == "subtle":
+            effective_max = max(1, settings.global_nudge_max_per_session - 1)
+        else:
+            effective_max = settings.global_nudge_max_per_session
+
+        warmup_remaining = max(0.0, effective_warmup - elapsed_seconds)
+        next_eligible = 0.0
+        if self._last_nudge_at is not None:
+            next_eligible = max(0.0, self._last_nudge_at + effective_interval - now)
+        budget_remaining = max(0, int(effective_max) - self._session_nudges_sent)
+        active = (
+            warmup_remaining == 0.0
+            and next_eligible == 0.0
+            and budget_remaining > 0
+        )
+
+        return {
+            "active": active,
+            "warmup_remaining_s": round(warmup_remaining, 1),
+            "next_eligible_s": round(next_eligible, 1),
+            "rules_evaluated": rules_evaluated,
+            "budget_remaining": budget_remaining,
+        }
 
     def reset_cooldown(self, rule_name: str):
         """Reset cooldown for a specific rule (for testing)."""
