@@ -30,6 +30,8 @@ type SessionCreateResponse = {
   session_title?: string
   tutor_token: string
   student_token: string
+  student_tokens?: string[]
+  max_students?: number
   media_provider?: 'custom_webrtc' | 'livekit'
   livekit_room_name?: string | null
   coaching_intensity?: string
@@ -125,10 +127,14 @@ function SessionCreationCard({
 }) {
   const panelPadding = large ? 'p-8 md:p-10' : 'p-6'
   const titleClass = large ? 'text-3xl' : 'text-2xl'
-  const studentJoinLink =
+  const studentJoinLinks =
     sessionInfo && typeof window !== 'undefined'
-      ? `${window.location.origin}${buildSessionHref(sessionInfo.session_id, sessionInfo.student_token)}`
-      : ''
+      ? (sessionInfo.student_tokens ?? [sessionInfo.student_token]).map(
+          (t) => `${window.location.origin}${buildSessionHref(sessionInfo.session_id, t)}`
+        )
+      : []
+  const studentJoinLink = studentJoinLinks[0] ?? ''
+  const isMultiStudent = (sessionInfo?.max_students ?? 1) > 1
 
   return (
     <section className={`${PANEL_CLASSES} ${panelPadding}`}>
@@ -213,24 +219,61 @@ function SessionCreationCard({
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-slate-950/50 p-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-white">Student join link</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void onCopyStudentLink()
-                  }}
-                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10"
-                >
-                  {copiedStudentLink ? 'Copied' : 'Copy link'}
-                </button>
-              </div>
-              <code
-                data-testid="student-join-link"
-                className="block break-all rounded-2xl bg-slate-900 px-3 py-3 text-xs text-sky-100"
-              >
-                {studentJoinLink}
-              </code>
+              {isMultiStudent ? (
+                <>
+                  <p className="mb-3 text-sm font-medium text-white">
+                    Student join links{' '}
+                    <span className="text-xs text-slate-400">
+                      ({sessionInfo?.max_students ?? 1} students)
+                    </span>
+                  </p>
+                  <p className="mb-3 text-xs leading-5 text-slate-400">
+                    Each student must use a <strong>different</strong> link. If two students use the same link, the first will be disconnected.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {studentJoinLinks.map((link, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-slate-300">
+                          Student {i + 1}
+                        </span>
+                        <code className="min-w-0 flex-1 break-all rounded-xl bg-slate-900 px-3 py-2 text-xs text-sky-100">
+                          {link}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await navigator.clipboard.writeText(link)
+                          }}
+                          className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-white">Student join link</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void onCopyStudentLink()
+                      }}
+                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+                    >
+                      {copiedStudentLink ? 'Copied' : 'Copy link'}
+                    </button>
+                  </div>
+                  <code
+                    data-testid="student-join-link"
+                    className="block break-all rounded-2xl bg-slate-900 px-3 py-3 text-xs text-sky-100"
+                  >
+                    {studentJoinLink}
+                  </code>
+                </>
+              )}
             </div>
 
             <button

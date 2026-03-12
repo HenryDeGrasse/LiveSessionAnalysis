@@ -72,7 +72,7 @@ export function useWebSocket({
       } else if (event.code === 4001 || event.code === 4004) {
         setError(event.reason || 'Connection rejected')
       } else if (event.code === 4002) {
-        setError('Another connection is already active for this participant')
+        setError('This session was opened in another tab or browser. Close duplicates and refresh to rejoin.')
       } else if (event.code === 4003) {
         setError('Session has already ended')
       }
