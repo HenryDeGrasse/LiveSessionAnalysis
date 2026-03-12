@@ -44,3 +44,7 @@ data/real-media-clips/*.webm
 
 # Logs
 *.log
+
+# Test videos (too large for git)
+backend/tests/*.mp4
+backend/tests/*.mp4.mp4
