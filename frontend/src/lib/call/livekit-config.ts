@@ -11,12 +11,13 @@ import {
 } from '@/lib/constants'
 
 // ── Bitrate tiers (bps) ────────────────────────────────────────────────
-// These are higher than LiveKit's built-in presets to match Zoom/Meet
-// quality for a 1:1 tutoring call.
-const BITRATE_1080 = 4_500_000 // 4.5 Mbps  (LK default: 3 Mbps)
-const BITRATE_720 = 2_500_000 // 2.5 Mbps  (LK default: 1.7 Mbps)
-const BITRATE_540 = 1_200_000 // 1.2 Mbps  (LK default: 800 Kbps)
-const BITRATE_360 = 600_000 //   600 Kbps (LK default: 450 Kbps)
+// Sized for 60fps capture (default).  60fps at a given resolution needs
+// ~1.5x the bitrate of 30fps to maintain comparable quality per-frame.
+// At 30fps these tiers are still comfortable headroom over 30fps requirements.
+const BITRATE_1080 = 6_000_000 // 6 Mbps  — 60fps 1080p  (was 4.5 Mbps @ 30fps)
+const BITRATE_720 = 3_500_000 // 3.5 Mbps — 60fps 720p   (was 2.5 Mbps @ 30fps)
+const BITRATE_540 = 1_200_000 // 1.2 Mbps — unchanged (540p/30fps acceptable)
+const BITRATE_360 = 600_000 //   600 Kbps — unchanged
 
 /**
  * Pick a high-quality video encoding for the configured capture resolution.

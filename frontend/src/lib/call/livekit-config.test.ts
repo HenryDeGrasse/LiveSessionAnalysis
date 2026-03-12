@@ -3,7 +3,50 @@ import { VideoPresets } from 'livekit-client'
 import { buildLiveKitConfig } from './livekit-config'
 
 describe('buildLiveKitConfig', () => {
-  it('uses 4.5 Mbps encoding for 1920x1080 capture (higher than LK default)', () => {
+  // ── 60fps default behaviour ────────────────────────────────────────────
+  it('uses 60fps and the default bitrate tier with no overrides', () => {
+    const config = buildLiveKitConfig()
+
+    expect(config.roomOptions.videoCaptureDefaults?.resolution).toEqual({
+      width: 1920,
+      height: 1080,
+      frameRate: 60,
+    })
+    expect(config.videoPublishOptions.videoEncoding?.maxBitrate).toBe(6_000_000)
+    expect(config.videoPublishOptions.videoEncoding?.maxFramerate).toBe(60)
+    expect(config.roomOptions.publishDefaults?.videoEncoding?.maxFramerate).toBe(60)
+  })
+
+  it('uses 6 Mbps encoding for 1920x1080 at 60fps (default tier)', () => {
+    const config = buildLiveKitConfig({
+      width: 1920,
+      height: 1080,
+      frameRate: 60,
+      adaptiveStream: false,
+      dynacast: false,
+      simulcast: false,
+    })
+
+    expect(config.roomOptions.adaptiveStream).toBe(false)
+    expect(config.roomOptions.dynacast).toBe(false)
+
+    // 60fps 1080p needs ~1.5x the bandwidth of 30fps → 6 Mbps tier
+    expect(config.videoPublishOptions.videoEncoding?.maxBitrate).toBe(6_000_000)
+    expect(config.videoPublishOptions.videoEncoding?.maxFramerate).toBe(60)
+  })
+
+  it('propagates 60fps frameRate into room capture defaults', () => {
+    const config = buildLiveKitConfig({
+      width: 1920,
+      height: 1080,
+      frameRate: 60,
+    })
+
+    expect(config.roomOptions.videoCaptureDefaults?.resolution?.frameRate).toBe(60)
+    expect(config.roomOptions.publishDefaults?.videoEncoding?.maxFramerate).toBe(60)
+  })
+
+  it('uses 6 Mbps encoding for 1920x1080 capture (higher than 30fps LK default)', () => {
     const config = buildLiveKitConfig({
       width: 1920,
       height: 1080,
@@ -16,16 +59,16 @@ describe('buildLiveKitConfig', () => {
     expect(config.roomOptions.adaptiveStream).toBe(false)
     expect(config.roomOptions.dynacast).toBe(false)
 
-    // Should use our higher 4.5 Mbps tier, not LK's default 3 Mbps
-    expect(config.videoPublishOptions.videoEncoding?.maxBitrate).toBe(4_500_000)
+    // 30fps at 1080p is within the 6 Mbps tier (comfortable headroom)
+    expect(config.videoPublishOptions.videoEncoding?.maxBitrate).toBe(6_000_000)
     expect(config.videoPublishOptions.videoEncoding?.maxFramerate).toBe(30)
   })
 
-  it('uses 2.5 Mbps encoding for 1280x720 capture', () => {
+  it('uses 3.5 Mbps encoding for 1280x720 capture', () => {
     const config = buildLiveKitConfig({
       width: 1280,
       height: 720,
-      frameRate: 30,
+      frameRate: 60,
       adaptiveStream: true,
       dynacast: true,
       simulcast: false,
@@ -33,7 +76,8 @@ describe('buildLiveKitConfig', () => {
 
     expect(config.roomOptions.adaptiveStream).toBe(true)
     expect(config.roomOptions.dynacast).toBe(true)
-    expect(config.videoPublishOptions.videoEncoding?.maxBitrate).toBe(2_500_000)
+    expect(config.videoPublishOptions.videoEncoding?.maxBitrate).toBe(3_500_000)
+    expect(config.videoPublishOptions.videoEncoding?.maxFramerate).toBe(60)
   })
 
   it('uses 1.2 Mbps encoding for 960x540 capture', () => {
@@ -47,14 +91,15 @@ describe('buildLiveKitConfig', () => {
     expect(config.videoPublishOptions.videoEncoding?.maxFramerate).toBe(24)
   })
 
-  it('falls back to 2.5 Mbps (720p tier) for very small resolutions', () => {
+  it('falls back to 3.5 Mbps (720p tier) for very small resolutions', () => {
     const config = buildLiveKitConfig({
       width: 320,
       height: 240,
       frameRate: 15,
     })
 
-    expect(config.videoPublishOptions.videoEncoding?.maxBitrate).toBe(2_500_000)
+    // The else-branch falls through to the 720p tier
+    expect(config.videoPublishOptions.videoEncoding?.maxBitrate).toBe(3_500_000)
   })
 
   it('disables simulcast by default for 1:1 calls', () => {

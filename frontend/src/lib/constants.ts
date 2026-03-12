@@ -37,7 +37,16 @@ function parseBooleanEnv(name: string, fallback: boolean): boolean {
 
 export const LOCAL_VIDEO_WIDTH = parseNumberEnv('NEXT_PUBLIC_VIDEO_WIDTH', 1920)
 export const LOCAL_VIDEO_HEIGHT = parseNumberEnv('NEXT_PUBLIC_VIDEO_HEIGHT', 1080)
-export const LOCAL_VIDEO_FRAME_RATE = parseNumberEnv('NEXT_PUBLIC_VIDEO_FRAME_RATE', 30)
+/**
+ * Capture and publish frame rate for the local video track.
+ * The default is 60fps for smooth, high-quality video during tutoring calls.
+ *
+ * NOTE: This is the *capture/publish* FPS, independent of backend analysis FPS.
+ * The backend rate-limits analysis via `should_process_video_frame` (default 3 fps),
+ * so increasing capture FPS does not increase CPU load on the analysis server —
+ * it only improves call quality for participants.
+ */
+export const LOCAL_VIDEO_FRAME_RATE = parseNumberEnv('NEXT_PUBLIC_VIDEO_FRAME_RATE', 60)
 export const LIVEKIT_ADAPTIVE_STREAM = parseBooleanEnv(
   'NEXT_PUBLIC_LIVEKIT_ADAPTIVE_STREAM',
   true
@@ -59,7 +68,8 @@ export const LIVEKIT_VIDEO_CODEC =
   process.env.NEXT_PUBLIC_LIVEKIT_VIDEO_CODEC || 'h264'
 /**
  * Max video bitrate override in bps. 0 means use the resolution-based default.
- * For 1080p, 4_500_000 (4.5 Mbps) gives Zoom/Meet-class quality.
+ * For 1080p60, the default tier is 6_000_000 (6 Mbps); lower resolutions use
+ * their own tiers in livekit-config.ts.
  */
 export const LIVEKIT_VIDEO_MAX_BITRATE = parseNumberEnv(
   'NEXT_PUBLIC_LIVEKIT_VIDEO_MAX_BITRATE',

@@ -249,7 +249,7 @@ export function useLiveKitTransport({
       return
     }
 
-    if (!role || !localStream || !sessionId || !sessionToken) {
+    if (!role || !sessionId || !sessionToken) {
       return
     }
 
@@ -362,6 +362,8 @@ export function useLiveKitTransport({
           throw new Error('Missing LiveKit URL')
         }
 
+        // Best-effort prewarm: primes DNS/TLS/edge routing before full connect.
+        await room.prepareConnection(url, join.token)
         await room.connect(url, join.token)
         if (cancelled) {
           await room.disconnect()
@@ -389,7 +391,6 @@ export function useLiveKitTransport({
   }, [
     enabled,
     role,
-    localStream,
     sessionId,
     sessionToken,
     fetchJoinConfig,
