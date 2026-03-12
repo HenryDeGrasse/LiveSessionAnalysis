@@ -164,18 +164,32 @@ class TestAuthenticationEdgeCases:
             ):
                 pass
 
-    def test_duplicate_role_rejected(self):
-        """Second connection with same role token should be rejected."""
+    def test_duplicate_role_takes_over(self):
+        """Second connection with same role token should take over (not be rejected).
+
+        The old behavior was to close the second connection with 4002.  The new
+        behaviour does a forced takeover: the first connection's socket is closed
+        with 4002 and the second connection is accepted.  This prevents infinite
+        reconnect loops on the frontend when network blips leave the old server-
+        side state still marked as connected.
+        """
+        from app.session_manager import session_manager as _sm
         client = TestClient(app)
         sid, tutor_token, _ = _create_session(client)
+        # Manually mark tutor as connected (simulating stale state) so we can
+        # exercise the takeover path without needing two concurrent real sockets.
+        room = _sm.get_session(sid)
+        assert room is not None
+        from app.models import Role as _Role
+        room.participants[_Role.TUTOR].connected = True
+        room.participants[_Role.TUTOR].websocket = None  # stale — no live socket
+
+        # Second connection should succeed via takeover
         with client.websocket_connect(
             f"/ws/session/{sid}?token={tutor_token}"
-        ) as ws1:
-            with pytest.raises(Exception):
-                with client.websocket_connect(
-                    f"/ws/session/{sid}?token={tutor_token}"
-                ) as ws2:
-                    pass
+        ) as ws2:
+            assert ws2 is not None
+            assert room.participants[_Role.TUTOR].connected is True
 
     def test_nonexistent_session_rejected(self):
         """Connection to nonexistent session should be rejected."""

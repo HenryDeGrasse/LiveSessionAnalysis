@@ -205,8 +205,22 @@ async def websocket_endpoint(
     participant = _participant_for(room, role, student_index)
 
     if participant.connected:
-        await websocket.close(code=4002, reason="Participant already connected")
-        return
+        old_ws = participant.websocket
+        logger.warning(
+            f"Session {session_id}: {_participant_key(role, student_index)} forced takeover — "
+            "closing stale connection and accepting new one"
+        )
+        # Detach participant from old socket before closing it, so the old
+        # handler's finally block sees a different websocket and skips cleanup.
+        participant.websocket = None
+        participant.connected = False
+        if old_ws is not None:
+            async def _close_stale(ws=old_ws):
+                try:
+                    await ws.close(code=4002, reason="Replaced by new connection")
+                except Exception:
+                    pass
+            asyncio.create_task(_close_stale())
 
     if room.ended_at is not None:
         await websocket.close(code=4003, reason="Session already ended")
@@ -325,6 +339,19 @@ async def websocket_endpoint(
     except Exception as exc:
         logger.error(f"Session {session_id}: error for {participant_key}: {exc}")
     finally:
+        # Identity guard: only clean up state if this websocket is still the
+        # current one for this participant.  During a forced takeover the new
+        # handler sets participant.websocket to None (and later to the new ws)
+        # *before* closing the old socket, so when this finally block runs for
+        # the old handler participant.websocket is no longer our websocket — we
+        # must skip cleanup to avoid clobbering the replacement connection.
+        if participant.websocket is not websocket:
+            logger.debug(
+                f"Session {session_id}: {participant_key} stale handler cleanup skipped "
+                "(participant already taken over by new connection)"
+            )
+            return
+
         participant.connected = False
         participant.websocket = None
         participant.disconnected_at = time.time()

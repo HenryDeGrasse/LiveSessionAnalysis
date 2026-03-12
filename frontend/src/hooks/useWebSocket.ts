@@ -64,13 +64,15 @@ export function useWebSocket({
       onClose?.()
 
       // Reconnect with exponential backoff (unless intentional or terminal close)
-      const terminalCodes = [4001, 4003, 4004, 1000] // invalid token, session ended, not found, normal close
+      const terminalCodes = [4001, 4002, 4003, 4004, 1000] // invalid token, already connected, session ended, not found, normal close
       if (!terminalCodes.includes(event.code)) {
         const delay = Math.min(1000 * 2 ** reconnectAttemptsRef.current, 10000)
         reconnectAttemptsRef.current++
         reconnectTimeoutRef.current = setTimeout(connect, delay)
       } else if (event.code === 4001 || event.code === 4004) {
         setError(event.reason || 'Connection rejected')
+      } else if (event.code === 4002) {
+        setError('Another connection is already active for this participant')
       } else if (event.code === 4003) {
         setError('Session has already ended')
       }
