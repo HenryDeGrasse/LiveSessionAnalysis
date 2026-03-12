@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -26,6 +27,7 @@ import {
 
 type SessionCreateResponse = {
   session_id: string
+  session_title?: string
   tutor_token: string
   student_token: string
   media_provider?: 'custom_webrtc' | 'livekit'
@@ -193,7 +195,7 @@ function SessionCreationCard({
               data-testid="create-session-button"
               onClick={onCreate}
               disabled={creating}
-              className="w-full rounded-2xl bg-sky-500 px-4 py-3 text-sm font-medium text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-2xl bg-[#0066FF] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#3385FF] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {creating ? 'Creating session…' : 'Create Session'}
             </button>
@@ -543,7 +545,7 @@ function HomeContent() {
     <main className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-10 lg:px-8">
         {/* Hero section */}
-        <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.18),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(139,92,246,0.22),_transparent_30%),linear-gradient(180deg,_rgba(15,23,42,0.96),_rgba(2,6,23,0.98))] p-8 shadow-[0_28px_120px_rgba(2,6,23,0.55)]">
+        <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(0,102,255,0.22),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(255,107,53,0.16),_transparent_30%),linear-gradient(180deg,_rgba(10,22,40,0.97),_rgba(2,6,23,0.98))] p-8 shadow-[0_28px_120px_rgba(2,6,23,0.55)]">
           {/* UserMenu in the hero section top-right */}
           <div className="mb-4 flex justify-end">
             <UserMenu />
@@ -554,6 +556,21 @@ function HomeContent() {
                 {roleLabel} workspace
               </div>
               <div>
+                <div className="mb-4 flex flex-wrap items-center gap-3">
+                  <div className="rounded-full border border-white/10 bg-white/5 px-3 py-2">
+                    <Image
+                      src="/nerdy-logo.svg"
+                      alt="Nerdy"
+                      width={84}
+                      height={22}
+                      className="h-5 w-auto"
+                      priority
+                    />
+                  </div>
+                  <span className="text-xs text-slate-500 uppercase tracking-[0.18em]">
+                    A Varsity Tutors Platform
+                  </span>
+                </div>
                 <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
                   Live Session Analysis
                 </h1>

@@ -45,10 +45,16 @@ test.describe(`${DEFAULT_MEDIA_PROVIDER} live tutoring call`, () => {
       await expectMediaProvider(tutor.page)
       await expectMediaProvider(student.page)
 
-      await expect(tutor.page.getByTestId('end-session-button')).toContainText(
-        'End for everyone'
+      await expect(tutor.page.getByTestId('end-session-button')).toBeVisible()
+      await expect(tutor.page.getByTestId('end-session-button')).toHaveAttribute(
+        'aria-label',
+        'End session for everyone'
       )
       await expect(student.page.getByTestId('leave-session-button')).toBeVisible()
+      await expect(student.page.getByTestId('leave-session-button')).toHaveAttribute(
+        'aria-label',
+        'Leave session'
+      )
       await expect(student.page.getByTestId('end-session-button')).toHaveCount(0)
 
       student.page.on('dialog', (dialog) => dialog.accept())
@@ -101,8 +107,10 @@ test.describe(`${DEFAULT_MEDIA_PROVIDER} live tutoring call`, () => {
       ).toBeVisible()
       await expect(student.page.getByTestId('session-ended-banner')).toBeVisible()
       await expect(tutor.page.getByTestId('view-analytics-button')).toBeVisible()
-      await expect(student.page.getByTestId('leave-session-button')).toContainText(
-        'Return home'
+      await expect(student.page.getByTestId('leave-session-button')).toBeVisible()
+      await expect(student.page.getByTestId('leave-session-button')).toHaveAttribute(
+        'aria-label',
+        'View your session'
       )
       await waitForAnalyticsSummary(request, session.sessionId)
 

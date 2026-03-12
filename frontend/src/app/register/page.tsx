@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { signIn } from 'next-auth/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -99,8 +100,17 @@ export default function RegisterPage() {
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.24em] text-slate-300">
-            Live Session Analysis
+          <div className="mx-auto mb-3 inline-flex items-center gap-2 rounded-full border border-[#0066FF]/30 bg-[#0066FF]/10 px-3 py-1.5">
+            <Image
+              src="/nerdy-logo.svg"
+              alt="Nerdy"
+              width={72}
+              height={18}
+              className="h-[18px] w-auto"
+              priority
+            />
+            <span className="text-xs text-slate-500">·</span>
+            <span className="text-xs uppercase tracking-[0.18em] text-slate-400">Live Session Analysis</span>
           </div>
           <h1 className="text-3xl font-semibold tracking-tight text-white">
             Create account
@@ -240,7 +250,7 @@ export default function RegisterPage() {
               data-testid="register-submit-button"
               type="submit"
               disabled={!canSubmit}
-              className="w-full rounded-2xl bg-sky-500 px-4 py-3 text-sm font-medium text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-2xl bg-[#0066FF] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#3385FF] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? 'Creating account…' : 'Create account'}
             </button>
@@ -252,10 +262,14 @@ export default function RegisterPage() {
           Already have an account?{' '}
           <Link
             href="/login"
-            className="font-medium text-sky-400 transition hover:text-sky-300"
+            className="font-medium text-[#0066FF] transition hover:text-[#3385FF]"
           >
             Sign in
           </Link>
+        </p>
+
+        <p className="text-center text-xs text-slate-600">
+          A Varsity Tutors Platform
         </p>
       </div>
     </main>

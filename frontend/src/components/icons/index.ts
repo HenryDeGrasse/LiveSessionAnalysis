@@ -1,0 +1,5 @@
+export { default as MicIcon } from './MicIcon'
+export { default as MicOffIcon } from './MicOffIcon'
+export { default as CameraIcon } from './CameraIcon'
+export { default as CameraOffIcon } from './CameraOffIcon'
+export { default as PhoneOffIcon } from './PhoneOffIcon'

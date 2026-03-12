@@ -5,8 +5,8 @@ import { SiteHeader } from '@/components/auth/SiteHeader'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Live Session Analysis',
-  description: 'AI-Powered Real-Time Engagement Analysis for Video Tutoring',
+  title: 'Live Session Analysis | Nerdy',
+  description: 'AI-Powered Real-Time Engagement Analysis for Video Tutoring — A Varsity Tutors Platform',
 }
 
 export default function RootLayout({

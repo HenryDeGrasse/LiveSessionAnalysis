@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { signIn, useSession } from 'next-auth/react'
@@ -9,6 +10,13 @@ import { useMetrics } from '@/hooks/useMetrics'
 import { useNudges } from '@/hooks/useNudges'
 import { useCallTransport } from '@/hooks/useCallTransport'
 import { MetricCard } from '@/components/charts'
+import {
+  MicIcon,
+  MicOffIcon,
+  CameraIcon,
+  CameraOffIcon,
+  PhoneOffIcon,
+} from '@/components/icons'
 import {
   formatMinutes,
   formatPercent,
@@ -22,6 +30,7 @@ import { API_URL, ENABLE_WEBRTC_CALL_UI } from '@/lib/constants'
 import { resolveMediaProvider } from '@/lib/call/provider'
 import { encodeVideoFrame, encodeAudioChunk } from '@/lib/frameEncoder'
 import { apiFetch } from '@/lib/api-client'
+import { coachingStatusSummary } from '@/lib/coaching-status'
 import type {
   MetricsSnapshot,
   Nudge,
@@ -927,13 +936,13 @@ export default function SessionPage() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    canvas.width = 320
-    canvas.height = 240
+    canvas.width = 480
+    canvas.height = 360
 
     const sendFrame = async () => {
       if (!isVideoEnabled) return
       if (!videoRef.current || videoRef.current.readyState < 2) return
-      ctx.drawImage(videoRef.current, 0, 0, 320, 240)
+      ctx.drawImage(videoRef.current, 0, 0, 480, 360)
       try {
         const data = await encodeVideoFrame(canvas)
         sendBinary(data)
@@ -1049,11 +1058,18 @@ export default function SessionPage() {
       ? 'Declining'
       : 'Stable'
     : 'Stable'
-  const minimalAttentionSummary = currentMetrics
+  const attentionOverlayState = currentMetrics
+    ? currentMetrics.student.instant_attention_state === 'OFF_TASK_AWAY' ||
+      currentMetrics.student.instant_attention_state === 'FACE_MISSING' ||
+      currentMetrics.student.instant_attention_state === 'DOWN_ENGAGED'
+      ? currentMetrics.student.instant_attention_state
+      : currentMetrics.student.attention_state
+    : null
+  const minimalAttentionSummary = currentMetrics && attentionOverlayState
     ? {
         label: 'Student attention',
-        value: formatAttentionStateLabel(currentMetrics.student.attention_state),
-        className: attentionPillClasses(currentMetrics.student.attention_state),
+        value: formatAttentionStateLabel(attentionOverlayState),
+        className: attentionPillClasses(attentionOverlayState),
       }
     : null
   const minimalTalkSummary = currentMetrics
@@ -1061,6 +1077,9 @@ export default function SessionPage() {
     : null
   const minimalFlowSummary = currentMetrics
     ? flowSummary(currentMetrics)
+    : null
+  const minimalCoachingStatus = currentMetrics
+    ? coachingStatusSummary(currentMetrics)
     : null
   const remoteLabel =
     role === 'tutor' ? 'Student' : role === 'student' ? 'Tutor' : 'Participant'
@@ -1178,13 +1197,85 @@ export default function SessionPage() {
     stopStream,
   ])
 
+  // ── Fullscreen UI: auto-hide controls after inactivity ──
+  const [controlsVisible, setControlsVisible] = useState(true)
+  const hideTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const showControlsTemporarily = useCallback(() => {
+    setControlsVisible(true)
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+    hideTimerRef.current = setTimeout(() => {
+      setControlsVisible(false)
+    }, 4000)
+  }, [])
+
+  useEffect(() => {
+    showControlsTemporarily()
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+    }
+  }, [showControlsTemporarily])
+
+  // ── Keyboard shortcuts: Space = toggle mute, V = toggle camera ──
+  useEffect(() => {
+    if (showConsent) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeElement = document.activeElement as HTMLElement | null
+      const tag = (activeElement?.tagName ?? '').toLowerCase()
+      if (
+        tag === 'input' ||
+        tag === 'textarea' ||
+        tag === 'select' ||
+        activeElement?.isContentEditable
+      ) {
+        return
+      }
+      if (e.key === ' ') {
+        e.preventDefault()
+        showControlsTemporarily()
+        toggleAudio()
+        appendDebugEvent(isAudioEnabled ? 'mic muted (Space)' : 'mic unmuted (Space)')
+      } else if (e.key === 'v' || e.key === 'V') {
+        e.preventDefault()
+        showControlsTemporarily()
+        toggleVideo()
+        appendDebugEvent(isVideoEnabled ? 'camera off (V)' : 'camera on (V)')
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [
+    showConsent,
+    toggleAudio,
+    toggleVideo,
+    isAudioEnabled,
+    isVideoEnabled,
+    appendDebugEvent,
+    showControlsTemporarily,
+  ])
+
   if (showConsent) {
     return (
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(139,92,246,0.18),_transparent_32%),#020617] px-6 py-10 text-white">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(0,102,255,0.2),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(255,107,53,0.12),_transparent_32%),#020617] px-6 py-10 text-white">
         <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-5xl items-center justify-center">
           <div className="grid w-full gap-6 rounded-[32px] border border-white/10 bg-slate-950/75 p-6 shadow-[0_28px_120px_rgba(2,6,23,0.6)] backdrop-blur md:grid-cols-[1.1fr_0.9fr] md:p-8">
             <div className="space-y-6">
               <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="rounded-full border border-white/10 bg-white/5 px-3 py-2">
+                    <Image
+                      src="/nerdy-logo.svg"
+                      alt="Nerdy"
+                      width={84}
+                      height={22}
+                      className="h-5 w-auto"
+                      priority
+                    />
+                  </div>
+                  <span className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                    Varsity Tutors session workspace
+                  </span>
+                </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <span
                     data-testid="session-perspective-badge"
@@ -1286,7 +1377,7 @@ export default function SessionPage() {
                     setShowConsent(false)
                     requestAccess()
                   }}
-                  className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-500"
+                  className="w-full rounded-2xl bg-[#0066FF] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#3385FF]"
                 >
                   {consentButtonLabel}
                 </button>
@@ -1299,61 +1390,144 @@ export default function SessionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      {/* Header */}
-      <div className="border-b border-white/10 bg-gray-900/90 px-4 py-3 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-start gap-3">
+    <div
+      data-testid="call-surface"
+      className="fixed inset-0 overflow-hidden bg-black text-white"
+      onMouseMove={showControlsTemporarily}
+      onPointerMove={showControlsTemporarily}
+      onTouchStart={showControlsTemporarily}
+    >
+      {/* ── Background layer: remote video / multi-participant grid / local-only ── */}
+      {ENABLE_WEBRTC_CALL_UI && remoteParticipants.size > 1 ? (
+        <div
+          data-testid="participant-grid"
+          className={`absolute inset-0 grid gap-1 ${
+            remoteParticipants.size === 2
+              ? 'grid-cols-2'
+              : 'grid-cols-2 grid-rows-2'
+          }`}
+        >
+          {Array.from(remoteParticipants.values())
+            .sort(compareParticipantIdentity)
+            .map((participant) => (
+              <ParticipantTile key={participant.identity} participant={participant} />
+            ))}
+        </div>
+      ) : ENABLE_WEBRTC_CALL_UI ? (
+        <>
+          <video
+            data-testid="remote-video"
+            ref={remoteVideoRef}
+            autoPlay
+            playsInline
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity ${
+              hasRemoteVideo ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+          {!hasRemoteVideo && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.14),_transparent_38%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.14),_transparent_34%),#050816] px-6 text-center text-gray-200">
+              <div
+                data-testid="call-status-placeholder"
+                className={`rounded-full border px-4 py-1.5 text-xs font-medium ${callStatusClasses(callStatus)}`}
+              >
+                {callStatusLabel(callStatus)}
+              </div>
+              <div>
+                <p className="text-lg font-medium text-white">{remoteLabel}</p>
+                <p className="mt-1 text-sm text-gray-400">{callPlaceholderText}</p>
+              </div>
+              {ENABLE_WEBRTC_CALL_UI && !hasRemoteAudio && callStatus === 'connected' && (
+                <p className="text-xs text-gray-500">Remote audio not detected yet.</p>
+              )}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          {!isVideoEnabled && hasVideoTrack && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/75 text-sm text-gray-200">
+              Camera is off
+            </div>
+          )}
+        </>
+      )}
+
+      <canvas ref={canvasRef} className="hidden" />
+
+      {/* ── Top bar overlay (auto-hide after 4s inactivity) ── */}
+      <div
+        className={`pointer-events-none absolute left-0 right-0 top-0 z-20 transition-opacity duration-500 ${
+          controlsVisible ? 'pointer-events-auto opacity-100' : 'opacity-0'
+        }`}
+      >
+        <div className="flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent px-4 py-3">
+          {/* Left: connection status dot + role badge + session ID + call status */}
+          <div className="flex flex-wrap items-center gap-2">
             <div
-              className={`mt-1 h-3 w-3 rounded-full ${
+              className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${
                 connected ? 'bg-green-500' : 'bg-red-500'
               }`}
             />
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  data-testid="session-role-badge"
-                  className={`rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] ${
-                    isTutor
-                      ? 'border-sky-400/40 bg-sky-500/10 text-sky-100'
-                      : 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100'
-                  }`}
-                >
-                  {roleBadgeLabel}
-                </span>
-                <span
-                  className="group cursor-pointer rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-slate-400 transition-colors hover:text-slate-200"
-                  title={`Session ${sessionId}`}
-                  onClick={() => navigator.clipboard.writeText(sessionId)}
-                >
-                  {sessionId.slice(0, 8)}…
-                </span>
-              </div>
-              <p className="mt-2 text-sm text-white">
-                {connected ? 'Connected to session server' : 'Trying to reconnect to the session server'}
-                {role && ` · ${role}`}
-              </p>
-              <p className="mt-1 text-xs text-gray-400">{roleSummaryText}</p>
+            <span
+              data-testid="session-role-badge"
+              className={`rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] backdrop-blur-md ${
+                isTutor
+                  ? 'border-sky-400/40 bg-sky-500/10 text-sky-100'
+                  : 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100'
+              }`}
+            >
+              {roleBadgeLabel}
+            </span>
+            <button
+              type="button"
+              aria-label="Copy session ID"
+              className="rounded-full border border-white/10 bg-black/40 px-3 py-1 text-[11px] text-slate-300 backdrop-blur-md transition-colors hover:text-slate-100"
+              title={`Session ${sessionId}`}
+              onClick={() => navigator.clipboard.writeText(sessionId)}
+            >
+              {sessionId.slice(0, 8)}…
+            </button>
+            <div
+              data-testid="call-status-badge"
+              className={`rounded-full border px-3 py-1 text-[11px] font-medium backdrop-blur-md ${callStatusClasses(callStatus)}`}
+            >
+              {callStatusLabel(callStatus)}
             </div>
-          </div>
-          <div className="flex items-center gap-2 self-end md:self-auto">
-            {showCoachDebug && currentMetrics && (
-              <div className="text-xs text-gray-400">
-                p50: {currentMetrics.latency_p50_ms.toFixed(0)}ms · p95: {currentMetrics.latency_p95_ms.toFixed(0)}ms
-                {currentMetrics.degraded && (
-                  <span className="ml-2 text-yellow-400">DEGRADED ({currentMetrics.degradation_reason})</span>
-                )}
+            {peerDisconnected && !sessionEnded && (
+              <div className="rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1 text-[11px] font-medium text-amber-100 backdrop-blur-md">
+                Reconnect grace active
               </div>
+            )}
+          </div>
+          {/* Right: latency info + debug toggle */}
+          <div className="flex items-center gap-2">
+            {showCoachDebug && currentMetrics && (
+              <span className="text-xs text-gray-400">
+                p50: {currentMetrics.latency_p50_ms.toFixed(0)}ms · p95:{' '}
+                {currentMetrics.latency_p95_ms.toFixed(0)}ms
+                {currentMetrics.degraded && (
+                  <span className="ml-2 text-yellow-400">
+                    DEGRADED ({currentMetrics.degradation_reason})
+                  </span>
+                )}
+              </span>
             )}
             {canShowDebugToggle && (
               <button
                 data-testid="coach-debug-toggle"
                 type="button"
                 onClick={() => setShowCoachDebug((prev) => !prev)}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                className={`rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-md transition-colors ${
                   showCoachDebug
-                    ? 'border-blue-400/50 bg-blue-500/10 text-blue-100'
-                    : 'border-gray-600 bg-gray-700/70 text-gray-200 hover:bg-gray-700'
+                    ? 'border-blue-400/50 bg-blue-500/20 text-blue-100'
+                    : 'border-white/20 bg-black/40 text-gray-200 hover:bg-black/60'
                 }`}
               >
                 {showCoachDebug ? 'Hide debug' : isTutor ? 'Coach debug' : 'Debug panel'}
@@ -1363,831 +1537,758 @@ export default function SessionPage() {
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex flex-col items-center p-4 gap-4">
-        {peerDisconnected && !sessionEnded && (
-          <div data-testid="participant-disconnected-banner" className="w-full max-w-5xl rounded-2xl border border-yellow-700 bg-yellow-900/40 p-4 text-sm text-yellow-100">
-            {remoteLabel} disconnected. They can rejoin within the grace window, and the call will attempt to recover automatically.
-          </div>
-        )}
-
-        {sessionEnded && !isTutor && (
-          <div data-testid="session-ended-banner" className="w-full max-w-5xl rounded-2xl border border-blue-700 bg-blue-900/40 p-4 text-sm text-blue-100">
-            {sessionEndedMessage}
-          </div>
-        )}
-
-        <div className="w-full max-w-5xl rounded-[24px] border border-gray-700 bg-gray-800 p-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="text-sm text-gray-300">
-              <p className="font-medium text-white">{controlTitle}</p>
-              <p>
-                Mic: {hasAudioTrack ? (isAudioEnabled ? 'On' : 'Muted') : 'Unavailable'}
-                {' • '}
-                Camera: {hasVideoTrack ? (isVideoEnabled ? 'On' : 'Off') : 'Unavailable'}
-              </p>
-              <p className="mt-1 text-xs text-gray-400">{controlDescription}</p>
-              <p className="mt-1 text-xs text-gray-500">{secondaryHelperText}</p>
+      {/* ── Coach overlay pills — always visible, top-left below top bar ── */}
+      {isTutor && currentMetrics && minimalAttentionSummary && minimalTalkSummary && minimalFlowSummary && (
+        <div
+          data-testid="coach-overlay"
+          className="pointer-events-none absolute left-3 right-3 top-14 z-10 flex flex-wrap items-start gap-2"
+        >
+          {[
+            minimalAttentionSummary,
+            minimalTalkSummary,
+            minimalFlowSummary,
+            ...(minimalCoachingStatus ? [minimalCoachingStatus] : []),
+          ].map((pill) => (
+            <div
+              key={pill.label}
+              data-testid={pill.label === 'Coaching' ? 'coaching-status-pill' : undefined}
+              className={`rounded-full border px-3 py-1.5 text-[11px] font-medium tracking-[0.02em] backdrop-blur-md ${pill.className}`}
+            >
+              <span className="mr-2 text-[10px] uppercase tracking-[0.16em] text-white/55">
+                {pill.label}
+              </span>
+              <span>{pill.value}</span>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  toggleAudio()
-                  appendDebugEvent(isAudioEnabled ? 'microphone muted locally' : 'microphone unmuted locally')
-                }}
-                disabled={!hasAudioTrack}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                  isAudioEnabled
-                    ? 'bg-gray-700 text-white hover:bg-gray-600'
-                    : 'bg-red-600 text-white hover:bg-red-500'
+          ))}
+        </div>
+      )}
+
+      {/* ── Detailed metrics overlay (debug only) ── */}
+      {showCoachDebug && isTutor && currentMetrics && (
+        <div className="absolute left-3 right-3 top-28 z-10 rounded-2xl border border-white/10 bg-black/55 p-3 text-xs text-white backdrop-blur-md">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-1">
+              <div
+                className={`h-2 w-2 rounded-full ${
+                  currentMetrics.gaze_unavailable
+                    ? 'bg-gray-400'
+                    : currentMetrics.student.eye_contact_score > 0.7
+                    ? 'bg-green-400'
+                    : currentMetrics.student.eye_contact_score > 0.4
+                    ? 'bg-yellow-400'
+                    : 'bg-red-400'
                 }`}
+              />
+              <span>
+                Student camera-facing:{' '}
+                {currentMetrics.gaze_unavailable
+                  ? 'unavailable'
+                  : `${(currentMetrics.student.eye_contact_score * 100).toFixed(0)}%`}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className={`rounded-full px-2 py-0.5 ${currentMetrics.tutor.is_speaking ? 'bg-blue-500/30 text-blue-100' : 'bg-gray-700 text-gray-200'}`}>
+                Tutor {currentMetrics.tutor.is_speaking ? 'speaking' : 'silent'}
+              </span>
+              <span className={`rounded-full px-2 py-0.5 ${currentMetrics.student.is_speaking ? 'bg-green-500/30 text-green-100' : 'bg-gray-700 text-gray-200'}`}>
+                Student {currentMetrics.student.is_speaking ? 'speaking' : 'silent'}
+              </span>
+            </div>
+
+            <div className="min-w-[220px] flex-1">
+              <div className="mb-0.5 flex justify-between text-[10px]">
+                <span>
+                  Talk share · Tutor {(currentMetrics.tutor.talk_time_percent * 100).toFixed(0)}%
+                </span>
+                <span>
+                  Student {(currentMetrics.student.talk_time_percent * 100).toFixed(0)}%
+                </span>
+              </div>
+              <div className="flex h-1.5 overflow-hidden rounded-full bg-gray-600">
+                <div
+                  className="h-full bg-blue-400"
+                  style={{ width: `${currentMetrics.tutor.talk_time_percent * 100}%` }}
+                />
+                <div
+                  className="h-full bg-green-400"
+                  style={{ width: `${currentMetrics.student.talk_time_percent * 100}%` }}
+                />
+              </div>
+            </div>
+
+            <div>
+              Trend: {engagementTrendLabel} · Score {currentMetrics.session.engagement_score.toFixed(0)}
+            </div>
+
+            <div>
+              Student silence: {currentMetrics.session.time_since_student_spoke.toFixed(0)}s
+            </div>
+
+            <div>
+              Tutor monologue: {currentMetrics.session.tutor_monologue_duration_current.toFixed(0)}s
+            </div>
+
+            <div>
+              Overlaps: {currentMetrics.session.interruption_count}
+              {currentMetrics.session.active_overlap_state !== 'none' && (
+                <span className="ml-1 text-orange-300">
+                  · live {currentMetrics.session.active_overlap_state} {currentMetrics.session.active_overlap_duration_current.toFixed(1)}s
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Local video PIP (bottom-right, above bottom control bar) ── */}
+      {ENABLE_WEBRTC_CALL_UI && (
+        <div data-testid="local-video-pip" className="absolute bottom-24 right-4 z-10 w-60 overflow-hidden rounded-2xl border border-white/15 bg-black/80 shadow-lg sm:w-80">
+          <video
+            data-testid="local-video"
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className="aspect-video h-full w-full object-cover"
+          />
+          {!isVideoEnabled && hasVideoTrack && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-xs text-gray-200">
+              Camera off
+            </div>
+          )}
+          <div className="absolute bottom-2 left-2 rounded-full border border-white/10 bg-black/55 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-md">
+            {localLabel}
+          </div>
+        </div>
+      )}
+
+      {/* ── Bottom control bar (auto-hide after 4s inactivity) ── */}
+      <div
+        data-testid="controls-overlay"
+        className={`pointer-events-none absolute bottom-0 left-0 right-0 z-20 transition-opacity duration-500 ${
+          controlsVisible ? 'pointer-events-auto opacity-100' : 'opacity-0'
+        }`}
+      >
+        <div className="flex items-center justify-center gap-4 bg-gradient-to-t from-black/70 to-transparent px-4 pb-6 pt-8">
+          {/* Mute mic — icon-based circular button */}
+          <button
+            data-testid="mute-button"
+            type="button"
+            aria-label={isAudioEnabled ? 'Mute microphone' : 'Unmute microphone'}
+            onClick={() => {
+              toggleAudio()
+              appendDebugEvent(isAudioEnabled ? 'microphone muted locally' : 'microphone unmuted locally')
+            }}
+            disabled={!hasAudioTrack}
+            title={isAudioEnabled ? 'Mute microphone (Space)' : 'Unmute microphone (Space)'}
+            className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50 ${
+              isAudioEnabled
+                ? 'border-white/20 bg-white/10 text-white hover:bg-white/20'
+                : 'border-red-500/60 bg-red-600/80 text-white hover:bg-red-500'
+            }`}
+          >
+            {isAudioEnabled ? <MicIcon /> : <MicOffIcon />}
+          </button>
+
+          {/* Toggle camera — icon-based circular button */}
+          <button
+            data-testid="camera-button"
+            type="button"
+            aria-label={isVideoEnabled ? 'Turn camera off' : 'Turn camera on'}
+            onClick={() => {
+              toggleVideo()
+              appendDebugEvent(isVideoEnabled ? 'camera turned off locally' : 'camera turned on locally')
+            }}
+            disabled={!hasVideoTrack}
+            title={isVideoEnabled ? 'Turn camera off (V)' : 'Turn camera on (V)'}
+            className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50 ${
+              isVideoEnabled
+                ? 'border-white/20 bg-white/10 text-white hover:bg-white/20'
+                : 'border-red-500/60 bg-red-600/80 text-white hover:bg-red-500'
+            }`}
+          >
+            {isVideoEnabled ? <CameraIcon /> : <CameraOffIcon />}
+          </button>
+
+          {/* End session (tutor) — red circular button */}
+          {isTutor && (
+            <button
+              data-testid="end-session-button"
+              type="button"
+              aria-label={sessionEnded ? 'Session ended' : 'End session for everyone'}
+              onClick={handleEndSession}
+              disabled={endingSession || sessionEnded}
+              title={sessionEnded ? 'Session ended' : 'End session for everyone'}
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-red-500/60 bg-red-600 text-white backdrop-blur-md transition-colors hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <PhoneOffIcon />
+            </button>
+          )}
+
+          {/* Leave session (student) — red circular button */}
+          {!isTutor && (
+            <button
+              data-testid="leave-session-button"
+              type="button"
+              aria-label={sessionEnded ? 'View your session' : 'Leave session'}
+              onClick={handleLeaveSession}
+              title={sessionEnded ? 'View your session' : 'Leave session'}
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-red-500/60 bg-red-600 text-white backdrop-blur-md transition-colors hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            >
+              <PhoneOffIcon />
+            </button>
+          )}
+
+          {/* Tutor post-session navigation (when session ended and summary dismissed) */}
+          {isTutor && sessionEnded && !showTutorEndSummaryOverlay && (
+            <>
+              <button
+                data-testid="view-analytics-button"
+                type="button"
+                onClick={() => handleEndedSessionNavigation(`/analytics/${sessionId}`)}
+                className="rounded-full border border-white/20 bg-black/50 px-4 py-2 text-sm font-medium text-white backdrop-blur-md transition-colors hover:bg-black/70"
               >
-                {isAudioEnabled ? 'Mute microphone' : 'Unmute microphone'}
+                View analytics
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  toggleVideo()
-                  appendDebugEvent(isVideoEnabled ? 'camera turned off locally' : 'camera turned on locally')
-                }}
-                disabled={!hasVideoTrack}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                  isVideoEnabled
-                    ? 'bg-gray-700 text-white hover:bg-gray-600'
-                    : 'bg-red-600 text-white hover:bg-red-500'
-                }`}
+                onClick={() => handleEndedSessionNavigation('/')}
+                className="rounded-full border border-white/10 bg-black/40 px-4 py-2 text-sm font-medium text-white backdrop-blur-md transition-colors hover:bg-black/60"
               >
-                {isVideoEnabled ? 'Turn camera off' : 'Turn camera on'}
+                Dashboard
               </button>
-              {!isTutor && (
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── Session banners (pinned near top, below top bar) ── */}
+      {peerDisconnected && !sessionEnded && (
+        <div
+          data-testid="participant-disconnected-banner"
+          className="absolute left-4 right-4 top-16 z-30 rounded-2xl border border-yellow-700 bg-yellow-900/80 p-3 text-sm text-yellow-100 backdrop-blur-md"
+        >
+          {remoteLabel} disconnected. They can rejoin within the grace window, and the call will attempt to recover automatically.
+        </div>
+      )}
+
+      {sessionEnded && !isTutor && (
+        <div
+          data-testid="session-ended-banner"
+          className="absolute left-4 right-4 top-16 z-30 rounded-2xl border border-blue-700 bg-blue-900/80 p-3 text-sm text-blue-100 backdrop-blur-md"
+        >
+          {sessionEndedMessage}
+        </div>
+      )}
+
+      {/* ── Nudge toasts (tutor only, fixed bottom-right above control bar) ── */}
+      {isTutor && nudges.length > 0 && (
+        <div className="fixed bottom-24 right-4 z-50 max-w-sm space-y-2">
+          {nudges.map((nudge) => (
+            <div
+              key={nudge.id}
+              className={`rounded-2xl border p-4 shadow-xl transition-all ${
+                nudge.priority === 'high'
+                  ? 'border-red-700 bg-red-950/92'
+                  : nudge.priority === 'medium'
+                  ? 'border-yellow-700 bg-yellow-950/92'
+                  : 'border-gray-700 bg-gray-900/92'
+              }`}
+            >
+              <p className="text-sm font-medium text-white">{nudge.message}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
                 <button
-                  data-testid="leave-session-button"
                   type="button"
-                  onClick={handleLeaveSession}
-                  className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+                  onClick={() => dismissNudge(nudge.id)}
+                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
                 >
-                  {sessionEnded ? 'View your session' : 'Leave session'}
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={disableAllNudges}
+                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
+                >
+                  Disable all nudges for session
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isTutor && !nudgesEnabled && (
+        <div className="fixed bottom-24 right-4 z-40 rounded-full border border-white/10 bg-gray-900/90 px-3 py-2 text-xs text-gray-200 shadow-lg">
+          Live nudges disabled for this session.
+        </div>
+      )}
+
+      {/* ── Errors ── */}
+      {(mediaError || wsError || peerError || endSessionError) && (
+        <div className="absolute bottom-24 left-4 z-30 max-w-sm rounded-2xl border border-red-700 bg-red-900/80 p-3 text-sm text-white backdrop-blur-md">
+          {mediaError && <p>Media: {mediaError}</p>}
+          {wsError && <p>Connection: {wsError}</p>}
+          {peerError && <p>WebRTC: {peerError}</p>}
+          {endSessionError && <p>Session: {endSessionError}</p>}
+        </div>
+      )}
+
+      {/* ── Debug panel overlay (scrollable drawer from bottom) ── */}
+      {showCoachDebug && (
+        <div
+          data-testid="coach-debug-panel"
+          className="fixed inset-x-0 bottom-0 z-40 max-h-[65vh] overflow-auto rounded-t-2xl border-t border-gray-700 bg-gray-900/97 backdrop-blur-md"
+        >
+          <div className="flex items-center justify-between px-4 py-3 text-sm font-medium text-white">
+            <span>Debug panel</span>
+            <div className="flex items-center gap-2">
+              {!nudgesEnabled && (
+                <button
+                  type="button"
+                  onClick={enableAllNudges}
+                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white transition-colors hover:bg-white/10"
+                >
+                  Re-enable nudges
                 </button>
               )}
-              {isTutor && sessionEnded && !showTutorEndSummaryOverlay && (
-                <>
+              <button
+                type="button"
+                onClick={() => setShowCoachDebug(false)}
+                className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white transition-colors hover:bg-white/10"
+              >
+                Hide
+              </button>
+            </div>
+          </div>
+          <div className="grid gap-4 border-t border-gray-700 px-4 py-4 text-sm md:grid-cols-2">
+            <div className="space-y-2">
+              <h3 className="font-semibold text-white">Connection + local state</h3>
+              <div className="space-y-1 text-gray-300">
+                <p>Session ID: <code>{sessionId}</code></p>
+                <p>Role: {role ?? 'unknown'}</p>
+                <p>Connected: {connected ? 'yes' : 'no'}</p>
+                <p>Token present: {token ? 'yes' : 'no'}</p>
+                <p>Mic enabled: {isAudioEnabled ? 'yes' : 'no'}</p>
+                <p>Camera enabled: {isVideoEnabled ? 'yes' : 'no'}</p>
+                <p>Session ended: {sessionEnded ? 'yes' : 'no'}</p>
+                <p>Live nudges enabled: {nudgesEnabled ? 'yes' : 'no'}</p>
+                <p data-testid="debug-media-provider">Media provider: {mediaProvider}</p>
+                <p data-testid="debug-analytics-ingest-mode">Analytics ingest: {analyticsIngestMode}</p>
+                <p data-testid="debug-webrtc-enabled">WebRTC enabled: {ENABLE_WEBRTC_CALL_UI ? 'yes' : 'no'}</p>
+                <p data-testid="debug-call-status">Call status: {callStatusLabel(callStatus)}</p>
+                <p data-testid="debug-peer-connection-state">Peer connection state: {connectionState}</p>
+                <p data-testid="debug-ice-connection-state">ICE connection state: {iceConnectionState}</p>
+                <p data-testid="debug-ice-gathering-state">ICE gathering state: {iceGatheringState}</p>
+                <p data-testid="debug-signaling-state">Signaling state: {signalingState}</p>
+                <p data-testid="debug-remote-tracks">Remote tracks: {remoteTrackCount}</p>
+                <p data-testid="debug-remote-video-present">Remote video present: {hasRemoteVideo ? 'yes' : 'no'}</p>
+                <p data-testid="debug-remote-audio-present">Remote audio present: {hasRemoteAudio ? 'yes' : 'no'}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-semibold text-white">Current metrics</h3>
+              {currentMetrics ? (
+                <div data-testid="debug-current-metrics" className="space-y-1 text-gray-300">
+                  <p>Student live attention: {formatAttentionStateLabel(currentMetrics.student.instant_attention_state)}</p>
+                  <p>Student live attention confidence: {(currentMetrics.student.instant_attention_state_confidence * 100).toFixed(1)}%</p>
+                  <p>Student smoothed attention state: {formatAttentionStateLabel(currentMetrics.student.attention_state)}</p>
+                  <p>Student attention confidence: {(currentMetrics.student.attention_state_confidence * 100).toFixed(1)}%</p>
+                  <p>Student face presence: {(currentMetrics.student.face_presence_score * 100).toFixed(1)}%</p>
+                  <p>Student visual attention score: {(currentMetrics.student.visual_attention_score * 100).toFixed(1)}%</p>
+                  <p>Student camera-facing score: {(currentMetrics.student.eye_contact_score * 100).toFixed(1)}%</p>
+                  <p>Tutor live attention: {formatAttentionStateLabel(currentMetrics.tutor.instant_attention_state)}</p>
+                  <p>Tutor attention state: {formatAttentionStateLabel(currentMetrics.tutor.attention_state)}</p>
+                  <p>Tutor talk share: {(currentMetrics.tutor.talk_time_percent * 100).toFixed(1)}%</p>
+                  <p>Student talk share: {(currentMetrics.student.talk_time_percent * 100).toFixed(1)}%</p>
+                  <p>Tutor speaking now: {currentMetrics.tutor.is_speaking ? 'yes' : 'no'}</p>
+                  <p>Student speaking now: {currentMetrics.student.is_speaking ? 'yes' : 'no'}</p>
+                  <p>Student silence timer: {currentMetrics.session.time_since_student_spoke.toFixed(1)}s</p>
+                  <p>Mutual silence timer: {currentMetrics.session.mutual_silence_duration_current.toFixed(1)}s</p>
+                  <p>Tutor monologue timer: {currentMetrics.session.tutor_monologue_duration_current.toFixed(1)}s</p>
+                  <p>Tutor turns: {currentMetrics.session.tutor_turn_count}</p>
+                  <p>Student turns: {currentMetrics.session.student_turn_count}</p>
+                  <p>Last student response latency: {currentMetrics.session.student_response_latency_last_seconds.toFixed(1)}s</p>
+                  <p>Last tutor response latency: {currentMetrics.session.tutor_response_latency_last_seconds.toFixed(1)}s</p>
+                  <p>Total overlaps: {currentMetrics.session.interruption_count}</p>
+                  <p>Active overlap: {currentMetrics.session.active_overlap_state} ({currentMetrics.session.active_overlap_duration_current.toFixed(1)}s)</p>
+                  <p>Hard interruptions: {currentMetrics.session.hard_interruption_count}</p>
+                  <p>Recent hard interruptions: {currentMetrics.session.recent_hard_interruptions}</p>
+                  <p>Backchannels: {currentMetrics.session.backchannel_overlap_count}</p>
+                  <p>Recent backchannels: {currentMetrics.session.recent_backchannel_overlaps}</p>
+                  <p>Echo suspected: {currentMetrics.session.echo_suspected ? 'yes' : 'no'}</p>
+                  <p>Tutor cutoffs: {currentMetrics.session.tutor_cutoffs}</p>
+                  <p>Engagement trend: {engagementTrendLabel}</p>
+                  <p>Engagement score: {currentMetrics.session.engagement_score.toFixed(1)}</p>
+                  <p>Target FPS: {currentMetrics.target_fps}</p>
+                  <p>Processing ms: {currentMetrics.server_processing_ms.toFixed(1)}</p>
+                  <p>Latency p50: {currentMetrics.latency_p50_ms.toFixed(1)}ms</p>
+                  <p>Latency p95: {currentMetrics.latency_p95_ms.toFixed(1)}ms</p>
+                  <p>Degradation: {currentMetrics.degradation_reason}</p>
+                  <p>Student time in state: {currentMetrics.student.time_in_attention_state_seconds.toFixed(0)}s</p>
+                  <p>Student talk (windowed): {(currentMetrics.student.talk_time_pct_windowed * 100).toFixed(1)}%</p>
+                  <p>Tutor talk (windowed): {(currentMetrics.tutor.talk_time_pct_windowed * 100).toFixed(1)}%</p>
+                  <p>Student time since spoke: {currentMetrics.student.time_since_spoke_seconds.toFixed(1)}s</p>
+                  <p>Tutor time since spoke: {currentMetrics.tutor.time_since_spoke_seconds.toFixed(1)}s</p>
+                </div>
+              ) : (
+                <p data-testid="debug-no-live-metrics" className="text-gray-400">No live metrics yet.</p>
+              )}
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <h3 className="font-semibold text-white">Recent events</h3>
+              <div className="max-h-48 overflow-auto rounded bg-gray-900 p-3 text-xs text-gray-300 space-y-1">
+                {debugEvents.length > 0 ? (
+                  debugEvents.slice().reverse().map((event, index) => (
+                    <p key={`${event.at}-${index}`}>
+                      <span className="text-gray-500">[{event.at}]</span> {event.message}
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-gray-500">No events yet.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-semibold text-white">Nudges seen</h3>
+              <div className="max-h-40 overflow-auto rounded bg-gray-900 p-3 text-xs text-gray-300 space-y-1">
+                {nudgeHistory.length > 0 ? (
+                  nudgeHistory.slice().reverse().map((nudge) => (
+                    <p key={nudge.id}>
+                      <span className="text-gray-500">{nudge.priority}</span> · {nudge.nudge_type} · {nudge.message}
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-gray-500">No nudges yet.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-semibold text-white">Coaching decisions</h3>
+              {currentMetrics?.coaching_decision ? (
+                <div data-testid="debug-coaching-decision" className="space-y-2 rounded bg-gray-900 p-3 text-xs text-gray-300">
+                  <p>
+                    <span className="text-gray-500">Session type:</span>{' '}
+                    {currentMetrics.coaching_decision.session_type}
+                  </p>
+                  {(currentMetrics.coaching_decision.coaching_intensity ?? sessionInfo?.coaching_intensity) ? (
+                    <p>
+                      <span className="text-gray-500">Coaching intensity:</span>{' '}
+                      {currentMetrics.coaching_decision.coaching_intensity ?? sessionInfo?.coaching_intensity}
+                    </p>
+                  ) : null}
+                  {currentMetrics.coaching_decision.candidates_evaluated !== undefined && (
+                    <details className="cursor-pointer">
+                      <summary className="text-gray-400">
+                        Rules evaluated: {currentMetrics.coaching_decision.candidates_evaluated.length}
+                      </summary>
+                      <ul className="ml-4 mt-1 list-disc text-gray-500">
+                        {currentMetrics.coaching_decision.candidates_evaluated.map((name, i) => (
+                          <li key={i}>{name}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                  {currentMetrics.coaching_decision.fired_rule !== undefined ? (
+                    currentMetrics.coaching_decision.fired_rule ? (
+                      <p>
+                        <span className="text-green-400">▶ Fired rule:</span>{' '}
+                        <span className="text-green-300">{currentMetrics.coaching_decision.fired_rule}</span>
+                        {currentMetrics.coaching_decision.fired_rule_score != null && (
+                          <span className="ml-2 text-xs text-green-200">
+                            score {currentMetrics.coaching_decision.fired_rule_score.toFixed(2)}
+                          </span>
+                        )}
+                        {currentMetrics.coaching_decision.emitted_priority && (
+                          <span className="ml-2 text-xs text-amber-200">
+                            {currentMetrics.coaching_decision.emitted_priority}
+                          </span>
+                        )}
+                      </p>
+                    ) : (
+                      <p className="text-gray-500">No rule fired</p>
+                    )
+                  ) : currentMetrics.coaching_decision.emitted_nudge ? (
+                    <p>
+                      <span className="text-green-400">▶ Fired:</span>{' '}
+                      {currentMetrics.coaching_decision.emitted_nudge}
+                    </p>
+                  ) : (
+                    <p className="text-gray-500">No nudge fired this cycle</p>
+                  )}
+                  {currentMetrics.coaching_decision.candidate_nudges.length > 0 && (
+                    <div>
+                      <p>
+                        <span className="text-yellow-400">Candidates:</span>{' '}
+                        {currentMetrics.coaching_decision.candidate_nudges.join(', ')}
+                      </p>
+                      {currentMetrics.coaching_decision.candidate_rule_scores && (
+                        <ul className="ml-4 mt-1 list-disc text-gray-500">
+                          {Object.entries(currentMetrics.coaching_decision.candidate_rule_scores).map(([rule, score]) => (
+                            <li key={rule}>{rule}: {score.toFixed(2)}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                  {currentMetrics.coaching_decision.suppressed_reasons.length > 0 && (
+                    <div>
+                      <span className="text-gray-400">Suppressed:</span>
+                      <ul className="ml-4 list-disc">
+                        {currentMetrics.coaching_decision.suppressed_reasons.map((r, i) => (
+                          <li key={i}>{r}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {Object.keys(currentMetrics.coaching_decision.trigger_features).length > 0 && (
+                    <details className="cursor-pointer">
+                      <summary className="text-gray-400">Trigger features</summary>
+                      <pre className="mt-1 whitespace-pre-wrap break-words text-gray-500">
+                        {JSON.stringify(currentMetrics.coaching_decision.trigger_features, null, 2)}
+                      </pre>
+                    </details>
+                  )}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-xs">No coaching decisions yet (waiting for warmup).</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-semibold text-white">Raw snapshot</h3>
+              <pre className="max-h-40 overflow-auto rounded bg-gray-900 p-3 text-xs text-gray-300 whitespace-pre-wrap break-words">
+                {currentMetrics ? JSON.stringify(currentMetrics, null, 2) : 'No metrics yet.'}
+              </pre>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <h3 className="font-semibold text-white">History</h3>
+              <p className="text-xs text-gray-400">
+                Metrics snapshots kept in memory: {metricsHistory.length}. Live nudge history: {nudgeHistory.length}.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── End-session summary overlay (unchanged) ── */}
+      {showTutorEndSummaryOverlay && (
+        <div
+          data-testid="session-end-summary-overlay"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 px-6 py-8 backdrop-blur"
+        >
+          <div className="w-full max-w-5xl rounded-[32px] border border-white/10 bg-slate-950/95 p-6 shadow-[0_28px_120px_rgba(2,6,23,0.72)] md:p-8">
+            <div className="flex flex-col gap-4 border-b border-white/10 pb-6 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                  Session wrap-up
+                </p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+                  Session Complete
+                </h2>
+                {endSummary && endSummaryHealth && (
+                  <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-200">
+                      Duration {formatMinutes(endSummary.duration_seconds)}
+                    </span>
+                    <span
+                      className={`rounded-full border px-3 py-1 ${analyticsToneClasses(
+                        endSummaryHealth.tone
+                      )}`}
+                    >
+                      {endSummaryHealth.label}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <button
+                data-testid="session-end-summary-close"
+                type="button"
+                onClick={() => setShowEndSummary(false)}
+                className="self-start rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+              >
+                Close
+              </button>
+            </div>
+
+            {(endSummaryLoading || (!endSummary && !endSummaryFailed)) && (
+              <div
+                data-testid="session-end-summary-loading"
+                className="flex min-h-[280px] flex-col items-center justify-center gap-4 text-center"
+              >
+                <div className="h-10 w-10 animate-spin rounded-full border-2 border-slate-700 border-t-sky-400" />
+                <div>
+                  <p className="text-lg font-medium text-white">
+                    Generating session report...
+                  </p>
+                  <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
+                    We&apos;re packaging the final analytics summary so you can move straight from the call into review.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!endSummaryLoading && endSummary && endSummaryHealth && (
+              <div className="space-y-8 pt-8">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <MetricCard
+                    title="Engagement score"
+                    value={formatScore(endSummary.engagement_score)}
+                    detail={endSummaryHealth.summary}
+                    tone={endSummaryHealth.tone}
+                  />
+                  <MetricCard
+                    title="Student camera-facing"
+                    value={formatPercent(endSummary.avg_eye_contact.student || 0)}
+                    detail="Average presence across the full session."
+                    tone={
+                      (endSummary.avg_eye_contact.student || 0) >= 0.5
+                        ? 'emerald'
+                        : (endSummary.avg_eye_contact.student || 0) >= 0.3
+                        ? 'amber'
+                        : 'rose'
+                    }
+                  />
+                  <MetricCard
+                    title="Tutor talk share"
+                    value={formatPercent(endSummary.talk_time_ratio.tutor || 0)}
+                    detail={
+                      isTalkBalanced(endSummary)
+                        ? 'Talk balance stayed near the session target.'
+                        : 'Talk balance drifted outside the session target.'
+                    }
+                    tone={
+                      isTalkBalanced(endSummary)
+                        ? 'emerald'
+                        : (endSummary.talk_time_ratio.tutor || 0) >= 0.8
+                        ? 'rose'
+                        : 'amber'
+                    }
+                  />
+                  <MetricCard
+                    title="Interruptions"
+                    value={`${endSummary.total_interruptions}`}
+                    detail={
+                      endSummary.total_interruptions === 0
+                        ? 'No interruptions were flagged.'
+                        : 'Counted across the entire session.'
+                    }
+                    tone={
+                      endSummary.total_interruptions >= 5
+                        ? 'rose'
+                        : endSummary.total_interruptions >= 2
+                        ? 'amber'
+                        : 'emerald'
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
+                  <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+                    <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                      Quick highlights
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {endSummary.flagged_moments.length > 0 ? (
+                        <span className="rounded-full border border-rose-400/30 bg-rose-400/10 px-3 py-1.5 text-sm font-medium text-rose-100">
+                          {endSummary.flagged_moments.length} flagged moment
+                          {endSummary.flagged_moments.length === 1 ? '' : 's'}
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-sm font-medium text-emerald-100">
+                          No flagged moments surfaced
+                        </span>
+                      )}
+                      {endSummary.nudges_sent > 0 && (
+                        <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-sm font-medium text-amber-100">
+                          {endSummary.nudges_sent} live nudges sent
+                        </span>
+                      )}
+                      {endSummary.turn_counts &&
+                        Object.keys(endSummary.turn_counts).length > 0 && (
+                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-slate-200">
+                            {endSummary.turn_counts.tutor ?? 0} tutor turns ·{' '}
+                            {endSummary.turn_counts.student ?? 0} student turns
+                          </span>
+                        )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+                    <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                      First recommendations
+                    </p>
+                    {endSummaryRecommendationsToShow.length > 0 ? (
+                      <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-200">
+                        {endSummaryRecommendationsToShow.map((recommendation, index) => (
+                          <li key={`${recommendation}-${index}`} className="flex gap-3">
+                            <span className="mt-1 text-violet-300">•</span>
+                            <span>{recommendation}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-4 text-sm leading-6 text-slate-400">
+                        No immediate follow-up recommendations were generated for this session.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row">
                   <button
                     data-testid="view-analytics-button"
                     type="button"
                     onClick={() =>
                       handleEndedSessionNavigation(`/analytics/${sessionId}`)
                     }
-                    className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+                    className="inline-flex items-center justify-center rounded-2xl bg-violet-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-violet-500"
                   >
-                    View analytics
+                    View Full Analytics
                   </button>
                   <button
                     type="button"
                     onClick={() => handleEndedSessionNavigation('/')}
-                    className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+                    className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-white/10"
                   >
-                    Back to dashboard
+                    Back to Dashboard
                   </button>
-                </>
-              )}
-              {isTutor && (
-                <button
-                  data-testid="end-session-button"
-                  type="button"
-                  onClick={handleEndSession}
-                  disabled={endingSession || sessionEnded}
-                  className="rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {endingSession ? 'Ending…' : sessionEnded ? 'Session ended' : 'End for everyone'}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Call surface */}
-        <div className="relative w-full max-w-5xl">
-          <div data-testid="call-surface" className="relative aspect-video overflow-hidden rounded-[28px] border border-white/10 bg-black shadow-[0_24px_90px_rgba(0,0,0,0.45)]">
-            {ENABLE_WEBRTC_CALL_UI && remoteParticipants.size > 1 ? (
-              <>
-                {/* Multi-participant grid — 2-up for 2 participants, 2×2 for 3–4 */}
-                <div
-                  data-testid="participant-grid"
-                  className={`absolute inset-0 grid gap-1 ${
-                    remoteParticipants.size === 2
-                      ? 'grid-cols-2'
-                      : 'grid-cols-2 grid-rows-2'
-                  }`}
-                >
-                  {Array.from(remoteParticipants.values())
-                    .sort(compareParticipantIdentity)
-                    .map((participant) => (
-                      <ParticipantTile
-                        key={participant.identity}
-                        participant={participant}
-                      />
-                    ))}
                 </div>
-
-                {/* Call-status badge top-left */}
-                <div className="absolute left-4 top-4 flex items-center gap-2">
-                  <div data-testid="call-status-badge" className={`rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-md ${callStatusClasses(callStatus)}`}>
-                    {callStatusLabel(callStatus)}
-                  </div>
-                  {peerDisconnected && !sessionEnded && (
-                    <div className="rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-100 backdrop-blur-md">
-                      Reconnect grace active
-                    </div>
-                  )}
-                </div>
-
-                {/* Local video PIP in corner */}
-                <div className="absolute bottom-4 right-4 w-40 overflow-hidden rounded-2xl border border-white/15 bg-black/80 shadow-lg sm:w-52">
-                  <video
-                    data-testid="local-video"
-                    ref={videoRef}
-                    autoPlay
-                    muted
-                    playsInline
-                    className="aspect-video h-full w-full object-cover"
-                  />
-                  {!isVideoEnabled && hasVideoTrack && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-xs text-gray-200">
-                      Camera off
-                    </div>
-                  )}
-                  <div className="absolute bottom-2 left-2 rounded-full border border-white/10 bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-md">
-                    {localLabel}
-                  </div>
-                </div>
-              </>
-            ) : ENABLE_WEBRTC_CALL_UI ? (
-              <>
-                <video
-                  data-testid="remote-video"
-                  ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  className={`absolute inset-0 h-full w-full object-cover transition-opacity ${
-                    hasRemoteVideo ? 'opacity-100' : 'opacity-0'
-                  }`}
-                />
-
-                {!hasRemoteVideo && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.14),_transparent_38%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.14),_transparent_34%),#050816] px-6 text-center text-gray-200">
-                    <div data-testid="call-status-placeholder" className={`rounded-full border px-4 py-1.5 text-xs font-medium ${callStatusClasses(callStatus)}`}>
-                      {callStatusLabel(callStatus)}
-                    </div>
-                    <div>
-                      <p className="text-lg font-medium text-white">{remoteLabel}</p>
-                      <p className="mt-1 text-sm text-gray-400">
-                        {callPlaceholderText}
-                      </p>
-                    </div>
-                    {ENABLE_WEBRTC_CALL_UI && !hasRemoteAudio && callStatus === 'connected' && (
-                      <p className="text-xs text-gray-500">Remote audio not detected yet.</p>
-                    )}
-                  </div>
-                )}
-
-                <div className="absolute left-4 top-4 flex items-center gap-2">
-                  <div data-testid="call-status-badge" className={`rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-md ${callStatusClasses(callStatus)}`}>
-                    {callStatusLabel(callStatus)}
-                  </div>
-                  {peerDisconnected && !sessionEnded && (
-                    <div className="rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-100 backdrop-blur-md">
-                      Reconnect grace active
-                    </div>
-                  )}
-                </div>
-
-                <div className="absolute bottom-4 left-4 rounded-full border border-white/15 bg-black/45 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">
-                  {remoteLabel}
-                </div>
-
-                {callStatus === 'connected' && !hasRemoteAudio && (
-                  <div className="absolute right-4 top-4 rounded-full border border-white/15 bg-black/45 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">
-                    Remote audio unavailable
-                  </div>
-                )}
-
-                <div className="absolute bottom-4 right-4 w-40 overflow-hidden rounded-2xl border border-white/15 bg-black/80 shadow-lg sm:w-52">
-                  <video
-                    data-testid="local-video"
-                    ref={videoRef}
-                    autoPlay
-                    muted
-                    playsInline
-                    className="aspect-video h-full w-full object-cover"
-                  />
-                  {!isVideoEnabled && hasVideoTrack && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-xs text-gray-200">
-                      Camera off
-                    </div>
-                  )}
-                  <div className="absolute bottom-2 left-2 rounded-full border border-white/10 bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-md">
-                    {localLabel}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  muted
-                  playsInline
-                  className="h-full w-full object-cover"
-                />
-                {!isVideoEnabled && hasVideoTrack && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/75 text-sm text-gray-200">
-                    Camera is off
-                  </div>
-                )}
-              </>
-            )}
-
-            <canvas ref={canvasRef} className="hidden" />
-
-            {/* Minimal tutor overlay */}
-            {isTutor && currentMetrics && minimalAttentionSummary && minimalTalkSummary && minimalFlowSummary && (
-              <div data-testid="coach-overlay" className="pointer-events-none absolute left-3 right-3 top-16 flex flex-wrap items-start gap-2">
-                {[minimalAttentionSummary, minimalTalkSummary, minimalFlowSummary].map((pill) => (
-                  <div
-                    key={pill.label}
-                    className={`rounded-full border px-3 py-1.5 text-[11px] font-medium tracking-[0.02em] backdrop-blur-md ${pill.className}`}
-                  >
-                    <span className="mr-2 text-[10px] uppercase tracking-[0.16em] text-white/55">
-                      {pill.label}
-                    </span>
-                    <span>{pill.value}</span>
-                  </div>
-                ))}
               </div>
             )}
 
-            {/* Detailed metrics overlay (debug only) */}
-            {showCoachDebug && isTutor && currentMetrics && (
-              <div className="absolute left-3 right-3 top-28 rounded-2xl border border-white/10 bg-black/55 p-3 text-xs text-white backdrop-blur-md">
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="flex items-center gap-1">
-                    <div
-                      className={`h-2 w-2 rounded-full ${
-                        currentMetrics.gaze_unavailable
-                          ? 'bg-gray-400'
-                          : currentMetrics.student.eye_contact_score > 0.7
-                          ? 'bg-green-400'
-                          : currentMetrics.student.eye_contact_score > 0.4
-                          ? 'bg-yellow-400'
-                          : 'bg-red-400'
-                      }`}
-                    />
-                    <span>
-                      Student camera-facing:{' '}
-                      {currentMetrics.gaze_unavailable
-                        ? 'unavailable'
-                        : `${(currentMetrics.student.eye_contact_score * 100).toFixed(0)}%`}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className={`rounded-full px-2 py-0.5 ${currentMetrics.tutor.is_speaking ? 'bg-blue-500/30 text-blue-100' : 'bg-gray-700 text-gray-200'}`}>
-                      Tutor {currentMetrics.tutor.is_speaking ? 'speaking' : 'silent'}
-                    </span>
-                    <span className={`rounded-full px-2 py-0.5 ${currentMetrics.student.is_speaking ? 'bg-green-500/30 text-green-100' : 'bg-gray-700 text-gray-200'}`}>
-                      Student {currentMetrics.student.is_speaking ? 'speaking' : 'silent'}
-                    </span>
-                  </div>
-
-                  <div className="min-w-[220px] flex-1">
-                    <div className="mb-0.5 flex justify-between text-[10px]">
-                      <span>
-                        Talk share · Tutor {(currentMetrics.tutor.talk_time_percent * 100).toFixed(0)}%
-                      </span>
-                      <span>
-                        Student {(currentMetrics.student.talk_time_percent * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className="flex h-1.5 overflow-hidden rounded-full bg-gray-600">
-                      <div
-                        className="h-full bg-blue-400"
-                        style={{ width: `${currentMetrics.tutor.talk_time_percent * 100}%` }}
-                      />
-                      <div
-                        className="h-full bg-green-400"
-                        style={{ width: `${currentMetrics.student.talk_time_percent * 100}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    Trend: {engagementTrendLabel} · Score {currentMetrics.session.engagement_score.toFixed(0)}
-                  </div>
-
-                  <div>
-                    Student silence: {currentMetrics.session.time_since_student_spoke.toFixed(0)}s
-                  </div>
-
-                  <div>
-                    Tutor monologue: {currentMetrics.session.tutor_monologue_duration_current.toFixed(0)}s
-                  </div>
-
-                  <div>
-                    Overlaps: {currentMetrics.session.interruption_count}
-                    {currentMetrics.session.active_overlap_state !== 'none' && (
-                      <span className="ml-1 text-orange-300">
-                        · live {currentMetrics.session.active_overlap_state} {currentMetrics.session.active_overlap_duration_current.toFixed(1)}s
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Nudge toasts (tutor only) */}
-        {isTutor && nudges.length > 0 && (
-          <div className="fixed bottom-4 right-4 z-50 max-w-sm space-y-2">
-            {nudges.map((nudge) => (
-              <div
-                key={nudge.id}
-                className={`rounded-2xl border p-4 shadow-xl transition-all ${
-                  nudge.priority === 'high'
-                    ? 'border-red-700 bg-red-950/92'
-                    : nudge.priority === 'medium'
-                    ? 'border-yellow-700 bg-yellow-950/92'
-                    : 'border-gray-700 bg-gray-900/92'
-                }`}
-              >
-                <p className="text-sm font-medium text-white">{nudge.message}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => dismissNudge(nudge.id)}
-                    className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
-                  >
-                    Close
-                  </button>
-                  <button
-                    type="button"
-                    onClick={disableAllNudges}
-                    className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
-                  >
-                    Disable all nudges for session
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {isTutor && !nudgesEnabled && (
-          <div className="fixed bottom-4 right-4 z-40 rounded-full border border-white/10 bg-gray-900/90 px-3 py-2 text-xs text-gray-200 shadow-lg">
-            Live nudges disabled for this session.
-          </div>
-        )}
-
-        {showCoachDebug && (
-          <div data-testid="coach-debug-panel" className="w-full max-w-5xl rounded-lg border border-gray-700 bg-gray-800/80">
-            <div className="flex items-center justify-between px-4 py-3 text-sm font-medium text-white">
-              <span>Debug panel</span>
-              <div className="flex items-center gap-2">
-                {!nudgesEnabled && (
-                  <button
-                    type="button"
-                    onClick={enableAllNudges}
-                    className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white transition-colors hover:bg-white/10"
-                  >
-                    Re-enable nudges
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setShowCoachDebug(false)}
-                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white transition-colors hover:bg-white/10"
-                >
-                  Hide
-                </button>
-              </div>
-            </div>
-            <div className="grid gap-4 border-t border-gray-700 px-4 py-4 text-sm md:grid-cols-2">
-              <div className="space-y-2">
-                <h3 className="font-semibold text-white">Connection + local state</h3>
-                <div className="space-y-1 text-gray-300">
-                  <p>Session ID: <code>{sessionId}</code></p>
-                  <p>Role: {role ?? 'unknown'}</p>
-                  <p>Connected: {connected ? 'yes' : 'no'}</p>
-                  <p>Token present: {token ? 'yes' : 'no'}</p>
-                  <p>Mic enabled: {isAudioEnabled ? 'yes' : 'no'}</p>
-                  <p>Camera enabled: {isVideoEnabled ? 'yes' : 'no'}</p>
-                  <p>Session ended: {sessionEnded ? 'yes' : 'no'}</p>
-                  <p>Live nudges enabled: {nudgesEnabled ? 'yes' : 'no'}</p>
-                  <p data-testid="debug-media-provider">Media provider: {mediaProvider}</p>
-                  <p data-testid="debug-analytics-ingest-mode">Analytics ingest: {analyticsIngestMode}</p>
-                  <p data-testid="debug-webrtc-enabled">WebRTC enabled: {ENABLE_WEBRTC_CALL_UI ? 'yes' : 'no'}</p>
-                  <p data-testid="debug-call-status">Call status: {callStatusLabel(callStatus)}</p>
-                  <p data-testid="debug-peer-connection-state">Peer connection state: {connectionState}</p>
-                  <p data-testid="debug-ice-connection-state">ICE connection state: {iceConnectionState}</p>
-                  <p data-testid="debug-ice-gathering-state">ICE gathering state: {iceGatheringState}</p>
-                  <p data-testid="debug-signaling-state">Signaling state: {signalingState}</p>
-                  <p data-testid="debug-remote-tracks">Remote tracks: {remoteTrackCount}</p>
-                  <p data-testid="debug-remote-video-present">Remote video present: {hasRemoteVideo ? 'yes' : 'no'}</p>
-                  <p data-testid="debug-remote-audio-present">Remote audio present: {hasRemoteAudio ? 'yes' : 'no'}</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-semibold text-white">Current metrics</h3>
-                {currentMetrics ? (
-                  <div data-testid="debug-current-metrics" className="space-y-1 text-gray-300">
-                    <p>Student attention state: {formatAttentionStateLabel(currentMetrics.student.attention_state)}</p>
-                    <p>Student attention confidence: {(currentMetrics.student.attention_state_confidence * 100).toFixed(1)}%</p>
-                    <p>Student face presence: {(currentMetrics.student.face_presence_score * 100).toFixed(1)}%</p>
-                    <p>Student visual attention score: {(currentMetrics.student.visual_attention_score * 100).toFixed(1)}%</p>
-                    <p>Student camera-facing score: {(currentMetrics.student.eye_contact_score * 100).toFixed(1)}%</p>
-                    <p>Tutor attention state: {formatAttentionStateLabel(currentMetrics.tutor.attention_state)}</p>
-                    <p>Tutor talk share: {(currentMetrics.tutor.talk_time_percent * 100).toFixed(1)}%</p>
-                    <p>Student talk share: {(currentMetrics.student.talk_time_percent * 100).toFixed(1)}%</p>
-                    <p>Tutor speaking now: {currentMetrics.tutor.is_speaking ? 'yes' : 'no'}</p>
-                    <p>Student speaking now: {currentMetrics.student.is_speaking ? 'yes' : 'no'}</p>
-                    <p>Student silence timer: {currentMetrics.session.time_since_student_spoke.toFixed(1)}s</p>
-                    <p>Mutual silence timer: {currentMetrics.session.mutual_silence_duration_current.toFixed(1)}s</p>
-                    <p>Tutor monologue timer: {currentMetrics.session.tutor_monologue_duration_current.toFixed(1)}s</p>
-                    <p>Tutor turns: {currentMetrics.session.tutor_turn_count}</p>
-                    <p>Student turns: {currentMetrics.session.student_turn_count}</p>
-                    <p>Last student response latency: {currentMetrics.session.student_response_latency_last_seconds.toFixed(1)}s</p>
-                    <p>Last tutor response latency: {currentMetrics.session.tutor_response_latency_last_seconds.toFixed(1)}s</p>
-                    <p>Total overlaps: {currentMetrics.session.interruption_count}</p>
-                    <p>Active overlap: {currentMetrics.session.active_overlap_state} ({currentMetrics.session.active_overlap_duration_current.toFixed(1)}s)</p>
-                    <p>Hard interruptions: {currentMetrics.session.hard_interruption_count}</p>
-                    <p>Recent hard interruptions: {currentMetrics.session.recent_hard_interruptions}</p>
-                    <p>Backchannels: {currentMetrics.session.backchannel_overlap_count}</p>
-                    <p>Recent backchannels: {currentMetrics.session.recent_backchannel_overlaps}</p>
-                    <p>Echo suspected: {currentMetrics.session.echo_suspected ? 'yes' : 'no'}</p>
-                    <p>Tutor cutoffs: {currentMetrics.session.tutor_cutoffs}</p>
-                    <p>Engagement trend: {engagementTrendLabel}</p>
-                    <p>Engagement score: {currentMetrics.session.engagement_score.toFixed(1)}</p>
-                    <p>Target FPS: {currentMetrics.target_fps}</p>
-                    <p>Processing ms: {currentMetrics.server_processing_ms.toFixed(1)}</p>
-                    <p>Latency p50: {currentMetrics.latency_p50_ms.toFixed(1)}ms</p>
-                    <p>Latency p95: {currentMetrics.latency_p95_ms.toFixed(1)}ms</p>
-                    <p>Degradation: {currentMetrics.degradation_reason}</p>
-                    <p>Student time in state: {currentMetrics.student.time_in_attention_state_seconds.toFixed(0)}s</p>
-                    <p>Student talk (windowed): {(currentMetrics.student.talk_time_pct_windowed * 100).toFixed(1)}%</p>
-                    <p>Tutor talk (windowed): {(currentMetrics.tutor.talk_time_pct_windowed * 100).toFixed(1)}%</p>
-                    <p>Student time since spoke: {currentMetrics.student.time_since_spoke_seconds.toFixed(1)}s</p>
-                    <p>Tutor time since spoke: {currentMetrics.tutor.time_since_spoke_seconds.toFixed(1)}s</p>
-                  </div>
-                ) : (
-                  <p data-testid="debug-no-live-metrics" className="text-gray-400">No live metrics yet.</p>
-                )}
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <h3 className="font-semibold text-white">Recent events</h3>
-                <div className="max-h-48 overflow-auto rounded bg-gray-900 p-3 text-xs text-gray-300 space-y-1">
-                  {debugEvents.length > 0 ? (
-                    debugEvents.slice().reverse().map((event, index) => (
-                      <p key={`${event.at}-${index}`}>
-                        <span className="text-gray-500">[{event.at}]</span> {event.message}
-                      </p>
-                    ))
-                  ) : (
-                    <p className="text-gray-500">No events yet.</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-semibold text-white">Nudges seen</h3>
-                <div className="max-h-40 overflow-auto rounded bg-gray-900 p-3 text-xs text-gray-300 space-y-1">
-                  {nudgeHistory.length > 0 ? (
-                    nudgeHistory.slice().reverse().map((nudge) => (
-                      <p key={nudge.id}>
-                        <span className="text-gray-500">{nudge.priority}</span> · {nudge.nudge_type} · {nudge.message}
-                      </p>
-                    ))
-                  ) : (
-                    <p className="text-gray-500">No nudges yet.</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-semibold text-white">Coaching decisions</h3>
-                {currentMetrics?.coaching_decision ? (
-                  <div data-testid="debug-coaching-decision" className="space-y-2 rounded bg-gray-900 p-3 text-xs text-gray-300">
-                    <p>
-                      <span className="text-gray-500">Session type:</span>{' '}
-                      {currentMetrics.coaching_decision.session_type}
-                    </p>
-                    {(currentMetrics.coaching_decision.coaching_intensity ?? sessionInfo?.coaching_intensity) ? (
-                      <p>
-                        <span className="text-gray-500">Coaching intensity:</span>{' '}
-                        {currentMetrics.coaching_decision.coaching_intensity ?? sessionInfo?.coaching_intensity}
-                      </p>
-                    ) : null}
-                    {currentMetrics.coaching_decision.candidates_evaluated !== undefined && (
-                      <details className="cursor-pointer">
-                        <summary className="text-gray-400">
-                          Rules evaluated: {currentMetrics.coaching_decision.candidates_evaluated.length}
-                        </summary>
-                        <ul className="ml-4 mt-1 list-disc text-gray-500">
-                          {currentMetrics.coaching_decision.candidates_evaluated.map((name, i) => (
-                            <li key={i}>{name}</li>
-                          ))}
-                        </ul>
-                      </details>
-                    )}
-                    {currentMetrics.coaching_decision.fired_rule !== undefined ? (
-                      currentMetrics.coaching_decision.fired_rule ? (
-                        <p>
-                          <span className="text-green-400">▶ Fired rule:</span>{' '}
-                          <span className="text-green-300">{currentMetrics.coaching_decision.fired_rule}</span>
-                        </p>
-                      ) : (
-                        <p className="text-gray-500">No rule fired</p>
-                      )
-                    ) : currentMetrics.coaching_decision.emitted_nudge ? (
-                      <p>
-                        <span className="text-green-400">▶ Fired:</span>{' '}
-                        {currentMetrics.coaching_decision.emitted_nudge}
-                      </p>
-                    ) : (
-                      <p className="text-gray-500">No nudge fired this cycle</p>
-                    )}
-                    {currentMetrics.coaching_decision.candidate_nudges.length > 0 && (
-                      <p>
-                        <span className="text-yellow-400">Candidates:</span>{' '}
-                        {currentMetrics.coaching_decision.candidate_nudges.join(', ')}
-                      </p>
-                    )}
-                    {currentMetrics.coaching_decision.suppressed_reasons.length > 0 && (
-                      <div>
-                        <span className="text-gray-400">Suppressed:</span>
-                        <ul className="ml-4 list-disc">
-                          {currentMetrics.coaching_decision.suppressed_reasons.map((r, i) => (
-                            <li key={i}>{r}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {Object.keys(currentMetrics.coaching_decision.trigger_features).length > 0 && (
-                      <details className="cursor-pointer">
-                        <summary className="text-gray-400">Trigger features</summary>
-                        <pre className="mt-1 whitespace-pre-wrap break-words text-gray-500">
-                          {JSON.stringify(currentMetrics.coaching_decision.trigger_features, null, 2)}
-                        </pre>
-                      </details>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-xs">No coaching decisions yet (waiting for warmup).</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-semibold text-white">Raw snapshot</h3>
-                <pre className="max-h-40 overflow-auto rounded bg-gray-900 p-3 text-xs text-gray-300 whitespace-pre-wrap break-words">
-                  {currentMetrics ? JSON.stringify(currentMetrics, null, 2) : 'No metrics yet.'}
-                </pre>
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <h3 className="font-semibold text-white">History</h3>
-                <p className="text-xs text-gray-400">
-                  Metrics snapshots kept in memory: {metricsHistory.length}. Live nudge history: {nudgeHistory.length}.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showTutorEndSummaryOverlay && (
-          <div
-            data-testid="session-end-summary-overlay"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 px-6 py-8 backdrop-blur"
-          >
-            <div className="w-full max-w-5xl rounded-[32px] border border-white/10 bg-slate-950/95 p-6 shadow-[0_28px_120px_rgba(2,6,23,0.72)] md:p-8">
-              <div className="flex flex-col gap-4 border-b border-white/10 pb-6 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
-                    Session wrap-up
+            {!endSummaryLoading && !endSummary && endSummaryFailed && (
+              <div className="space-y-6 pt-8">
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+                  <p className="text-lg font-medium text-white">
+                    Session ended. Full analytics are still finalizing.
                   </p>
-                  <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">
-                    Session Complete
-                  </h2>
-                  {endSummary && endSummaryHealth && (
-                    <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-200">
-                        Duration {formatMinutes(endSummary.duration_seconds)}
-                      </span>
-                      <span
-                        className={`rounded-full border px-3 py-1 ${analyticsToneClasses(
-                          endSummaryHealth.tone
-                        )}`}
-                      >
-                        {endSummaryHealth.label}
-                      </span>
-                    </div>
-                  )}
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+                    The session report wasn&apos;t available yet, but the detail page will fetch it independently as soon as persistence finishes.
+                  </p>
                 </div>
-                <button
-                  data-testid="session-end-summary-close"
-                  type="button"
-                  onClick={() => setShowEndSummary(false)}
-                  className="self-start rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
-                >
-                  Close
-                </button>
+                <div>
+                  <button
+                    data-testid="view-analytics-button"
+                    type="button"
+                    onClick={() =>
+                      handleEndedSessionNavigation(`/analytics/${sessionId}`)
+                    }
+                    className="inline-flex items-center justify-center rounded-2xl bg-violet-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-violet-500"
+                  >
+                    View Full Analytics
+                  </button>
+                </div>
               </div>
-
-              {(endSummaryLoading || (!endSummary && !endSummaryFailed)) && (
-                <div
-                  data-testid="session-end-summary-loading"
-                  className="flex min-h-[280px] flex-col items-center justify-center gap-4 text-center"
-                >
-                  <div className="h-10 w-10 animate-spin rounded-full border-2 border-slate-700 border-t-sky-400" />
-                  <div>
-                    <p className="text-lg font-medium text-white">
-                      Generating session report...
-                    </p>
-                    <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
-                      We&apos;re packaging the final analytics summary so you can move straight from the call into review.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {!endSummaryLoading && endSummary && endSummaryHealth && (
-                <div className="space-y-8 pt-8">
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <MetricCard
-                      title="Engagement score"
-                      value={formatScore(endSummary.engagement_score)}
-                      detail={endSummaryHealth.summary}
-                      tone={endSummaryHealth.tone}
-                    />
-                    <MetricCard
-                      title="Student camera-facing"
-                      value={formatPercent(endSummary.avg_eye_contact.student || 0)}
-                      detail="Average presence across the full session."
-                      tone={
-                        (endSummary.avg_eye_contact.student || 0) >= 0.5
-                          ? 'emerald'
-                          : (endSummary.avg_eye_contact.student || 0) >= 0.3
-                          ? 'amber'
-                          : 'rose'
-                      }
-                    />
-                    <MetricCard
-                      title="Tutor talk share"
-                      value={formatPercent(endSummary.talk_time_ratio.tutor || 0)}
-                      detail={
-                        isTalkBalanced(endSummary)
-                          ? 'Talk balance stayed near the session target.'
-                          : 'Talk balance drifted outside the session target.'
-                      }
-                      tone={
-                        isTalkBalanced(endSummary)
-                          ? 'emerald'
-                          : (endSummary.talk_time_ratio.tutor || 0) >= 0.8
-                          ? 'rose'
-                          : 'amber'
-                      }
-                    />
-                    <MetricCard
-                      title="Interruptions"
-                      value={`${endSummary.total_interruptions}`}
-                      detail={
-                        endSummary.total_interruptions === 0
-                          ? 'No interruptions were flagged.'
-                          : 'Counted across the entire session.'
-                      }
-                      tone={
-                        endSummary.total_interruptions >= 5
-                          ? 'rose'
-                          : endSummary.total_interruptions >= 2
-                          ? 'amber'
-                          : 'emerald'
-                      }
-                    />
-                  </div>
-
-                  <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
-                    <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                      <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
-                        Quick highlights
-                      </p>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {endSummary.flagged_moments.length > 0 ? (
-                          <span className="rounded-full border border-rose-400/30 bg-rose-400/10 px-3 py-1.5 text-sm font-medium text-rose-100">
-                            {endSummary.flagged_moments.length} flagged moment
-                            {endSummary.flagged_moments.length === 1 ? '' : 's'}
-                          </span>
-                        ) : (
-                          <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-sm font-medium text-emerald-100">
-                            No flagged moments surfaced
-                          </span>
-                        )}
-                        {endSummary.nudges_sent > 0 && (
-                          <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-sm font-medium text-amber-100">
-                            {endSummary.nudges_sent} live nudges sent
-                          </span>
-                        )}
-                        {endSummary.turn_counts &&
-                          Object.keys(endSummary.turn_counts).length > 0 && (
-                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-slate-200">
-                              {endSummary.turn_counts.tutor ?? 0} tutor turns ·{' '}
-                              {endSummary.turn_counts.student ?? 0} student turns
-                            </span>
-                          )}
-                      </div>
-                    </div>
-
-                    <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                      <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
-                        First recommendations
-                      </p>
-                      {endSummaryRecommendationsToShow.length > 0 ? (
-                        <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-200">
-                          {endSummaryRecommendationsToShow.map((recommendation, index) => (
-                            <li key={`${recommendation}-${index}`} className="flex gap-3">
-                              <span className="mt-1 text-violet-300">•</span>
-                              <span>{recommendation}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="mt-4 text-sm leading-6 text-slate-400">
-                          No immediate follow-up recommendations were generated for this session.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <button
-                      data-testid="view-analytics-button"
-                      type="button"
-                      onClick={() =>
-                        handleEndedSessionNavigation(`/analytics/${sessionId}`)
-                      }
-                      className="inline-flex items-center justify-center rounded-2xl bg-violet-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-violet-500"
-                    >
-                      View Full Analytics
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleEndedSessionNavigation('/')}
-                      className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-white/10"
-                    >
-                      Back to Dashboard
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {!endSummaryLoading && !endSummary && endSummaryFailed && (
-                <div className="space-y-6 pt-8">
-                  <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                    <p className="text-lg font-medium text-white">
-                      Session ended. Full analytics are still finalizing.
-                    </p>
-                    <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-                      The session report wasn&apos;t available yet, but the detail page will fetch it independently as soon as persistence finishes.
-                    </p>
-                  </div>
-                  <div>
-                    <button
-                      data-testid="view-analytics-button"
-                      type="button"
-                      onClick={() =>
-                        handleEndedSessionNavigation(`/analytics/${sessionId}`)
-                      }
-                      className="inline-flex items-center justify-center rounded-2xl bg-violet-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-violet-500"
-                    >
-                      View Full Analytics
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
           </div>
-        )}
-
-        {/* Errors */}
-        {(mediaError || wsError || peerError || endSessionError) && (
-          <div className="bg-red-900/50 border border-red-700 rounded-lg p-3 text-sm w-full max-w-5xl">
-            {mediaError && <p>Media: {mediaError}</p>}
-            {wsError && <p>Connection: {wsError}</p>}
-            {peerError && <p>WebRTC: {peerError}</p>}
-            {endSessionError && <p>Session: {endSessionError}</p>}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
