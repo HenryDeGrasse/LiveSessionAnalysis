@@ -22,6 +22,7 @@ import {
   formatMinutes,
   formatPercent,
   formatScore,
+  getSessionDisplayTitle,
   getSessionHealth,
   getSessionTypeLabel,
   getTrendLabel,
@@ -529,7 +530,7 @@ export default function AnalyticsPage() {
                               </span>
                             </div>
                             <h3 className="mt-3 text-xl font-semibold text-white">
-                              {session.tutor_id || 'Unassigned tutor'}
+                              {getSessionDisplayTitle(session)}
                             </h3>
                             <p className="mt-1 text-sm text-slate-400">
                               {new Date(session.start_time).toLocaleString()} · {formatMinutes(session.duration_seconds)}

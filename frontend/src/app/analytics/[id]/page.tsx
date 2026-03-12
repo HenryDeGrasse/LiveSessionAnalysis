@@ -29,6 +29,7 @@ import {
   formatMinutes,
   formatPercent,
   formatScore,
+  getSessionDisplayTitle,
   getSessionHealth,
   getSessionTypeLabel,
   getTrendLabel,
@@ -183,6 +184,10 @@ export default function SessionDetailPage() {
   const [studentInsights, setStudentInsights] = useState<StudentInsights | null>(null)
   const [peerSessions, setPeerSessions] = useState<SessionSummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
+  const [titleSaving, setTitleSaving] = useState(false)
+  const [titleError, setTitleError] = useState('')
   const [seriesVisible, setSeriesVisible] = useState<DetailSeriesKey[]>([
     'engagement',
     'studentEye',
@@ -191,6 +196,31 @@ export default function SessionDetailPage() {
 
   const accessToken = authSession?.user?.accessToken
   const isStudentView = isStudentAnalyticsView(authSession?.user?.role)
+
+  const saveSessionTitle = async () => {
+    if (!session || !titleDraft.trim() || titleSaving) return
+
+    setTitleSaving(true)
+    setTitleError('')
+    try {
+      const response = await apiFetch(`/api/analytics/sessions/${session.session_id}`, {
+        method: 'PATCH',
+        accessToken,
+        body: JSON.stringify({ session_title: titleDraft.trim() }),
+      })
+      if (!response.ok) {
+        throw new Error('Failed to update session title')
+      }
+      const updated = (await response.json()) as SessionSummary
+      setSession(updated)
+      setTitleDraft(updated.session_title || '')
+      setEditingTitle(false)
+    } catch (error) {
+      setTitleError(error instanceof Error ? error.message : 'Failed to update session title')
+    } finally {
+      setTitleSaving(false)
+    }
+  }
 
   useEffect(() => {
     // Only fetch when the user is fully authenticated. Guarding against
@@ -237,6 +267,7 @@ export default function SessionDetailPage() {
       .then(([sessionData, recs, insights]) => {
         if (cancelled) return
         setSession(sessionData)
+        setTitleDraft(sessionData?.session_title || '')
         setRecommendations(Array.isArray(recs) ? recs : [])
         setStudentInsights(insights ?? null)
       })
@@ -453,12 +484,64 @@ export default function SessionDetailPage() {
                   {getSessionTypeLabel(session.session_type)}
                 </span>
               </div>
-              <h1
-                data-testid="analytics-detail-title"
-                className="mt-4 text-4xl font-semibold tracking-tight text-white md:text-5xl"
-              >
-                {getAnalyticsDetailTitle(authSession?.user?.role, session.tutor_id)}
-              </h1>
+              <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  {editingTitle ? (
+                    <div className="space-y-2">
+                      <input
+                        value={titleDraft}
+                        onChange={(event) => setTitleDraft(event.target.value)}
+                        className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-2xl font-semibold tracking-tight text-white outline-none focus:border-sky-400 md:text-3xl"
+                        maxLength={120}
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void saveSessionTitle()}
+                          disabled={titleSaving || !titleDraft.trim()}
+                          className="rounded-full border border-sky-400/40 bg-sky-500/15 px-3 py-1 text-xs font-medium text-sky-100 disabled:opacity-50"
+                        >
+                          {titleSaving ? 'Saving…' : 'Save title'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingTitle(false)
+                            setTitleDraft(session.session_title || '')
+                            setTitleError('')
+                          }}
+                          className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-slate-200"
+                        >
+                          Cancel
+                        </button>
+                        {titleError ? <span className="text-xs text-rose-300">{titleError}</span> : null}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <h1
+                        data-testid="analytics-detail-title"
+                        className="text-4xl font-semibold tracking-tight text-white md:text-5xl"
+                      >
+                        {getAnalyticsDetailTitle(authSession?.user?.role, session)}
+                      </h1>
+                      {!isStudentView && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingTitle(true)
+                            setTitleDraft(getSessionDisplayTitle(session))
+                            setTitleError('')
+                          }}
+                          className="mt-3 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+                        >
+                          Rename session
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 md:text-lg">
                 {sessionHealth.summary} This review keeps the live-call UI clean,
                 then concentrates the richer coaching readout here.
@@ -474,7 +557,7 @@ export default function SessionDetailPage() {
                     navigator.clipboard.writeText(session.session_id)
                   }}
                 >
-                  ID: {session.session_id.slice(0, 8)}…
+                  Ref: {session.session_id.slice(0, 8)}…
                   <span className="ml-1 text-[10px] opacity-0 transition-opacity group-hover:opacity-100">
                     copy
                   </span>

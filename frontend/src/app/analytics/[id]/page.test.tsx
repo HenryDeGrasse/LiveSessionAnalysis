@@ -17,6 +17,7 @@ import { apiFetch } from '@/lib/api-client'
 // ---------------------------------------------------------------------------
 const MOCK_SESSION = {
   session_id: 'session-test-001',
+  session_title: 'Algebra review · Jan 1, 10:00 AM',
   tutor_id: 'Alice',
   start_time: '2026-01-01T10:00:00Z',
   end_time: '2026-01-01T10:45:00Z',
@@ -237,14 +238,13 @@ describe('SessionDetailPage — tutor view', () => {
     })
   })
 
-  it('shows the tutor name in the title for a tutor', async () => {
+  it('shows the session title for a tutor', async () => {
     mockUserRole = 'tutor'
     render(<SessionDetailPage />)
 
     await waitFor(() => {
       const title = screen.getByTestId('analytics-detail-title')
-      expect(title).toHaveTextContent('Alice')
-      expect(title).toHaveTextContent('session review')
+      expect(title).toHaveTextContent('Algebra review')
     })
   })
 })
@@ -348,13 +348,13 @@ describe('SessionDetailPage — student view', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('shows "Session summary" in the title for a student', async () => {
+  it('shows the session title in the title for a student', async () => {
     mockUserRole = 'student'
     render(<SessionDetailPage />)
 
     await waitFor(() => {
       const title = screen.getByTestId('analytics-detail-title')
-      expect(title).toHaveTextContent('Session summary')
+      expect(title).toHaveTextContent('Algebra review')
     })
   })
 })

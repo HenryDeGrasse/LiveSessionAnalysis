@@ -96,6 +96,7 @@ def generate_summary(
     tutor_id: str = "",
     student_user_id: str = "",
     session_type: str = "general",
+    session_title: str = "",
     media_provider: MediaProvider = MediaProvider.LIVEKIT,
     nudges: Optional[list[Nudge]] = None,
 ) -> SessionSummary:
@@ -105,6 +106,7 @@ def generate_summary(
         now = datetime.utcnow()
         return SessionSummary(
             session_id=session_id,
+            session_title=session_title,
             tutor_id=tutor_id,
             student_user_id=student_user_id,
             session_type=session_type,
@@ -191,6 +193,7 @@ def generate_summary(
 
     return SessionSummary(
         session_id=session_id,
+        session_title=session_title,
         tutor_id=tutor_id,
         student_user_id=student_user_id,
         session_type=session_type,

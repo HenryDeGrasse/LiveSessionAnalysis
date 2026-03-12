@@ -10,6 +10,7 @@ from .recommendations import generate_recommendations, generate_student_insights
 from .trends import compute_trends
 from ..auth.dependencies import get_optional_user
 from ..auth.models import User
+from ..models import SessionTitleUpdateRequest
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,34 @@ async def get_session(
         data["student_insights"] = generate_student_insights(summary)
 
     return data
+
+
+@router.patch("/sessions/{session_id}")
+async def update_session(
+    session_id: str,
+    body: SessionTitleUpdateRequest,
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    if current_user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required to update session details",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    summary = _session_store().load(session_id)
+    if summary is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if not summary.is_owner(current_user.id):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    new_title = body.session_title.strip()
+    if not new_title:
+        raise HTTPException(status_code=422, detail="session_title cannot be empty")
+
+    summary.session_title = new_title
+    _session_store().save(summary)
+    return summary.model_dump()
 
 
 @router.get("/sessions/{session_id}/recommendations")

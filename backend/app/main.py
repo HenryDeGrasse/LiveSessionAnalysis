@@ -19,7 +19,13 @@ from .livekit import (
     livekit_analytics_worker_enabled,
     verify_livekit_webhook,
 )
-from .models import MediaProvider, Role, SessionCreateRequest, SessionCreateResponse
+from .models import (
+    MediaProvider,
+    Role,
+    SessionCreateRequest,
+    SessionCreateResponse,
+    SessionTitleUpdateRequest,
+)
 from .session_manager import SessionRoom
 from .session_manager import session_manager
 from .ws import router as ws_router
@@ -188,6 +194,7 @@ async def create_session(
         tutor_id = body.tutor_id if body else ""
         student_user_id = ""
     session_type = body.session_type if body else "general"
+    session_title = body.session_title if body else ""
     media_provider = body.media_provider if body and body.media_provider else default_media_provider()
     coaching_intensity = body.coaching_intensity.value if body and body.coaching_intensity else "normal"
     max_students = body.max_students if body else 1
@@ -197,6 +204,7 @@ async def create_session(
         tutor_id=tutor_id,
         student_user_id=student_user_id,
         session_type=session_type,
+        session_title=session_title,
         media_provider=media_provider,
         coaching_intensity=coaching_intensity,
         max_students=max_students,
@@ -211,6 +219,7 @@ async def session_info(session_id: str, token: str = ""):
     resolved_role = room.get_role_for_token(token) if token else None
     return {
         "session_id": room.session_id,
+        "session_title": room.session_title,
         "tutor_connected": room.participants[Role.TUTOR].connected,
         "student_connected": any(
             participant.connected for _idx, participant in room.all_student_participants()
@@ -240,6 +249,35 @@ async def session_info(session_id: str, token: str = ""):
             "worker_last_error": room.livekit_worker_last_error,
         },
     }
+
+
+@app.patch("/api/sessions/{session_id}/title")
+async def update_live_session_title(
+    session_id: str,
+    body: SessionTitleUpdateRequest,
+    token: str = "",
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    room = session_manager.get_session(session_id)
+    if room is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    authorized = False
+    if token:
+        resolved_role = room.get_role_for_token(token)
+        authorized = resolved_role == Role.TUTOR
+    elif current_user is not None:
+        authorized = room.tutor_id == current_user.id
+
+    if not authorized:
+        raise HTTPException(status_code=403, detail="Only the tutor can rename this session")
+
+    new_title = body.session_title.strip()
+    if not new_title:
+        raise HTTPException(status_code=422, detail="session_title cannot be empty")
+
+    room.session_title = new_title
+    return {"session_id": room.session_id, "session_title": room.session_title}
 
 
 @app.post("/api/sessions/{session_id}/livekit-token")

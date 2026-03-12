@@ -5,7 +5,9 @@
  * should see tutor-only coaching content (nudges, recommendations, rubric) or
  * the simplified student-facing engagement summary.
  */
+import type { SessionSummary } from './types'
 import type { UserRole } from './auth-types'
+import { getSessionDisplayTitle } from './analytics'
 
 /**
  * Returns true when the viewer is a student.
@@ -36,12 +38,13 @@ export function getAnalyticsPortfolioDescription(role: UserRole | undefined | nu
 
 /**
  * Returns the analytics detail page title based on the viewer's role.
- * Tutors see "{tutor_id} · session review"; students see "Session summary".
+ * Students see a neutral summary title; tutors see the editable session title.
  */
 export function getAnalyticsDetailTitle(
   role: UserRole | undefined | null,
-  tutorId: string | undefined
+  session: Pick<SessionSummary, 'session_title' | 'session_type' | 'start_time'>
 ): string {
-  if (role === 'student') return 'Session summary'
-  return `${tutorId || 'Unassigned tutor'} · session review`
+  const title = getSessionDisplayTitle(session)
+  if (role === 'student') return title
+  return title
 }

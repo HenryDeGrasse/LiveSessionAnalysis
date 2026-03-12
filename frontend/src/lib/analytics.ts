@@ -103,6 +103,18 @@ export function getSessionTypeLabel(sessionType: string) {
   return SESSION_TYPE_LABELS[sessionType] || sessionType || 'General tutoring'
 }
 
+export function getSessionDisplayTitle(session: Pick<SessionSummary, 'session_title' | 'session_type' | 'start_time'>) {
+  if (session.session_title && session.session_title.trim().length > 0) {
+    return session.session_title.trim()
+  }
+  return `${getSessionTypeLabel(session.session_type)} · ${new Date(session.start_time).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })}`
+}
+
 export function formatPercent(value: number, digits = 0) {
   return `${(value * 100).toFixed(digits)}%`
 }
@@ -388,12 +400,7 @@ export function deriveActionQueue(sessions: SessionSummary[]): ActionItem[] {
       const health = getSessionHealth(session)
       return {
         sessionId: session.session_id,
-        title:
-          health.label === 'Needs review'
-            ? 'Escalate for coach review'
-            : health.label === 'Watchlist'
-            ? 'Review before next session'
-            : 'Healthy session',
+        title: getSessionDisplayTitle(session),
         description:
           signals[0]
             ? `${getSessionTypeLabel(session.session_type)} · ${signals[0]}.`

@@ -76,33 +76,31 @@ describe('getAnalyticsPortfolioDescription', () => {
 })
 
 describe('getAnalyticsDetailTitle', () => {
-  it('returns "Session summary" for student role', () => {
-    expect(getAnalyticsDetailTitle('student', 'Alice')).toBe('Session summary')
+  const session = {
+    session_title: 'Algebra review · Jan 1, 10:00 AM',
+    session_type: 'general',
+    start_time: '2026-01-01T10:00:00Z',
+  }
+
+  it('returns the session title for student role', () => {
+    expect(getAnalyticsDetailTitle('student', session)).toBe(session.session_title)
   })
 
-  it('returns tutor name + review for tutor role', () => {
-    expect(getAnalyticsDetailTitle('tutor', 'Alice')).toBe('Alice · session review')
+  it('returns the session title for tutor role', () => {
+    expect(getAnalyticsDetailTitle('tutor', session)).toBe(session.session_title)
   })
 
-  it('returns fallback when tutor_id is empty for tutor role', () => {
-    expect(getAnalyticsDetailTitle('tutor', '')).toBe('Unassigned tutor · session review')
-  })
-
-  it('returns fallback when tutor_id is undefined for tutor role', () => {
-    expect(getAnalyticsDetailTitle('tutor', undefined)).toBe(
-      'Unassigned tutor · session review'
-    )
-  })
-
-  it('ignores tutor_id for student role', () => {
-    expect(getAnalyticsDetailTitle('student', 'Any Tutor')).toBe('Session summary')
-    expect(getAnalyticsDetailTitle('student', '')).toBe('Session summary')
-    expect(getAnalyticsDetailTitle('student', undefined)).toBe('Session summary')
+  it('falls back to generated title when session_title is empty', () => {
+    const title = getAnalyticsDetailTitle('tutor', {
+      session_title: '',
+      session_type: 'practice',
+      start_time: '2026-01-01T10:00:00Z',
+    })
+    expect(title).toContain('Practice')
   })
 
   it('returns tutor view for undefined role (default)', () => {
-    const title = getAnalyticsDetailTitle(undefined, 'Bob')
-    expect(title).toContain('Bob')
-    expect(title).not.toBe('Session summary')
+    const title = getAnalyticsDetailTitle(undefined, session)
+    expect(title).toContain('Algebra review')
   })
 })

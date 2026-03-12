@@ -20,6 +20,22 @@ from .models import (
 )
 
 
+_SESSION_TYPE_TITLE_PREFIXES = {
+    "general": "General tutoring",
+    "lecture": "Lecture session",
+    "practice": "Practice session",
+    "discussion": "Discussion session",
+    "socratic": "Socratic session",
+}
+
+
+def generate_session_title(session_type: str, created_at_ts: float | None = None) -> str:
+    created_at = datetime.fromtimestamp(created_at_ts or time.time())
+    prefix = _SESSION_TYPE_TITLE_PREFIXES.get(session_type, "Tutoring session")
+    stamp = created_at.strftime("%b %d, %I:%M %p").replace(" 0", " ")
+    return f"{prefix} · {stamp}"
+
+
 @dataclass
 class ParticipantState:
     role: Role
@@ -59,6 +75,7 @@ class SessionRoom:
     tutor_id: str = ""
     student_user_id: str = ""  # Authenticated student user ID (set via first-message auth)
     session_type: str = "general"
+    session_title: str = ""
     coaching_intensity: str = "normal"
     max_students: int = 1
     media_provider: MediaProvider = MediaProvider.CUSTOM_WEBRTC
@@ -104,6 +121,9 @@ class SessionRoom:
     debug_mode: bool = False
 
     def __post_init__(self):
+        if not self.session_title.strip():
+            self.session_title = generate_session_title(self.session_type, self.created_at)
+
         self.participants[Role.TUTOR] = ParticipantState(role=Role.TUTOR)
         self.participants[Role.STUDENT] = ParticipantState(role=Role.STUDENT)
 
@@ -317,6 +337,7 @@ class SessionManager:
         tutor_id: str = "",
         student_user_id: str = "",
         session_type: str = "general",
+        session_title: str = "",
         media_provider: MediaProvider | None = None,
         coaching_intensity: str = "normal",
         max_students: int = 1,
@@ -337,6 +358,7 @@ class SessionManager:
             tutor_id=tutor_id,
             student_user_id=student_user_id,
             session_type=session_type,
+            session_title=session_title,
             coaching_intensity=coaching_intensity,
             max_students=max(1, max_students),
             media_provider=media_provider,
@@ -346,6 +368,7 @@ class SessionManager:
 
         return SessionCreateResponse(
             session_id=session_id,
+            session_title=room.session_title,
             tutor_token=tutor_token,
             # Expose the full list (generated in __post_init__); index 0 ==
             # the primary student_token that was passed in.
