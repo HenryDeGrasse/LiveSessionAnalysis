@@ -1643,7 +1643,7 @@ export default function SessionPage() {
 
       {/* ── Local video PIP (bottom-right, above bottom control bar) ── */}
       {ENABLE_WEBRTC_CALL_UI && (
-        <div data-testid="local-video-pip" className="absolute bottom-24 right-4 z-10 w-60 overflow-hidden rounded-2xl border border-white/15 bg-black/80 shadow-lg sm:w-80">
+        <div data-testid="local-video-pip" className="absolute bottom-24 right-4 z-10 w-[360px] overflow-hidden rounded-2xl border border-white/15 bg-black/80 shadow-lg sm:w-[480px]">
           <video
             data-testid="local-video"
             ref={videoRef}
