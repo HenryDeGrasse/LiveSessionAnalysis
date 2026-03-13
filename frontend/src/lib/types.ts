@@ -149,6 +149,8 @@ export interface SessionInfo {
   analytics_ingest_mode?: 'browser_upload' | 'livekit_worker'
   livekit_room_name?: string | null
   coaching_intensity?: string
+  /** Student invite tokens — only present when the caller is the tutor. */
+  student_tokens?: string[]
 }
 
 export interface FlaggedMoment {

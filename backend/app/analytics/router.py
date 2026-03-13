@@ -209,6 +209,34 @@ async def get_student_insights(
     return generate_student_insights(summary)
 
 
+@router.delete("/sessions/{session_id}", status_code=204)
+async def delete_session(
+    session_id: str,
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    """Delete a session.
+
+    Only the session owner (tutor or student) can delete it.
+    Returns 204 No Content on success.
+    """
+    if current_user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required to delete a session",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    summary = _session_store().load(session_id)
+    if summary is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if not summary.is_owner(current_user.id):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    _session_store().delete(session_id)
+    return None
+
+
 @router.get("/trends")
 async def get_trends(
     tutor_id: str = "",

@@ -248,6 +248,11 @@ async def session_info(session_id: str, token: str = ""):
             "worker_connected": room.livekit_worker_connected_at is not None,
             "worker_last_error": room.livekit_worker_last_error,
         },
+        **(
+            {"student_tokens": room.student_tokens}
+            if resolved_role == Role.TUTOR
+            else {}
+        ),
     }
 
 

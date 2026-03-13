@@ -93,6 +93,20 @@ class TestSessionCreation:
         assert info["role"] == "tutor"
         assert info["media_provider"] == "livekit"
         assert info["livekit_room_name"] is not None
+        assert info["student_tokens"] == data["student_tokens"]
+
+    def test_session_info_hides_student_tokens_from_student(self):
+        client = TestClient(app)
+        resp = client.post("/api/sessions")
+        data = resp.json()
+
+        info_resp = client.get(
+            f"/api/sessions/{data['session_id']}/info?token={data['student_token']}"
+        )
+        assert info_resp.status_code == 200
+        info = info_resp.json()
+        assert info["role"] == "student"
+        assert "student_tokens" not in info
 
     def test_end_session_with_valid_token(self):
         client = TestClient(app)

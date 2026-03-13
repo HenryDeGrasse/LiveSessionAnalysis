@@ -286,6 +286,70 @@ class TestStudentInsightsEndpoint:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# DELETE /sessions/{id}
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestDeleteSessionEndpoint:
+    def teardown_method(self):
+        app.dependency_overrides.clear()
+
+    def _store_with_summary(self, tmpdir, summary: SessionSummary):
+        from app.analytics.session_store import SessionStore
+
+        store = SessionStore(data_dir=tmpdir)
+        store.save(summary)
+        return store
+
+    def test_owner_can_delete_session(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            summary = _make_summary("s1", tutor_id="tutor-001")
+            store = self._store_with_summary(tmpdir, summary)
+            tutor = _make_user("tutor-001", role="tutor")
+
+            with _override_user(tutor), patch("app.analytics.router.store", store):
+                client = TestClient(app)
+                resp = client.delete("/api/analytics/sessions/s1")
+            assert resp.status_code == 204
+            assert store.load("s1") is None
+
+    def test_non_owner_gets_403(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            summary = _make_summary("s1", tutor_id="tutor-001")
+            store = self._store_with_summary(tmpdir, summary)
+            other_user = _make_user("tutor-999", role="tutor")
+
+            with _override_user(other_user), patch("app.analytics.router.store", store):
+                client = TestClient(app)
+                resp = client.delete("/api/analytics/sessions/s1")
+            assert resp.status_code == 403
+            assert store.load("s1") is not None
+
+    def test_unauthenticated_delete_returns_401(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            summary = _make_summary("s1", tutor_id="tutor-001")
+            store = self._store_with_summary(tmpdir, summary)
+
+            with _override_user(None), patch("app.analytics.router.store", store):
+                client = TestClient(app)
+                resp = client.delete("/api/analytics/sessions/s1")
+            assert resp.status_code == 401
+            assert store.load("s1") is not None
+
+    def test_delete_missing_session_returns_404(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            from app.analytics.session_store import SessionStore
+
+            store = SessionStore(data_dir=tmpdir)
+            tutor = _make_user("tutor-001", role="tutor")
+
+            with _override_user(tutor), patch("app.analytics.router.store", store):
+                client = TestClient(app)
+                resp = client.delete("/api/analytics/sessions/missing")
+            assert resp.status_code == 404
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # GET /sessions/{id} enrichment for student viewers
 # ─────────────────────────────────────────────────────────────────────────────
 

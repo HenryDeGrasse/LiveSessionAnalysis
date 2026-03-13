@@ -5,6 +5,7 @@ Covers:
 - Analytics list filtering by authenticated tutor user
 - Analytics list filtering by authenticated student user
 - Session detail returns 403 for authenticated user who doesn't own the session
+- Session deletion enforces ownership and removes the stored record
 - Recommendations returns 403 for non-owner
 - Trends auto-scopes to authenticated user
 - Backward compat: unauthenticated session creation still works
@@ -416,6 +417,71 @@ class TestAnalyticsDetailAuth:
 # ─────────────────────────────────────────────────────────────────────────────
 # GET /api/analytics/sessions/{id}/recommendations — ownership check
 # ─────────────────────────────────────────────────────────────────────────────
+
+class TestAnalyticsDeleteAuth:
+    def teardown_method(self):
+        app.dependency_overrides.clear()
+
+    def test_tutor_owner_can_delete(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = SessionStore(data_dir=tmpdir)
+            store.save(_make_summary("s1", tutor_id="tutor-001"))
+
+            tutor = _make_user("tutor-001", role="tutor")
+
+            with _override_user(tutor), patch("app.analytics.router.store", store):
+                client = TestClient(app)
+                resp = client.delete("/api/analytics/sessions/s1")
+            assert resp.status_code == 204
+            assert store.load("s1") is None
+
+    def test_student_owner_can_delete(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = SessionStore(data_dir=tmpdir)
+            store.save(_make_summary("s1", student_user_id="student-010"))
+
+            student = _make_user("student-010", role="student")
+
+            with _override_user(student), patch("app.analytics.router.store", store):
+                client = TestClient(app)
+                resp = client.delete("/api/analytics/sessions/s1")
+            assert resp.status_code == 204
+            assert store.load("s1") is None
+
+    def test_non_owner_gets_403_for_delete(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = SessionStore(data_dir=tmpdir)
+            store.save(_make_summary("s1", tutor_id="tutor-001"))
+
+            other = _make_user("stranger-999", role="tutor")
+
+            with _override_user(other), patch("app.analytics.router.store", store):
+                client = TestClient(app)
+                resp = client.delete("/api/analytics/sessions/s1")
+            assert resp.status_code == 403
+            assert store.load("s1") is not None
+
+    def test_unauthenticated_is_rejected_for_delete(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = SessionStore(data_dir=tmpdir)
+            store.save(_make_summary("s1", tutor_id="legacy-tutor"))
+
+            with _override_user(None), patch("app.analytics.router.store", store):
+                client = TestClient(app)
+                resp = client.delete("/api/analytics/sessions/s1")
+            assert resp.status_code == 401
+            assert store.load("s1") is not None
+
+    def test_missing_session_returns_404_for_delete(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = SessionStore(data_dir=tmpdir)
+            tutor = _make_user("tutor-001", role="tutor")
+
+            with _override_user(tutor), patch("app.analytics.router.store", store):
+                client = TestClient(app)
+                resp = client.delete("/api/analytics/sessions/does-not-exist")
+            assert resp.status_code == 404
+
 
 class TestRecommendationsAuth:
     def teardown_method(self):

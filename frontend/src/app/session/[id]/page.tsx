@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { signIn, useSession } from 'next-auth/react'
+import { toast } from 'sonner'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import { useMediaStream } from '@/hooks/useMediaStream'
 import { useMetrics } from '@/hooks/useMetrics'
@@ -275,6 +276,28 @@ function compareParticipantIdentity(a: RemoteParticipant, b: RemoteParticipant):
   return a.identity.localeCompare(b.identity)
 }
 
+function formatElapsed(totalSeconds: number): string {
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = totalSeconds % 60
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  }
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+async function copyToClipboard(text: string) {
+  if (!navigator.clipboard?.writeText) {
+    throw new Error('Clipboard API unavailable')
+  }
+
+  await navigator.clipboard.writeText(text)
+}
+
+function buildStudentInviteUrl(sessionId: string, studentToken: string) {
+  return `${window.location.origin}/session/${encodeURIComponent(sessionId)}?token=${encodeURIComponent(studentToken)}`
+}
+
 /** Renders a single participant video tile for the multi-participant grid. */
 function ParticipantTile({ participant }: { participant: RemoteParticipant }) {
   const tileVideoRef = useRef<HTMLVideoElement>(null)
@@ -324,6 +347,10 @@ export default function SessionPage() {
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null)
   const [sessionInfoLoaded, setSessionInfoLoaded] = useState(false)
   const [showConsent, setShowConsent] = useState(true)
+  const [previewStream, setPreviewStream] = useState<MediaStream | null>(null)
+  const [previewError, setPreviewError] = useState<string | null>(null)
+  const previewVideoRef = useRef<HTMLVideoElement>(null)
+  const previewStreamRef = useRef<MediaStream | null>(null)
   const [sessionEnded, setSessionEnded] = useState(false)
   const [peerDisconnected, setPeerDisconnected] = useState(false)
   const [endingSession, setEndingSession] = useState(false)
@@ -337,6 +364,10 @@ export default function SessionPage() {
   const [showCoachDebug, setShowCoachDebug] = useState(
     searchParams.get('debug') === '1'
   )
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [showInviteMenu, setShowInviteMenu] = useState(false)
+  const inviteMenuRef = useRef<HTMLDivElement>(null)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
@@ -394,10 +425,12 @@ export default function SessionPage() {
     nudges,
     nudgeHistory,
     nudgesEnabled,
+    nudgeSoundEnabled,
     handleNudge,
     dismissNudge,
     disableAllNudges,
     enableAllNudges,
+    toggleNudgeSound,
   } = useNudges()
   const isTutorRole = role === 'tutor' || currentMetrics !== null
 
@@ -922,6 +955,24 @@ export default function SessionPage() {
     }
   }, [stream])
 
+  useEffect(() => {
+    previewStreamRef.current = previewStream
+  }, [previewStream])
+
+  // Attach preview stream to preview video element
+  useEffect(() => {
+    if (!previewVideoRef.current) return
+    previewVideoRef.current.srcObject = previewStream
+    if (previewStream) {
+      void previewVideoRef.current.play().catch(() => {
+        // ignore autoplay policy errors
+      })
+      return
+    }
+
+    previewVideoRef.current.srcObject = null
+  }, [previewStream])
+
   // Send video frames at adaptive FPS (adjusted by backend target_fps)
   useEffect(() => {
     if (
@@ -1133,6 +1184,35 @@ export default function SessionPage() {
   ).slice(0, 2)
   const showTutorEndSummaryOverlay = sessionEnded && isTutor && showEndSummary
 
+  const stopPreviewTracks = useCallback((streamToStop: MediaStream | null) => {
+    streamToStop?.getTracks().forEach((track) => track.stop())
+  }, [])
+
+  const startCameraPreview = useCallback(async () => {
+    // Stop any existing preview before requesting a new one.
+    stopPreviewTracks(previewStreamRef.current)
+    previewStreamRef.current = null
+    setPreviewStream(null)
+    setPreviewError(null)
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 320 }, height: { ideal: 240 } },
+        audio: false,
+      })
+      setPreviewStream(stream)
+    } catch {
+      setPreviewError('Could not access camera. Please check your permissions.')
+    }
+  }, [stopPreviewTracks])
+
+  const stopCameraPreview = useCallback(() => {
+    stopPreviewTracks(previewStreamRef.current)
+    previewStreamRef.current = null
+    setPreviewStream(null)
+    setPreviewError(null)
+  }, [stopPreviewTracks])
+
   const handleEndSession = useCallback(async () => {
     if (!sessionId || !token || endingSession || sessionEnded) return
     if (!window.confirm('End this session for everyone?')) return
@@ -1197,6 +1277,46 @@ export default function SessionPage() {
     stopStream,
   ])
 
+  // ── Camera preview stream: stop tracks on unmount ──
+  useEffect(() => {
+    return () => {
+      stopPreviewTracks(previewStreamRef.current)
+      previewStreamRef.current = null
+    }
+  }, [stopPreviewTracks])
+
+  // ── Close invite menu when clicking outside ──
+  useEffect(() => {
+    if (!showInviteMenu) return
+    const handleClick = (e: MouseEvent) => {
+      if (inviteMenuRef.current && !inviteMenuRef.current.contains(e.target as Node)) {
+        setShowInviteMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showInviteMenu])
+
+  // ── Session elapsed time counter ──
+  useEffect(() => {
+    if (sessionStartTime === null) {
+      setElapsedSeconds(0)
+      return
+    }
+
+    // Freeze the timer once the session has ended.
+    if (sessionEnded) {
+      return
+    }
+
+    // Reset on each new session start
+    setElapsedSeconds(Math.floor((Date.now() - sessionStartTime) / 1000))
+    const id = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - sessionStartTime) / 1000))
+    }, 1000)
+    return () => clearInterval(id)
+  }, [sessionEnded, sessionStartTime])
+
   // ── Fullscreen UI: auto-hide controls after inactivity ──
   const [controlsVisible, setControlsVisible] = useState(true)
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -1253,6 +1373,24 @@ export default function SessionPage() {
     appendDebugEvent,
     showControlsTemporarily,
   ])
+
+  // ── beforeunload guard: warn before closing/navigating away mid-session ──
+  // Only active when the session is live (not on consent screen, not ended).
+  // Removed automatically once the session ends so analytics navigation isn't blocked.
+  useEffect(() => {
+    if (showConsent || sessionEnded) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      // Setting returnValue is required by some browsers to trigger the dialog
+      e.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [showConsent, sessionEnded])
 
   if (showConsent) {
     return (
@@ -1367,6 +1505,46 @@ export default function SessionPage() {
                   </p>
                 </div>
 
+                {/* Camera preview — only shown before joining (not for ended sessions) */}
+                {!sessionEnded && (
+                  <div className="space-y-2">
+                    {previewStream ? (
+                      <div className="relative overflow-hidden rounded-2xl bg-black">
+                        <video
+                          data-testid="camera-preview-video"
+                          ref={previewVideoRef}
+                          autoPlay
+                          muted
+                          playsInline
+                          className="h-[150px] w-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={stopCameraPreview}
+                          className="absolute right-2 top-2 rounded-full border border-white/15 bg-black/60 px-2 py-1 text-[10px] font-medium text-white/80 backdrop-blur-md transition-colors hover:text-white"
+                        >
+                          Stop preview
+                        </button>
+                        <div className="absolute bottom-2 left-2 rounded-full border border-white/15 bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-md">
+                          Preview
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        data-testid="camera-preview-button"
+                        type="button"
+                        onClick={() => void startCameraPreview()}
+                        className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-200 transition-colors hover:bg-white/10 hover:text-white"
+                      >
+                        Preview camera
+                      </button>
+                    )}
+                    {previewError && (
+                      <p className="text-xs text-red-400">{previewError}</p>
+                    )}
+                  </div>
+                )}
+
                 <button
                   data-testid="consent-start-button"
                   onClick={() => {
@@ -1374,7 +1552,10 @@ export default function SessionPage() {
                       handleLeaveSession()
                       return
                     }
+                    // Stop the preview stream before requesting the real stream
+                    stopCameraPreview()
                     setShowConsent(false)
+                    setSessionStartTime(Date.now())
                     requestAccess()
                   }}
                   className="w-full rounded-2xl bg-[#0066FF] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#3385FF]"
@@ -1461,9 +1642,41 @@ export default function SessionPage() {
 
       <canvas ref={canvasRef} className="hidden" />
 
+      {/* ── Persistent ended-session navigation bar (always visible when session is over) ── */}
+      {sessionEnded && (
+        <div
+          data-testid="ended-session-nav-bar"
+          className="pointer-events-auto absolute left-0 right-0 top-0 z-30 flex min-h-10 items-center justify-between gap-3 bg-black/80 px-4 py-2 backdrop-blur-md"
+        >
+          <span className="whitespace-nowrap text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
+            Session ended
+          </span>
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <button
+              data-testid="ended-nav-view-analytics"
+              type="button"
+              onClick={() => handleEndedSessionNavigation(`/analytics/${sessionId}`)}
+              className="whitespace-nowrap rounded-full bg-violet-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-500"
+            >
+              View Analytics
+            </button>
+            <button
+              data-testid="ended-nav-dashboard"
+              type="button"
+              onClick={() => handleEndedSessionNavigation('/')}
+              className="whitespace-nowrap rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Top bar overlay (auto-hide after 4s inactivity) ── */}
       <div
-        className={`pointer-events-none absolute left-0 right-0 top-0 z-20 transition-opacity duration-500 ${
+        className={`pointer-events-none absolute left-0 right-0 z-20 transition-opacity duration-500 ${
+          sessionEnded ? 'top-10' : 'top-0'
+        } ${
           controlsVisible ? 'pointer-events-auto opacity-100' : 'opacity-0'
         }`}
       >
@@ -1494,6 +1707,15 @@ export default function SessionPage() {
             >
               {sessionId.slice(0, 8)}…
             </button>
+            {sessionStartTime !== null && !sessionEnded && (
+              <div
+                data-testid="session-elapsed-timer"
+                className="rounded-full border border-white/10 bg-black/40 px-3 py-1 font-mono text-[11px] tabular-nums text-slate-300 backdrop-blur-md"
+                aria-label={`Elapsed time: ${formatElapsed(elapsedSeconds)}`}
+              >
+                {formatElapsed(elapsedSeconds)}
+              </div>
+            )}
             <div
               data-testid="call-status-badge"
               className={`rounded-full border px-3 py-1 text-[11px] font-medium backdrop-blur-md ${callStatusClasses(callStatus)}`}
@@ -1506,7 +1728,7 @@ export default function SessionPage() {
               </div>
             )}
           </div>
-          {/* Right: latency info + debug toggle */}
+          {/* Right: latency info + invite button + debug toggle */}
           <div className="flex items-center gap-2">
             {showCoachDebug && currentMetrics && (
               <span className="text-xs text-gray-400">
@@ -1518,6 +1740,107 @@ export default function SessionPage() {
                   </span>
                 )}
               </span>
+            )}
+            {/* Invite student button — tutor only, only while session is live */}
+            {isTutor && !sessionEnded && sessionInfo?.student_tokens && sessionInfo.student_tokens.length > 0 && (
+              <div ref={inviteMenuRef} className="relative">
+                {sessionInfo.student_tokens.length === 1 ? (
+                  <button
+                    data-testid="invite-student-button"
+                    type="button"
+                    onClick={() => {
+                      const url = buildStudentInviteUrl(
+                        sessionId,
+                        sessionInfo.student_tokens![0]
+                      )
+                      copyToClipboard(url)
+                        .then(() => toast.success('Student invite link copied!'))
+                        .catch(() => toast.error('Failed to copy link'))
+                    }}
+                    className="flex items-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-3 py-1 text-xs font-medium text-gray-200 backdrop-blur-md transition-colors hover:bg-black/60 hover:text-white"
+                    title="Copy student invite link"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="h-3.5 w-3.5"
+                      aria-hidden="true"
+                    >
+                      <path d="M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Z" />
+                      <path d="M11.603 7.963a.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865Z" />
+                    </svg>
+                    Invite student
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      data-testid="invite-student-button"
+                      type="button"
+                      onClick={() => setShowInviteMenu((prev) => !prev)}
+                      className="flex items-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-3 py-1 text-xs font-medium text-gray-200 backdrop-blur-md transition-colors hover:bg-black/60 hover:text-white"
+                      title="Copy a student invite link"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        className="h-3.5 w-3.5"
+                        aria-hidden="true"
+                      >
+                        <path d="M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Z" />
+                        <path d="M11.603 7.963a.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865Z" />
+                      </svg>
+                      Invite student
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        className="h-3 w-3"
+                        aria-hidden="true"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                    {showInviteMenu && (
+                      <div className="absolute right-0 top-full mt-1 min-w-[160px] rounded-xl border border-white/15 bg-black/85 py-1 shadow-lg backdrop-blur-md">
+                        {sessionInfo.student_tokens.map((studentToken, idx) => (
+                          <button
+                            key={studentToken}
+                            type="button"
+                            onClick={() => {
+                              const url = buildStudentInviteUrl(sessionId, studentToken)
+                              copyToClipboard(url)
+                                .then(() => {
+                                  toast.success(`Student ${idx + 1} invite link copied!`)
+                                  setShowInviteMenu(false)
+                                })
+                                .catch(() => toast.error('Failed to copy link'))
+                            }}
+                            className="flex w-full items-center gap-2 px-4 py-2 text-xs text-gray-200 transition-colors hover:bg-white/10 hover:text-white"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                              className="h-3.5 w-3.5 flex-shrink-0 text-gray-400"
+                              aria-hidden="true"
+                            >
+                              <path d="M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Z" />
+                              <path d="M11.603 7.963a.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865Z" />
+                            </svg>
+                            Copy Student {idx + 1} link
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             )}
             {canShowDebugToggle && (
               <button
@@ -1807,6 +2130,14 @@ export default function SessionPage() {
                 </button>
                 <button
                   type="button"
+                  onClick={toggleNudgeSound}
+                  title={nudgeSoundEnabled ? 'Mute nudge chime' : 'Unmute nudge chime'}
+                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
+                >
+                  {nudgeSoundEnabled ? '🔔 Sound on' : '🔕 Sound off'}
+                </button>
+                <button
+                  type="button"
                   onClick={disableAllNudges}
                   className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
                 >
@@ -1854,6 +2185,13 @@ export default function SessionPage() {
               )}
               <button
                 type="button"
+                onClick={toggleNudgeSound}
+                className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white transition-colors hover:bg-white/10"
+              >
+                {nudgeSoundEnabled ? 'Mute chime' : 'Unmute chime'}
+              </button>
+              <button
+                type="button"
                 onClick={() => setShowCoachDebug(false)}
                 className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white transition-colors hover:bg-white/10"
               >
@@ -1873,6 +2211,7 @@ export default function SessionPage() {
                 <p>Camera enabled: {isVideoEnabled ? 'yes' : 'no'}</p>
                 <p>Session ended: {sessionEnded ? 'yes' : 'no'}</p>
                 <p>Live nudges enabled: {nudgesEnabled ? 'yes' : 'no'}</p>
+                <p>Nudge chime enabled: {nudgeSoundEnabled ? 'yes' : 'no'}</p>
                 <p data-testid="debug-media-provider">Media provider: {mediaProvider}</p>
                 <p data-testid="debug-analytics-ingest-mode">Analytics ingest: {analyticsIngestMode}</p>
                 <p data-testid="debug-webrtc-enabled">WebRTC enabled: {ENABLE_WEBRTC_CALL_UI ? 'yes' : 'no'}</p>

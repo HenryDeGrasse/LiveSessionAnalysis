@@ -20,6 +20,28 @@ def test_get_session():
     assert room.session_id == resp.session_id
 
 
+def test_create_session_uses_explicit_title_when_provided():
+    mgr = SessionManager()
+    resp = mgr.create_session(session_type="practice", session_title="Midterm prep")
+    room = mgr.get_session(resp.session_id)
+
+    assert room is not None
+    assert resp.session_title == "Midterm prep"
+    assert room.session_title == "Midterm prep"
+
+
+def test_create_session_falls_back_to_generated_title_for_blank_input():
+    mgr = SessionManager()
+    resp = mgr.create_session(session_type="practice", session_title="   ")
+    room = mgr.get_session(resp.session_id)
+
+    assert room is not None
+    assert resp.session_title == room.session_title
+    assert resp.session_title.strip()
+    assert resp.session_title != "   "
+    assert "Practice" in resp.session_title
+
+
 def test_get_nonexistent_session():
     mgr = SessionManager()
     assert mgr.get_session("nonexistent") is None

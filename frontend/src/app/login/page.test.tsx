@@ -73,10 +73,12 @@ beforeEach(() => {
   mockPush.mockClear()
   mockRefresh.mockClear()
   vi.stubGlobal('fetch', mockFetch)
+  vi.useFakeTimers()
   mockSignIn.mockResolvedValue({ ok: true, error: null, status: 200, url: '/' })
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   cleanup()
   vi.restoreAllMocks()
 })
@@ -167,6 +169,11 @@ describe('LoginPage', () => {
 
     await act(async () => {
       fireEvent.click(screen.getByTestId('email-signin-button'))
+    })
+
+    // The login page uses a short success-state delay before redirecting.
+    await act(async () => {
+      vi.runAllTimers()
     })
 
     expect(mockPush).toHaveBeenCalledWith('/')
