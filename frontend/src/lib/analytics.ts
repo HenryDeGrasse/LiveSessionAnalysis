@@ -43,10 +43,10 @@ export interface ComparisonDelta {
 }
 
 const SESSION_TYPE_LABELS: Record<string, string> = {
-  general: 'General tutoring',
-  lecture: 'Lecture / explanation',
-  practice: 'Practice / problem solving',
-  discussion: 'Discussion / Socratic',
+  general: 'General',
+  lecture: 'Lecture',
+  practice: 'Practice',
+  discussion: 'Discussion',
 }
 
 const TALK_TARGETS: Record<string, number> = {
@@ -100,7 +100,7 @@ export function average(values: number[]) {
 }
 
 export function getSessionTypeLabel(sessionType: string) {
-  return SESSION_TYPE_LABELS[sessionType] || sessionType || 'General tutoring'
+  return SESSION_TYPE_LABELS[sessionType] || sessionType || 'General'
 }
 
 export function getSessionDisplayTitle(session: Pick<SessionSummary, 'session_title' | 'session_type' | 'start_time'>) {

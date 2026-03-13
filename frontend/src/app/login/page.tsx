@@ -4,13 +4,13 @@ import Image from 'next/image'
 import { signIn } from 'next-auth/react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { API_URL } from '@/lib/constants'
 
 const PANEL_CLASSES =
   'rounded-[28px] border border-white/10 bg-white/5 shadow-[0_24px_80px_rgba(2,6,23,0.28)] backdrop-blur'
 const INPUT_CLASSES =
-  'w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-sky-400'
+  'w-full rounded-2xl border border-white/10 bg-[#1e2545]/80 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#7b6ef6]/60'
 
 /**
  * Returns the callbackUrl to redirect to after sign-in. Defaults to '/'.
@@ -27,7 +27,25 @@ function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const redirectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const redirectAfterSuccess = (url: string) => {
+    setSuccess(true)
+    redirectTimeoutRef.current = setTimeout(() => {
+      router.push(url)
+      router.refresh()
+    }, 800)
+  }
 
   const handleEmailLogin = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -45,15 +63,15 @@ function LoginForm() {
 
       if (result?.error) {
         setError('Invalid email or password. Please try again.')
+        setSubmitting(false)
       } else if (result?.ok) {
-        router.push(callbackUrl)
-        router.refresh()
+        redirectAfterSuccess(callbackUrl)
       } else {
         setError('Sign-in failed. Please try again.')
+        setSubmitting(false)
       }
     } catch {
       setError('An unexpected error occurred. Please try again.')
-    } finally {
       setSubmitting(false)
     }
   }
@@ -91,24 +109,49 @@ function LoginForm() {
       })
 
       if (result?.ok) {
-        router.push(callbackUrl)
-        router.refresh()
+        redirectAfterSuccess(callbackUrl)
       } else {
         setError('Guest sign-in failed. Please try again.')
+        setSubmitting(false)
       }
     } catch {
       setError('Could not start guest session. Please try again.')
-    } finally {
       setSubmitting(false)
     }
   }
 
+  if (success) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#1a1f3a] to-[#252b4a] px-4 py-12">
+        <div className="flex flex-col items-center gap-4 text-center">
+          {/* Animated checkmark circle */}
+          <div className="flex h-16 w-16 animate-scale-in items-center justify-center rounded-full bg-emerald-500/20 ring-2 ring-emerald-400/60">
+            <svg
+              className="h-8 w-8 text-emerald-400"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          </div>
+          <p className="text-base font-medium text-white">Signing you in…</p>
+          <p className="text-sm text-slate-400">Just a moment</p>
+        </div>
+      </main>
+    )
+  }
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-12">
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#1a1f3a] to-[#252b4a] px-4 py-12">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto mb-3 inline-flex items-center gap-2 rounded-full border border-[#0066FF]/30 bg-[#0066FF]/10 px-3 py-1.5">
+          <div className="mx-auto mb-3 inline-flex items-center gap-2 rounded-full border border-[#4a5fff]/30 bg-[#4a5fff]/10 px-3 py-1.5">
             <Image
               src="/nerdy-logo.svg"
               alt="Nerdy"
@@ -228,7 +271,7 @@ function LoginForm() {
               data-testid="email-signin-button"
               type="submit"
               disabled={submitting || !email.trim() || !password}
-              className="w-full rounded-2xl bg-[#0066FF] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#3385FF] disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-2xl bg-gradient-to-r from-[#7b6ef6] to-[#4a90d9] px-4 py-3 text-sm font-medium text-white transition hover:shadow-[0_4px_24px_rgba(123,110,246,0.35)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? 'Signing in…' : 'Sign in'}
             </button>

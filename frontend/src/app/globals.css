@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;1,500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -8,4 +8,18 @@
   --nerdy-blue: #0066FF;
   --nerdy-navy: #0A1628;
   --nerdy-orange: #FF6B35;
+  --accent-gradient: linear-gradient(90deg, #f5a623, #e85d75, #c94bc0, #7b6ef6, #4a90d9);
+}
+
+/* Gradient accent text utility */
+.text-accent-gradient {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Serif accent for hero words */
+.font-serif-accent {
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
 }

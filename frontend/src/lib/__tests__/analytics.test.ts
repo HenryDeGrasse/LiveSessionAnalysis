@@ -181,10 +181,10 @@ describe('average', () => {
 // ── getSessionTypeLabel ─────────────────────────────────────
 describe('getSessionTypeLabel', () => {
   it('returns human-readable labels for known session types', () => {
-    expect(getSessionTypeLabel('general')).toBe('General tutoring')
-    expect(getSessionTypeLabel('lecture')).toBe('Lecture / explanation')
-    expect(getSessionTypeLabel('practice')).toBe('Practice / problem solving')
-    expect(getSessionTypeLabel('discussion')).toBe('Discussion / Socratic')
+    expect(getSessionTypeLabel('general')).toBe('General')
+    expect(getSessionTypeLabel('lecture')).toBe('Lecture')
+    expect(getSessionTypeLabel('practice')).toBe('Practice')
+    expect(getSessionTypeLabel('discussion')).toBe('Discussion')
   })
 
   it('returns the raw string for unknown session types', () => {
@@ -192,7 +192,7 @@ describe('getSessionTypeLabel', () => {
   })
 
   it('returns default label for empty string', () => {
-    expect(getSessionTypeLabel('')).toBe('General tutoring')
+    expect(getSessionTypeLabel('')).toBe('General')
   })
 })
 

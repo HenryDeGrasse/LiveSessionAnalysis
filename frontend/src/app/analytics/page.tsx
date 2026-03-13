@@ -138,6 +138,9 @@ export default function AnalyticsPage() {
   const [error, setError] = useState('')
   const [selectedType, setSelectedType] = useState('all')
   const [focusMetric, setFocusMetric] = useState<FocusMetric>('engagement')
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   useEffect(() => {
     // Do not issue any request while NextAuth is still resolving the session.
@@ -184,6 +187,34 @@ export default function AnalyticsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authStatus, authSession?.user?.accessToken])
 
+  function openDeleteConfirm(sessionId: string, event: React.MouseEvent) {
+    event.preventDefault()
+    event.stopPropagation()
+    setDeleteError('')
+    setDeleteConfirm(sessionId)
+  }
+
+  async function confirmDelete() {
+    if (!deleteConfirm) return
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      const response = await apiFetch(
+        `/api/analytics/sessions/${deleteConfirm}`,
+        { method: 'DELETE', accessToken: authSession?.user?.accessToken }
+      )
+      if (!response.ok) {
+        throw new Error('Failed to delete session')
+      }
+      setSessions((prev) => prev.filter((s) => s.session_id !== deleteConfirm))
+      setDeleteConfirm(null)
+    } catch {
+      setDeleteError('Failed to delete session. Please try again.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const filteredSessions = useMemo(() => {
     return sessions.filter((session) => {
       return selectedType === 'all' || session.session_type === selectedType
@@ -228,7 +259,7 @@ export default function AnalyticsPage() {
 
   return (
     <AuthGuard>
-    <main className="min-h-screen bg-slate-950 text-slate-100">
+    <main className="min-h-screen bg-gradient-to-b from-[#1a1f3a] to-[#252b4a] text-slate-100">
       <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-8 px-6 py-10 lg:px-8">
         <section
           data-testid="analytics-dashboard"
@@ -283,13 +314,13 @@ export default function AnalyticsPage() {
               data-testid="analytics-session-type-filter"
               value={selectedType}
               onChange={(event) => setSelectedType(event.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none ring-0 transition focus:border-sky-400"
+              className="w-full rounded-2xl border border-white/10 bg-[#1e2545]/80 px-4 py-3 text-white outline-none ring-0 transition focus:border-[#7b6ef6]/60"
             >
-              <option value="all">All session types</option>
-              <option value="general">General tutoring</option>
-              <option value="lecture">Lecture / explanation</option>
-              <option value="practice">Practice / problem solving</option>
-              <option value="discussion">Discussion / Socratic</option>
+              <option value="all">All types</option>
+              <option value="general">General</option>
+              <option value="lecture">Lecture</option>
+              <option value="practice">Practice</option>
+              <option value="discussion">Discussion</option>
             </select>
           </label>
 
@@ -512,9 +543,8 @@ export default function AnalyticsPage() {
                 {filteredSessions.map((session) => {
                   const health = getSessionHealth(session)
                   return (
-                    <Link
+                    <div
                       key={session.session_id}
-                      href={`/analytics/${session.session_id}`}
                       data-testid={`analytics-session-card-${session.session_id}`}
                       className="group rounded-[28px] border border-white/10 bg-white/5 p-5 transition hover:-translate-y-1 hover:border-sky-300/30 hover:bg-white/10"
                     >
@@ -536,11 +566,25 @@ export default function AnalyticsPage() {
                               {new Date(session.start_time).toLocaleString()} · {formatMinutes(session.duration_seconds)}
                             </p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm text-slate-400">Engagement</p>
-                            <p className="text-3xl font-semibold text-white">
-                              {formatScore(session.engagement_score)}
-                            </p>
+                          <div className="flex items-start gap-3">
+                            <div className="text-right">
+                              <p className="text-sm text-slate-400">Engagement</p>
+                              <p className="text-3xl font-semibold text-white">
+                                {formatScore(session.engagement_score)}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              data-testid={`analytics-delete-${session.session_id}`}
+                              onClick={(e) => openDeleteConfirm(session.session_id, e)}
+                              title="Delete session"
+                              aria-label={`Delete ${getSessionDisplayTitle(session)}`}
+                              className="mt-0.5 rounded-xl border border-white/10 bg-white/5 p-2 text-slate-400 transition hover:border-rose-400/40 hover:bg-rose-500/10 hover:text-rose-300"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                                <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+                              </svg>
+                            </button>
                           </div>
                         </div>
 
@@ -587,12 +631,15 @@ export default function AnalyticsPage() {
                           <span>
                             {session.flagged_moments.length} flagged moment{session.flagged_moments.length === 1 ? '' : 's'} · {session.degradation_events} degradation event{session.degradation_events === 1 ? '' : 's'}
                           </span>
-                          <span className="text-slate-200 transition group-hover:translate-x-1">
+                          <Link
+                            href={`/analytics/${session.session_id}`}
+                            className="text-slate-200 transition group-hover:translate-x-1"
+                          >
                             Open review →
-                          </span>
+                          </Link>
                         </div>
                       </div>
-                    </Link>
+                    </div>
                   )
                 })}
               </div>
@@ -601,6 +648,54 @@ export default function AnalyticsPage() {
         )}
       </div>
     </main>
+
+    {/* Delete confirmation modal */}
+    {deleteConfirm && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-dialog-title"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm"
+      >
+        <div className="w-full max-w-sm rounded-[28px] border border-white/10 bg-slate-900 p-7 shadow-2xl">
+          <h2 id="delete-dialog-title" className="text-lg font-semibold text-white">
+            Delete this session?
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-slate-300">
+            This will permanently remove the session record and all associated
+            analytics. This action cannot be undone.
+          </p>
+          {deleteError ? (
+            <p className="mt-4 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+              {deleteError}
+            </p>
+          ) : null}
+          <div className="mt-6 flex gap-3">
+            <button
+              type="button"
+              data-testid="delete-confirm-button"
+              disabled={deleting}
+              onClick={confirmDelete}
+              className="flex-1 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
+            >
+              {deleting ? 'Deleting…' : 'Yes, delete'}
+            </button>
+            <button
+              type="button"
+              data-testid="delete-cancel-button"
+              disabled={deleting}
+              onClick={() => {
+                setDeleteError('')
+                setDeleteConfirm(null)
+              }}
+              className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </AuthGuard>
   )
 }

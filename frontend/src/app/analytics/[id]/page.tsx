@@ -149,7 +149,7 @@ function ScoreBar({
   const tone = value >= 75 ? 'emerald' : value >= 55 ? 'amber' : 'rose'
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-4">
+    <div className="rounded-3xl border border-white/10 bg-[#1e2545]/60 p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-white">{label}</p>
@@ -439,7 +439,7 @@ export default function SessionDetailPage() {
   if (loading) {
     return (
       <AuthGuard>
-        <main className="min-h-screen bg-slate-950 px-6 py-10 text-slate-300">
+        <main className="min-h-screen bg-gradient-to-b from-[#1a1f3a] to-[#252b4a] px-6 py-10 text-slate-300">
           Loading session review…
         </main>
       </AuthGuard>
@@ -449,7 +449,7 @@ export default function SessionDetailPage() {
   if (!session || !sessionHealth) {
     return (
       <AuthGuard>
-        <main className="min-h-screen bg-slate-950 px-6 py-10 text-slate-300">
+        <main className="min-h-screen bg-gradient-to-b from-[#1a1f3a] to-[#252b4a] px-6 py-10 text-slate-300">
           <div className="mx-auto max-w-4xl rounded-[28px] border border-white/10 bg-white/5 p-8">
             <p className="text-2xl font-semibold text-white">
               Session not found or not yet available.
@@ -468,7 +468,7 @@ export default function SessionDetailPage() {
 
   return (
     <AuthGuard>
-    <main className="min-h-screen bg-slate-950 text-slate-100">
+    <main className="min-h-screen bg-gradient-to-b from-[#1a1f3a] to-[#252b4a] text-slate-100">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-10 lg:px-8">
         <section
           data-testid="analytics-detail-page"
@@ -491,7 +491,7 @@ export default function SessionDetailPage() {
                       <input
                         value={titleDraft}
                         onChange={(event) => setTitleDraft(event.target.value)}
-                        className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-2xl font-semibold tracking-tight text-white outline-none focus:border-sky-400 md:text-3xl"
+                        className="w-full rounded-2xl border border-white/10 bg-[#1e2545]/80 px-4 py-3 text-2xl font-semibold tracking-tight text-white outline-none focus:border-[#7b6ef6]/60 md:text-3xl"
                         maxLength={120}
                       />
                       <div className="flex flex-wrap items-center gap-2">
@@ -679,7 +679,7 @@ export default function SessionDetailPage() {
                     return (
                       <div
                         key={item.label}
-                        className="rounded-3xl border border-white/10 bg-slate-950/40 p-4"
+                        className="rounded-3xl border border-white/10 bg-[#1e2545]/60 p-4"
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div>
@@ -709,7 +709,7 @@ export default function SessionDetailPage() {
                 </div>
               </>
             ) : (
-              <div className="mt-6 rounded-3xl border border-white/10 bg-slate-950/40 p-5 text-sm leading-6 text-slate-300">
+              <div className="mt-6 rounded-3xl border border-white/10 bg-[#1e2545]/60 p-5 text-sm leading-6 text-slate-300">
                 Not enough peer sessions yet to build a tutor baseline. Once more sessions are stored for the same tutor, this panel will compare engagement, camera-facing, interruptions, and talk share automatically.
               </div>
             )}
@@ -787,7 +787,7 @@ export default function SessionDetailPage() {
                 </div>
               </div>
             ) : (
-              <div className="mt-6 rounded-3xl border border-white/10 bg-slate-950/40 p-5 text-sm leading-6 text-slate-300">
+              <div className="mt-6 rounded-3xl border border-white/10 bg-[#1e2545]/60 p-5 text-sm leading-6 text-slate-300">
                 Attention distribution is available for sessions recorded after
                 the attention-state tracking update. Older sessions show the
                 average camera-facing score instead.
@@ -800,7 +800,7 @@ export default function SessionDetailPage() {
         {isStudentView && studentInsights && (
           <section
             data-testid="analytics-student-insights"
-            className="rounded-[28px] border border-violet-400/20 bg-[radial-gradient(circle_at_top_left,_rgba(139,92,246,0.12),_transparent_60%)] bg-slate-950/60 p-6"
+            className="rounded-[28px] border border-violet-400/20 bg-[radial-gradient(circle_at_top_left,_rgba(139,92,246,0.12),_transparent_60%)] bg-[#1e2545]/80 p-6"
           >
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-violet-400">
@@ -877,7 +877,7 @@ export default function SessionDetailPage() {
                   {studentInsights.tips.map((tip, tipIdx) => (
                     <div
                       key={`tip-${tipIdx}`}
-                      className="rounded-3xl border border-white/10 bg-slate-950/40 p-4"
+                      className="rounded-3xl border border-white/10 bg-[#1e2545]/60 p-4"
                     >
                       <div className="flex items-start gap-3">
                         <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-violet-400/30 bg-violet-400/10 text-xs font-semibold text-violet-200">
@@ -1042,7 +1042,7 @@ export default function SessionDetailPage() {
                 {session.flagged_moments.map((moment, index) => (
                   <div
                     key={`${moment.metric_name}-${moment.timestamp}-${index}`}
-                    className="rounded-3xl border border-white/10 bg-slate-950/40 p-4"
+                    className="rounded-3xl border border-white/10 bg-[#1e2545]/60 p-4"
                   >
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
@@ -1062,7 +1062,7 @@ export default function SessionDetailPage() {
                 ))}
               </div>
             ) : (
-              <div className="mt-6 rounded-3xl border border-white/10 bg-slate-950/40 p-5 text-sm leading-6 text-slate-300">
+              <div className="mt-6 rounded-3xl border border-white/10 bg-[#1e2545]/60 p-5 text-sm leading-6 text-slate-300">
                 No flagged moments crossed the saved thresholds for this session.
               </div>
             )}
@@ -1093,7 +1093,7 @@ export default function SessionDetailPage() {
               ))}
             </div>
           ) : session.nudges_sent > 0 ? (
-            <div className="mt-6 rounded-3xl border border-white/10 bg-slate-950/40 p-5 text-sm leading-6 text-slate-300">
+            <div className="mt-6 rounded-3xl border border-white/10 bg-[#1e2545]/60 p-5 text-sm leading-6 text-slate-300">
               {session.nudges_sent} nudge{session.nudges_sent === 1 ? ' was' : 's were'} sent during this session. Detailed nudge history is available for newer sessions.
             </div>
           ) : (
@@ -1125,19 +1125,19 @@ export default function SessionDetailPage() {
             </Link>
           </div>
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-4">
+            <div className="rounded-3xl border border-white/10 bg-[#1e2545]/60 p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Tutor</p>
               <p className="mt-2 text-lg font-semibold text-white">{session.tutor_id || 'Not set'}</p>
             </div>
-            <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-4">
+            <div className="rounded-3xl border border-white/10 bg-[#1e2545]/60 p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Session type</p>
               <p className="mt-2 text-lg font-semibold text-white">{getSessionTypeLabel(session.session_type)}</p>
             </div>
-            <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-4">
+            <div className="rounded-3xl border border-white/10 bg-[#1e2545]/60 p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Start time</p>
               <p className="mt-2 text-lg font-semibold text-white">{new Date(session.start_time).toLocaleString()}</p>
             </div>
-            <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-4">
+            <div className="rounded-3xl border border-white/10 bg-[#1e2545]/60 p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">End time</p>
               <p className="mt-2 text-lg font-semibold text-white">{new Date(session.end_time).toLocaleString()}</p>
             </div>
