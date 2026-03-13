@@ -23,6 +23,7 @@ import {
   formatPercent,
   formatScore,
   getSessionHealth,
+  getTutorTalkTarget,
   isTalkBalanced,
   type AnalyticsTone,
 } from '@/lib/analytics'
@@ -1926,24 +1927,48 @@ export default function SessionPage() {
             </div>
 
             <div className="min-w-[220px] flex-1">
-              <div className="mb-0.5 flex justify-between text-[10px]">
-                <span>
-                  Talk share · Tutor {(currentMetrics.tutor.talk_time_percent * 100).toFixed(0)}%
-                </span>
-                <span>
-                  Student {(currentMetrics.student.talk_time_percent * 100).toFixed(0)}%
-                </span>
-              </div>
-              <div className="flex h-1.5 overflow-hidden rounded-full bg-gray-600">
-                <div
-                  className="h-full bg-blue-400"
-                  style={{ width: `${currentMetrics.tutor.talk_time_percent * 100}%` }}
-                />
-                <div
-                  className="h-full bg-green-400"
-                  style={{ width: `${currentMetrics.student.talk_time_percent * 100}%` }}
-                />
-              </div>
+              {(() => {
+                const sessionType = sessionInfo?.session_type ?? currentMetrics?.coaching_decision?.session_type ?? 'general'
+                const target = getTutorTalkTarget(sessionType)
+                const tutorPct = currentMetrics.tutor.talk_time_percent
+                const isOver = tutorPct > target + 0.12
+                return (
+                  <>
+                    <div className="mb-0.5 flex justify-between text-[10px]">
+                      <span className={isOver ? 'text-amber-400' : ''}>
+                        Talk share · Tutor {(tutorPct * 100).toFixed(0)}%
+                      </span>
+                      <span>
+                        Student {(currentMetrics.student.talk_time_percent * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <div className="flex h-2 overflow-hidden rounded-full bg-gray-600">
+                        <div
+                          className={`h-full transition-all duration-300 ${isOver ? 'bg-amber-400' : 'bg-blue-400'}`}
+                          style={{ width: `${tutorPct * 100}%` }}
+                        />
+                        <div
+                          className="h-full bg-green-400 transition-all duration-300"
+                          style={{ width: `${currentMetrics.student.talk_time_percent * 100}%` }}
+                        />
+                      </div>
+                      {/* Target marker */}
+                      <div
+                        className="absolute top-[-3px] h-[14px] w-[2px] rounded-full bg-white/70"
+                        style={{ left: `${target * 100}%` }}
+                        title={`Target tutor share: ${(target * 100).toFixed(0)}%`}
+                      />
+                      <div
+                        className="absolute top-[-12px] text-[8px] font-medium text-white/50"
+                        style={{ left: `${target * 100}%`, transform: 'translateX(-50%)' }}
+                      >
+                        {(target * 100).toFixed(0)}%
+                      </div>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
 
             <div>
@@ -2127,47 +2152,76 @@ export default function SessionPage() {
         </div>
       )}
 
-      {/* ── Nudge toasts (tutor only, fixed bottom-right above control bar) ── */}
+      {/* ── Nudge toasts (tutor only) — large & prominent ── */}
       {isTutor && nudges.length > 0 && (
-        <div className="fixed bottom-24 right-4 z-50 max-w-sm space-y-2">
-          {nudges.map((nudge) => (
-            <div
-              key={nudge.id}
-              className={`rounded-2xl border p-4 shadow-xl transition-all ${
-                nudge.priority === 'high'
-                  ? 'border-red-700 bg-red-950/92'
-                  : nudge.priority === 'medium'
-                  ? 'border-yellow-700 bg-yellow-950/92'
-                  : 'border-gray-700 bg-gray-900/92'
-              }`}
-            >
-              <p className="text-sm font-medium text-white">{nudge.message}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => dismissNudge(nudge.id)}
-                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleNudgeSound}
-                  title={nudgeSoundEnabled ? 'Mute nudge chime' : 'Unmute nudge chime'}
-                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
-                >
-                  {nudgeSoundEnabled ? '🔔 Sound on' : '🔕 Sound off'}
-                </button>
-                <button
-                  type="button"
-                  onClick={disableAllNudges}
-                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
-                >
-                  Disable all nudges for session
-                </button>
+        <div className="fixed bottom-28 right-6 z-50 w-[420px] max-w-[calc(100vw-2rem)] space-y-3">
+          {nudges.map((nudge) => {
+            const isHigh = nudge.priority === 'high'
+            const isMed = nudge.priority === 'medium'
+            return (
+              <div
+                key={nudge.id}
+                className={`animate-slide-in-right rounded-2xl border-2 p-5 shadow-2xl backdrop-blur-sm ${
+                  isHigh
+                    ? 'border-red-500/60 bg-red-950/95 shadow-red-900/40'
+                    : isMed
+                    ? 'border-amber-500/50 bg-amber-950/95 shadow-amber-900/30'
+                    : 'border-blue-500/40 bg-slate-900/95 shadow-blue-900/20'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  {/* Icon */}
+                  <div className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-lg ${
+                    isHigh ? 'bg-red-500/20 text-red-400' : isMed ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'
+                  }`}>
+                    {isHigh ? '⚠️' : isMed ? '💡' : 'ℹ️'}
+                  </div>
+                  <div className="flex-1">
+                    {/* Label */}
+                    <div className={`mb-1 text-[11px] font-bold uppercase tracking-wider ${
+                      isHigh ? 'text-red-400' : isMed ? 'text-amber-400' : 'text-blue-400'
+                    }`}>
+                      {isHigh ? 'Action needed' : isMed ? 'Coaching tip' : 'Suggestion'}
+                    </div>
+                    {/* Message */}
+                    <p className="text-[15px] font-medium leading-snug text-white">{nudge.message}</p>
+                  </div>
+                  {/* Close X */}
+                  <button
+                    type="button"
+                    onClick={() => dismissNudge(nudge.id)}
+                    className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-white/40 transition hover:bg-white/10 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => dismissNudge(nudge.id)}
+                    className="rounded-full bg-white/10 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20"
+                  >
+                    Got it
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleNudgeSound}
+                    title={nudgeSoundEnabled ? 'Mute nudge chime' : 'Unmute nudge chime'}
+                    className="rounded-full bg-white/5 px-3 py-1.5 text-xs text-white/60 transition hover:bg-white/10 hover:text-white/80"
+                  >
+                    {nudgeSoundEnabled ? '🔔' : '🔕'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={disableAllNudges}
+                    className="ml-auto rounded-full px-3 py-1.5 text-[10px] text-white/30 transition hover:text-white/50"
+                  >
+                    Pause all nudges
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

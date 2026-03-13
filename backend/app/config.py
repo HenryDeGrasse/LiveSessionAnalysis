@@ -119,10 +119,10 @@ class Settings(BaseSettings):
     echo_suspect_window_seconds: float = 30.0
 
     # Coaching
-    global_nudge_warmup_seconds: int = 30
-    global_nudge_min_interval_seconds: int = 60
-    global_nudge_max_per_session: int = 8
-    min_session_elapsed_for_nudges: int = 45
+    global_nudge_warmup_seconds: int = 20
+    global_nudge_min_interval_seconds: int = 30
+    global_nudge_max_per_session: int = 12
+    min_session_elapsed_for_nudges: int = 25
     student_silence_threshold_seconds: int = 180
     student_silence_talk_percent: float = 0.05
     student_silence_cooldown: int = 120

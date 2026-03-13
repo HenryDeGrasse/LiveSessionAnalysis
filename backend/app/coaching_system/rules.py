@@ -159,8 +159,8 @@ def _let_them_finish_severity(
     """
     # Echo affects overlap detection reliability; reduce severity instead of
     # hard-suppressing so strong interruption patterns can still surface.
-    echo_penalty = 0.5 if snapshot.session.echo_suspected else 1.0
-    if snapshot.session.recent_tutor_talk_percent < 0.58:
+    echo_penalty = 0.75 if snapshot.session.echo_suspected else 1.0
+    if snapshot.session.recent_tutor_talk_percent < 0.45:
         return 0.0
 
     hard_count = snapshot.session.recent_hard_interruptions
@@ -169,7 +169,7 @@ def _let_them_finish_severity(
 
     hard_factor = _clamp01(hard_count / max(1.0, profile.interruption_spike_count))
     cutoff_factor = _clamp01(cutoff_count / max(2.0, profile.interruption_spike_count - 1))
-    dominance_factor = _clamp01((snapshot.session.recent_tutor_talk_percent - 0.58) / 0.22)
+    dominance_factor = _clamp01((snapshot.session.recent_tutor_talk_percent - 0.45) / 0.30)
 
     active_bonus = 0.0
     if snapshot.session.active_overlap_state == "hard":
@@ -182,8 +182,8 @@ def _let_them_finish_severity(
         active_bonus = 0.08
 
     # Require a real recent pattern rather than isolated overlap noise.
-    if hard_count < max(1, profile.interruption_spike_count - 1) and cutoff_count < 2:
-        if not (cutoff_count >= 1 and recent_overlaps >= profile.interruption_spike_count * 2):
+    if hard_count < 2 and cutoff_count < 1:
+        if recent_overlaps < profile.interruption_spike_count * 2:
             return 0.0
 
     pattern_factor = max(hard_factor, cutoff_factor)
@@ -392,6 +392,46 @@ def _session_momentum_loss_severity(
 
 
 # ---------------------------------------------------------------------------
+# Interruption burst — easy to trigger for demos
+# ---------------------------------------------------------------------------
+
+
+def _interruption_burst_condition(
+    snapshot: MetricsSnapshot,
+    elapsed: float,
+    profile: SessionProfile,
+) -> bool:
+    return _interruption_burst_severity(snapshot, elapsed, profile) > 0.0
+
+
+def _interruption_burst_severity(
+    snapshot: MetricsSnapshot,
+    elapsed: float,
+    profile: SessionProfile,
+) -> float:
+    """Multiple hard interruptions in a short time window.
+
+    This is a simpler, more trigger-happy version of let_them_finish that
+    doesn't require high tutor talk share.  It fires when the tutor has
+    produced 2+ hard interruptions recently OR there's an active hard
+    overlap happening.  Designed to be easy to trigger in demos.
+    """
+    hard_recent = snapshot.session.recent_hard_interruptions
+    cutoffs = snapshot.session.tutor_cutoffs
+    active_hard = snapshot.session.active_overlap_state == "hard"
+
+    # Need at least 2 hard interruptions OR 1 hard + active hard overlap
+    signal_count = hard_recent + (1 if active_hard else 0) + min(cutoffs, 1)
+    if signal_count < 2:
+        return 0.0
+
+    echo_penalty = 0.85 if snapshot.session.echo_suspected else 1.0
+    hard_factor = _clamp01(hard_recent / max(1.0, profile.interruption_spike_count))
+    active_bonus = 0.15 if active_hard else 0.0
+    return _clamp01((0.50 + 0.30 * hard_factor + active_bonus) * echo_penalty)
+
+
+# ---------------------------------------------------------------------------
 # Default rule set
 # ---------------------------------------------------------------------------
 
@@ -478,6 +518,20 @@ DEFAULT_RULES: list[CoachingRule] = [
         cooldown_seconds=120,
         min_session_elapsed=60,
         # Audio/presence-based signal — fires even in degraded visual mode
+        allow_when_degraded=True,
+    ),
+    CoachingRule(
+        name="interruption_burst",
+        nudge_type="interruption_burst",
+        condition=_interruption_burst_condition,
+        severity=_interruption_burst_severity,
+        message_template=(
+            "You've interrupted the student several times in quick succession. "
+            "Try pausing after they speak to give them space to finish."
+        ),
+        priority=NudgePriority.MEDIUM,
+        cooldown_seconds=90,
+        min_session_elapsed=25,
         allow_when_degraded=True,
     ),
     CoachingRule(
