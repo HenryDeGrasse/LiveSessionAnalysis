@@ -11,8 +11,6 @@ const PANEL_CLASSES =
   'rounded-[28px] border border-white/10 bg-white/5 shadow-[0_24px_80px_rgba(2,6,23,0.28)] backdrop-blur'
 const INPUT_CLASSES =
   'w-full rounded-2xl border border-white/10 bg-[#1e2545]/80 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#7b6ef6]/60'
-const SELECT_CLASSES = `${INPUT_CLASSES} appearance-none`
-
 type Role = 'tutor' | 'student'
 
 function validatePassword(password: string): string | null {
@@ -260,20 +258,39 @@ export default function RegisterPage() {
               ) : null}
             </div>
 
-            {/* Role */}
+            {/* Role — pill selector */}
             <div>
-              <label
-                htmlFor="role"
-                className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400"
-              >
+              <span className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">
                 I am a…
-              </label>
+              </span>
+              <div className="flex gap-2" role="radiogroup" aria-label="Role">
+                {(['tutor', 'student'] as const).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    role="radio"
+                    aria-checked={role === r}
+                    data-testid={`role-pill-${r}`}
+                    onClick={() => setRole(r)}
+                    className={`flex-1 rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                      role === r
+                        ? 'border-[#7b6ef6]/50 bg-[#7b6ef6]/20 text-white'
+                        : 'border-white/10 bg-[#1e2545]/80 text-slate-400 hover:bg-white/5'
+                    }`}
+                  >
+                    {r.charAt(0).toUpperCase() + r.slice(1)}
+                  </button>
+                ))}
+              </div>
+              {/* Hidden native select for form data / test compat */}
               <select
                 id="role"
                 data-testid="role-select"
                 value={role}
                 onChange={(e) => setRole(e.target.value as Role)}
-                className={SELECT_CLASSES}
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden="true"
               >
                 <option value="tutor">Tutor</option>
                 <option value="student">Student</option>
@@ -306,7 +323,7 @@ export default function RegisterPage() {
           Already have an account?{' '}
           <Link
             href="/login"
-            className="font-medium text-[#0066FF] transition hover:text-[#3385FF]"
+            className="font-medium text-[#7b6ef6] transition hover:text-[#9b8df8]"
           >
             Sign in
           </Link>

@@ -305,29 +305,42 @@ export default function AnalyticsPage() {
           </div>
         </section>
 
-        <section className="grid gap-4 rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur lg:grid-cols-[1fr_220px]">
-          <label className="space-y-2 text-sm text-slate-300">
-            <span className="text-xs uppercase tracking-[0.22em] text-slate-400">
-              Session type
-            </span>
-            <select
-              data-testid="analytics-session-type-filter"
-              value={selectedType}
-              onChange={(event) => setSelectedType(event.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-[#1e2545]/80 px-4 py-3 text-white outline-none ring-0 transition focus:border-[#7b6ef6]/60"
-            >
-              <option value="all">All types</option>
-              <option value="general">General</option>
-              <option value="lecture">Lecture</option>
-              <option value="practice">Practice</option>
-              <option value="discussion">Discussion</option>
-            </select>
-          </label>
+        <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-2">
+              <span className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                Session type
+              </span>
+              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Session type filter">
+                {[
+                  { value: 'all', label: 'All types' },
+                  { value: 'general', label: 'General' },
+                  { value: 'lecture', label: 'Lecture' },
+                  { value: 'practice', label: 'Practice' },
+                  { value: 'discussion', label: 'Discussion' },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={selectedType === opt.value}
+                    data-testid={opt.value === 'all' ? 'analytics-session-type-filter' : `analytics-type-${opt.value}`}
+                    onClick={() => setSelectedType(opt.value)}
+                    className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                      selectedType === opt.value
+                        ? 'border-[#7b6ef6]/50 bg-[#7b6ef6]/20 text-white'
+                        : 'border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          <div className="flex items-end justify-end">
             <Link
               href="/"
-              className="inline-flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+              className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10"
             >
               Back to home
             </Link>
