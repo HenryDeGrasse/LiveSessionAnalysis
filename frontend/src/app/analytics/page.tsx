@@ -260,7 +260,7 @@ export default function AnalyticsPage() {
   return (
     <AuthGuard>
     <main className="min-h-screen bg-gradient-to-b from-[#1a1f3a] to-[#252b4a] text-slate-100">
-      <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-8 px-6 py-10 lg:px-8">
+      <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-8 px-6 pb-10 pt-20 lg:px-8">
         <section
           data-testid="analytics-dashboard"
           className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.18),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(139,92,246,0.22),_transparent_30%),linear-gradient(180deg,_rgba(15,23,42,0.96),_rgba(2,6,23,0.98))] p-8 shadow-[0_28px_120px_rgba(2,6,23,0.6)]"
@@ -338,12 +338,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            <Link
-              href="/"
-              className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10"
-            >
-              Back to home
-            </Link>
+            {/* Navigation handled by floating header breadcrumb */}
           </div>
         </section>
 

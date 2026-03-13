@@ -439,7 +439,7 @@ export default function SessionDetailPage() {
   if (loading) {
     return (
       <AuthGuard>
-        <main className="min-h-screen bg-gradient-to-b from-[#1a1f3a] to-[#252b4a] px-6 py-10 text-slate-300">
+        <main className="min-h-screen bg-gradient-to-b from-[#1a1f3a] to-[#252b4a] px-6 pb-10 pt-20 text-slate-300">
           Loading session review…
         </main>
       </AuthGuard>
@@ -449,7 +449,7 @@ export default function SessionDetailPage() {
   if (!session || !sessionHealth) {
     return (
       <AuthGuard>
-        <main className="min-h-screen bg-gradient-to-b from-[#1a1f3a] to-[#252b4a] px-6 py-10 text-slate-300">
+        <main className="min-h-screen bg-gradient-to-b from-[#1a1f3a] to-[#252b4a] px-6 pb-10 pt-20 text-slate-300">
           <div className="mx-auto max-w-4xl rounded-[28px] border border-white/10 bg-white/5 p-8">
             <p className="text-2xl font-semibold text-white">
               Session not found or not yet available.
@@ -469,7 +469,7 @@ export default function SessionDetailPage() {
   return (
     <AuthGuard>
     <main className="min-h-screen bg-gradient-to-b from-[#1a1f3a] to-[#252b4a] text-slate-100">
-      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-10 lg:px-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 pb-10 pt-20 lg:px-8">
         <section
           data-testid="analytics-detail-page"
           className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(139,92,246,0.2),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(34,197,94,0.15),_transparent_28%),linear-gradient(180deg,_rgba(15,23,42,0.96),_rgba(2,6,23,0.98))] p-8 shadow-[0_28px_120px_rgba(2,6,23,0.55)]"
