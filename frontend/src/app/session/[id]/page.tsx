@@ -348,6 +348,7 @@ export default function SessionPage() {
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null)
   const [sessionInfoLoaded, setSessionInfoLoaded] = useState(false)
   const [showConsent, setShowConsent] = useState(true)
+  const [analysisConsent, setAnalysisConsent] = useState(false)
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const previewVideoRef = useRef<HTMLVideoElement>(null)
@@ -1563,8 +1564,35 @@ export default function SessionPage() {
                   </div>
                 )}
 
+                {/* Analysis consent checkbox */}
+                {!sessionEnded && (
+                  <label
+                    data-testid="analysis-consent-label"
+                    className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 transition hover:bg-white/[0.06]"
+                  >
+                    <input
+                      data-testid="analysis-consent-checkbox"
+                      type="checkbox"
+                      checked={analysisConsent}
+                      onChange={(e) => setAnalysisConsent(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer appearance-none rounded border-2 border-white/30 bg-transparent transition checked:border-[#7b6ef6] checked:bg-[#7b6ef6] focus:outline-none focus:ring-2 focus:ring-[#7b6ef6]/40"
+                    />
+                    <div>
+                      <p className="text-sm font-medium leading-snug text-white">
+                        I consent to session analysis
+                      </p>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                        Tutors and students must consent to analysis. Camera, audio, and engagement
+                        signals are processed in real time. No raw video or audio is stored — only
+                        derived metrics are saved for post-session review.
+                      </p>
+                    </div>
+                  </label>
+                )}
+
                 <button
                   data-testid="consent-start-button"
+                  disabled={!sessionEnded && !analysisConsent}
                   onClick={() => {
                     if (sessionEnded) {
                       handleLeaveSession()
@@ -1576,7 +1604,7 @@ export default function SessionPage() {
                     setSessionStartTime(Date.now())
                     requestAccess()
                   }}
-                  className="w-full rounded-2xl bg-[#0066FF] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#3385FF]"
+                  className="w-full rounded-2xl bg-gradient-to-r from-[#7b6ef6] to-[#4a90d9] px-4 py-3 text-sm font-medium text-white transition hover:shadow-[0_4px_24px_rgba(123,110,246,0.35)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {consentButtonLabel}
                 </button>
