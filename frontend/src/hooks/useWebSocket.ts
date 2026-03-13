@@ -27,6 +27,15 @@ export function useWebSocket({
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const reconnectAttemptsRef = useRef(0)
 
+  // Store callbacks in refs so the WebSocket handlers always call the latest
+  // version without needing to tear down and reconnect when they change.
+  const onMessageRef = useRef(onMessage)
+  onMessageRef.current = onMessage
+  const onOpenRef = useRef(onOpen)
+  onOpenRef.current = onOpen
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   const connect = useCallback(() => {
     if (!sessionId || !token) return
     if (
@@ -45,14 +54,14 @@ export function useWebSocket({
       setConnected(true)
       setError(null)
       reconnectAttemptsRef.current = 0
-      onOpen?.()
+      onOpenRef.current?.()
     }
 
     ws.onmessage = (event) => {
       if (typeof event.data === 'string') {
         try {
           const message = JSON.parse(event.data) as WSMessage
-          onMessage?.(message)
+          onMessageRef.current?.(message)
         } catch {
           console.error('Failed to parse WS message')
         }
@@ -61,7 +70,7 @@ export function useWebSocket({
 
     ws.onclose = (event) => {
       setConnected(false)
-      onClose?.()
+      onCloseRef.current?.()
 
       // Reconnect with exponential backoff (unless intentional or terminal close)
       const terminalCodes = [4001, 4002, 4003, 4004, 1000] // invalid token, already connected, session ended, not found, normal close
@@ -81,7 +90,7 @@ export function useWebSocket({
     ws.onerror = () => {
       setError('WebSocket error')
     }
-  }, [sessionId, token, debug, onMessage, onOpen, onClose])
+  }, [sessionId, token, debug])
 
   useEffect(() => {
     if (!sessionId || !token) {

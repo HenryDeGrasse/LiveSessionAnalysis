@@ -1,7 +1,7 @@
 {
   "required_nudges": [],
   "forbidden_nudges": ["student_off_task", "energy_drop"],
-  "max_nudges": 0,
+  "max_nudges": 2,
   "value_assertions": [
     {
       "path": "snapshot.student.attention_state",

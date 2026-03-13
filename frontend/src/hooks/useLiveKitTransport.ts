@@ -71,6 +71,10 @@ export function useLiveKitTransport({
   const remoteParticipantsRef = useRef<Map<string, RemoteParticipant>>(new Map())
   const remoteParticipantDisconnectedRef = useRef(false)
 
+  // Stable ref for data packet handler so room listeners always call the latest version
+  const onDataPacketRef = useRef(onDataPacket)
+  onDataPacketRef.current = onDataPacket
+
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
   const [remoteParticipants, setRemoteParticipants] = useState<Map<string, RemoteParticipant>>(new Map())
   const [callStatus, setCallStatus] = useState<CallStatus>(
@@ -352,8 +356,8 @@ export function useLiveKitTransport({
           applyRoomState(room)
         })
         room.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
-          if (onDataPacket && topic) {
-            onDataPacket(topic, payload)
+          if (onDataPacketRef.current && topic) {
+            onDataPacketRef.current(topic, payload)
           }
         })
 

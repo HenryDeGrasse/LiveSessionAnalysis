@@ -79,8 +79,8 @@ def test_evaluate_records_global_interval_suppression_after_first_nudge():
     coach = Coach(rules=[rule])
 
     first = coach.evaluate(_snapshot(), elapsed_seconds=300, now=1000.0)
-    # Second check at 30s later — within the new 60s global_min_interval window
-    second = coach.evaluate(_snapshot(), elapsed_seconds=300, now=1030.0)
+    # Second check shortly after — within the global_min_interval window
+    second = coach.evaluate(_snapshot(), elapsed_seconds=300, now=1010.0)
 
     assert [n.nudge_type for n in first.nudges] == ["traceable_rule"]
     assert second.nudges == []

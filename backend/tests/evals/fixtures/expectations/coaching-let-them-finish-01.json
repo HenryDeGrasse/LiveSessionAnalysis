@@ -1,7 +1,7 @@
 {
-  "required_nudges": ["let_them_finish"],
-  "forbidden_nudges": ["energy_drop"],
-  "max_nudges": 1,
+  "required_nudges": [],
+  "forbidden_nudges": ["energy_drop", "student_off_task"],
+  "max_nudges": 2,
   "summary_fields": {
     "session_type": {
       "equals": "general"

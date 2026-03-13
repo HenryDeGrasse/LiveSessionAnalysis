@@ -139,6 +139,7 @@ export interface WSMessage {
 export interface SessionInfo {
   session_id: string
   session_title?: string
+  session_type?: string
   tutor_connected: boolean
   student_connected: boolean
   started: boolean

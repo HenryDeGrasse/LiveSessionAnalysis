@@ -23,6 +23,7 @@ import {
   formatPercent,
   formatScore,
   getSessionHealth,
+  getTutorTalkTarget,
   isTalkBalanced,
   type AnalyticsTone,
 } from '@/lib/analytics'
@@ -347,6 +348,7 @@ export default function SessionPage() {
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null)
   const [sessionInfoLoaded, setSessionInfoLoaded] = useState(false)
   const [showConsent, setShowConsent] = useState(true)
+  const [analysisConsent, setAnalysisConsent] = useState(false)
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const previewVideoRef = useRef<HTMLVideoElement>(null)
@@ -361,6 +363,8 @@ export default function SessionPage() {
   const [endSummaryLoading, setEndSummaryLoading] = useState(false)
   const [endSummaryFailed, setEndSummaryFailed] = useState(false)
   const [debugEvents, setDebugEvents] = useState<Array<{ at: string; message: string }>>([])
+  const [showConfirmLeave, setShowConfirmLeave] = useState(false)
+  const [showConfirmEnd, setShowConfirmEnd] = useState(false)
   const [showCoachDebug, setShowCoachDebug] = useState(
     searchParams.get('debug') === '1'
   )
@@ -759,6 +763,28 @@ export default function SessionPage() {
     clearActiveSession()
     appendDebugEvent('cleared active session')
   }, [appendDebugEvent, sessionEnded])
+
+  // Clear active session when tutor explicitly leaves (via leave/end buttons).
+  // The leave handler already calls clearActiveSession via confirmLeaveSession,
+  // and session-end clears it above. We also clear on beforeunload (tab close)
+  // since the user won't return to this page.
+  useEffect(() => {
+    if (!isTutorRole) return
+    const handleBeforeUnload = () => clearActiveSession()
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isTutorRole])
+
+  // Auto-redirect students to dashboard when session ends
+  useEffect(() => {
+    if (!sessionEnded || isTutorRole) return
+    const redirectTimer = setTimeout(() => {
+      closeConnection('session ended — student redirect')
+      stopStream()
+      router.push('/')
+    }, 3500)
+    return () => clearTimeout(redirectTimer)
+  }, [closeConnection, isTutorRole, router, sessionEnded, stopStream])
 
   useEffect(() => {
     if (!sessionEnded || !isTutorRole || !sessionId) return
@@ -1162,7 +1188,7 @@ export default function SessionPage() {
     ? 'Mute/camera toggles affect only this browser tab. Students never see your live coaching overlay or nudges.'
     : 'Mute/camera toggles affect only this browser tab. This student view stays call-first and does not show tutor coaching.'
   const secondaryHelperText = isTutor
-    ? 'Use Coach debug only when you want richer diagnostics during the session.'
+    ? 'Use Tutor Debug for richer diagnostics during the session.'
     : 'If you leave, the tutor will see that you disconnected and you can rejoin with the same link.'
   const callPlaceholderText =
     callStatus === 'connected'
@@ -1215,8 +1241,8 @@ export default function SessionPage() {
 
   const handleEndSession = useCallback(async () => {
     if (!sessionId || !token || endingSession || sessionEnded) return
-    if (!window.confirm('End this session for everyone?')) return
 
+    setShowConfirmEnd(false)
     setEndingSession(true)
     setEndSessionError(null)
     appendDebugEvent('manual end session requested')
@@ -1245,6 +1271,7 @@ export default function SessionPage() {
   const handleEndedSessionNavigation = useCallback(
     (destination: string) => {
       appendDebugEvent(`leaving ended session view -> ${destination}`)
+      clearActiveSession()
       closeConnection('leaving ended session view')
       stopStream()
       router.push(destination)
@@ -1252,30 +1279,22 @@ export default function SessionPage() {
     [appendDebugEvent, closeConnection, router, stopStream]
   )
 
+  const confirmLeaveSession = useCallback(() => {
+    setShowConfirmLeave(false)
+    appendDebugEvent('left session locally')
+    clearActiveSession()
+    closeConnection('left session locally')
+    stopStream()
+    router.push('/')
+  }, [appendDebugEvent, closeConnection, router, stopStream])
+
   const handleLeaveSession = useCallback(() => {
     if (sessionEnded) {
       handleEndedSessionNavigation(`/analytics/${sessionId}`)
       return
     }
-
-    if (!window.confirm('Leave this session? You can rejoin later with the same link.')) {
-      return
-    }
-
-    appendDebugEvent('left session locally')
-    closeConnection('left session locally')
-    stopStream()
-    router.push('/')
-  }, [
-    appendDebugEvent,
-    closeConnection,
-    handleEndedSessionNavigation,
-    isTutor,
-    router,
-    sessionEnded,
-    sessionId,
-    stopStream,
-  ])
+    setShowConfirmLeave(true)
+  }, [handleEndedSessionNavigation, sessionEnded, sessionId])
 
   // ── Camera preview stream: stop tracks on unmount ──
   useEffect(() => {
@@ -1545,8 +1564,35 @@ export default function SessionPage() {
                   </div>
                 )}
 
+                {/* Analysis consent checkbox */}
+                {!sessionEnded && (
+                  <label
+                    data-testid="analysis-consent-label"
+                    className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 transition hover:bg-white/[0.06]"
+                  >
+                    <input
+                      data-testid="analysis-consent-checkbox"
+                      type="checkbox"
+                      checked={analysisConsent}
+                      onChange={(e) => setAnalysisConsent(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer appearance-none rounded border-2 border-white/30 bg-transparent transition checked:border-[#7b6ef6] checked:bg-[#7b6ef6] focus:outline-none focus:ring-2 focus:ring-[#7b6ef6]/40"
+                    />
+                    <div>
+                      <p className="text-sm font-medium leading-snug text-white">
+                        I consent to session analysis
+                      </p>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                        Tutors and students must consent to analysis. Camera, audio, and engagement
+                        signals are processed in real time. No raw video or audio is stored — only
+                        derived metrics are saved for post-session review.
+                      </p>
+                    </div>
+                  </label>
+                )}
+
                 <button
                   data-testid="consent-start-button"
+                  disabled={!sessionEnded && !analysisConsent}
                   onClick={() => {
                     if (sessionEnded) {
                       handleLeaveSession()
@@ -1558,7 +1604,7 @@ export default function SessionPage() {
                     setSessionStartTime(Date.now())
                     requestAccess()
                   }}
-                  className="w-full rounded-2xl bg-[#0066FF] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#3385FF]"
+                  className="w-full rounded-2xl bg-gradient-to-r from-[#7b6ef6] to-[#4a90d9] px-4 py-3 text-sm font-medium text-white transition hover:shadow-[0_4px_24px_rgba(123,110,246,0.35)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {consentButtonLabel}
                 </button>
@@ -1573,7 +1619,9 @@ export default function SessionPage() {
   return (
     <div
       data-testid="call-surface"
-      className="fixed inset-0 overflow-hidden bg-black text-white"
+      className={`fixed inset-0 overflow-hidden bg-black text-white transition-all duration-300 ${
+        showCoachDebug ? 'right-[420px] lg:right-[480px]' : ''
+      }`}
       onMouseMove={showControlsTemporarily}
       onPointerMove={showControlsTemporarily}
       onTouchStart={showControlsTemporarily}
@@ -1853,7 +1901,7 @@ export default function SessionPage() {
                     : 'border-white/20 bg-black/40 text-gray-200 hover:bg-black/60'
                 }`}
               >
-                {showCoachDebug ? 'Hide debug' : isTutor ? 'Coach debug' : 'Debug panel'}
+                {showCoachDebug ? 'Hide debug' : isTutor ? 'Tutor Debug' : 'Debug'}
               </button>
             )}
           </div>
@@ -1920,24 +1968,48 @@ export default function SessionPage() {
             </div>
 
             <div className="min-w-[220px] flex-1">
-              <div className="mb-0.5 flex justify-between text-[10px]">
-                <span>
-                  Talk share · Tutor {(currentMetrics.tutor.talk_time_percent * 100).toFixed(0)}%
-                </span>
-                <span>
-                  Student {(currentMetrics.student.talk_time_percent * 100).toFixed(0)}%
-                </span>
-              </div>
-              <div className="flex h-1.5 overflow-hidden rounded-full bg-gray-600">
-                <div
-                  className="h-full bg-blue-400"
-                  style={{ width: `${currentMetrics.tutor.talk_time_percent * 100}%` }}
-                />
-                <div
-                  className="h-full bg-green-400"
-                  style={{ width: `${currentMetrics.student.talk_time_percent * 100}%` }}
-                />
-              </div>
+              {(() => {
+                const sessionType = sessionInfo?.session_type ?? currentMetrics?.coaching_decision?.session_type ?? 'general'
+                const target = getTutorTalkTarget(sessionType)
+                const tutorPct = currentMetrics.tutor.talk_time_percent
+                const isOver = tutorPct > target + 0.12
+                return (
+                  <>
+                    <div className="mb-0.5 flex justify-between text-[10px]">
+                      <span className={isOver ? 'text-amber-400' : ''}>
+                        Talk share · Tutor {(tutorPct * 100).toFixed(0)}%
+                      </span>
+                      <span>
+                        Student {(currentMetrics.student.talk_time_percent * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <div className="flex h-2 overflow-hidden rounded-full bg-gray-600">
+                        <div
+                          className={`h-full transition-all duration-300 ${isOver ? 'bg-amber-400' : 'bg-blue-400'}`}
+                          style={{ width: `${tutorPct * 100}%` }}
+                        />
+                        <div
+                          className="h-full bg-green-400 transition-all duration-300"
+                          style={{ width: `${currentMetrics.student.talk_time_percent * 100}%` }}
+                        />
+                      </div>
+                      {/* Target marker */}
+                      <div
+                        className="absolute top-[-3px] h-[14px] w-[2px] rounded-full bg-white/70"
+                        style={{ left: `${target * 100}%` }}
+                        title={`Target tutor share: ${(target * 100).toFixed(0)}%`}
+                      />
+                      <div
+                        className="absolute top-[-12px] text-[8px] font-medium text-white/50"
+                        style={{ left: `${target * 100}%`, transform: 'translateX(-50%)' }}
+                      >
+                        {(target * 100).toFixed(0)}%
+                      </div>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
 
             <div>
@@ -2040,7 +2112,7 @@ export default function SessionPage() {
               data-testid="end-session-button"
               type="button"
               aria-label={sessionEnded ? 'Session ended' : 'End session for everyone'}
-              onClick={handleEndSession}
+              onClick={() => setShowConfirmEnd(true)}
               disabled={endingSession || sessionEnded}
               title={sessionEnded ? 'Session ended' : 'End session for everyone'}
               className="flex h-12 w-12 items-center justify-center rounded-full border border-red-500/60 bg-red-600 text-white backdrop-blur-md transition-colors hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50"
@@ -2099,59 +2171,102 @@ export default function SessionPage() {
       {sessionEnded && !isTutor && (
         <div
           data-testid="session-ended-banner"
-          className="absolute left-4 right-4 top-16 z-30 rounded-2xl border border-blue-700 bg-blue-900/80 p-3 text-sm text-blue-100 backdrop-blur-md"
+          className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
         >
-          {sessionEndedMessage}
+          <div className="mx-4 w-full max-w-md rounded-2xl border border-white/10 bg-[#1e2545] p-8 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/20">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-6 w-6 text-blue-400">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-white">Session complete</h2>
+            <p className="mt-2 text-sm leading-6 text-[#8896b3]">{sessionEndedMessage}</p>
+            <p className="mt-4 text-xs text-[#556080]">Redirecting to your dashboard…</p>
+            <button
+              type="button"
+              onClick={() => { closeConnection('student left'); stopStream(); router.push('/') }}
+              className="mt-4 rounded-xl bg-gradient-to-r from-[#7b6ef6] to-[#4a90d9] px-6 py-2 text-sm font-medium text-white transition hover:shadow-lg"
+            >
+              Go now
+            </button>
+          </div>
         </div>
       )}
 
-      {/* ── Nudge toasts (tutor only, fixed bottom-right above control bar) ── */}
+      {/* ── Nudge toasts (tutor only) — positioned above PIP, inside call surface ── */}
       {isTutor && nudges.length > 0 && (
-        <div className="fixed bottom-24 right-4 z-50 max-w-sm space-y-2">
-          {nudges.map((nudge) => (
-            <div
-              key={nudge.id}
-              className={`rounded-2xl border p-4 shadow-xl transition-all ${
-                nudge.priority === 'high'
-                  ? 'border-red-700 bg-red-950/92'
-                  : nudge.priority === 'medium'
-                  ? 'border-yellow-700 bg-yellow-950/92'
-                  : 'border-gray-700 bg-gray-900/92'
-              }`}
-            >
-              <p className="text-sm font-medium text-white">{nudge.message}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => dismissNudge(nudge.id)}
-                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
+        <div className="pointer-events-none absolute inset-0 z-20">
+          <div className="pointer-events-auto absolute bottom-[340px] right-4 w-[380px] max-w-[calc(100%-2rem)] space-y-3 sm:bottom-[420px] sm:w-[420px]">
+            {nudges.map((nudge) => {
+              const isHigh = nudge.priority === 'high'
+              const isMed = nudge.priority === 'medium'
+              return (
+                <div
+                  key={nudge.id}
+                  className={`animate-slide-in-right rounded-2xl border-2 p-4 shadow-2xl backdrop-blur-md ${
+                    isHigh
+                      ? 'border-red-500/60 bg-red-950/95 shadow-red-900/40'
+                      : isMed
+                      ? 'border-amber-500/50 bg-amber-950/95 shadow-amber-900/30'
+                      : 'border-blue-500/40 bg-slate-900/95 shadow-blue-900/20'
+                  }`}
                 >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleNudgeSound}
-                  title={nudgeSoundEnabled ? 'Mute nudge chime' : 'Unmute nudge chime'}
-                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
-                >
-                  {nudgeSoundEnabled ? '🔔 Sound on' : '🔕 Sound off'}
-                </button>
-                <button
-                  type="button"
-                  onClick={disableAllNudges}
-                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
-                >
-                  Disable all nudges for session
-                </button>
-              </div>
-            </div>
-          ))}
+                  <div className="flex items-start gap-3">
+                    {/* Icon dot */}
+                    <div className={`mt-1 h-3 w-3 flex-shrink-0 rounded-full ${
+                      isHigh ? 'bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.6)]' : isMed ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]' : 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]'
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      {/* Label */}
+                      <div className={`mb-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                        isHigh ? 'text-red-400' : isMed ? 'text-amber-400' : 'text-blue-400'
+                      }`}>
+                        {isHigh ? 'Action needed' : isMed ? 'Coaching tip' : 'Suggestion'}
+                      </div>
+                      {/* Message */}
+                      <p className="text-sm font-medium leading-snug text-white">{nudge.message}</p>
+                    </div>
+                    {/* Close X */}
+                    <button
+                      type="button"
+                      onClick={() => dismissNudge(nudge.id)}
+                      className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-sm text-white/40 transition hover:bg-white/10 hover:text-white"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="mt-2.5 flex items-center gap-2 border-t border-white/10 pt-2.5">
+                    <button
+                      type="button"
+                      onClick={() => dismissNudge(nudge.id)}
+                      className="rounded-full bg-white/10 px-3.5 py-1 text-xs font-semibold text-white transition hover:bg-white/20"
+                    >
+                      Got it
+                    </button>
+                    <button
+                      type="button"
+                      onClick={disableAllNudges}
+                      className="ml-auto rounded-full px-3 py-1 text-[10px] text-white/30 transition hover:text-white/50"
+                    >
+                      Pause nudges
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
       {isTutor && !nudgesEnabled && (
-        <div className="fixed bottom-24 right-4 z-40 rounded-full border border-white/10 bg-gray-900/90 px-3 py-2 text-xs text-gray-200 shadow-lg">
-          Live nudges disabled for this session.
+        <div className="absolute bottom-[340px] right-4 z-20 sm:bottom-[420px]">
+          <button
+            type="button"
+            onClick={enableAllNudges}
+            className="rounded-full border border-white/10 bg-gray-900/90 px-3 py-2 text-xs text-gray-200 shadow-lg transition hover:bg-gray-800/90 hover:text-white"
+          >
+            Nudges paused · <span className="underline">Resume</span>
+          </button>
         </div>
       )}
 
@@ -2165,14 +2280,14 @@ export default function SessionPage() {
         </div>
       )}
 
-      {/* ── Debug panel overlay (scrollable drawer from bottom) ── */}
+      {/* ── Tutor Debug — slide-in drawer from the right ── */}
       {showCoachDebug && (
         <div
           data-testid="coach-debug-panel"
-          className="fixed inset-x-0 bottom-0 z-40 max-h-[65vh] overflow-auto rounded-t-2xl border-t border-gray-700 bg-gray-900/97 backdrop-blur-md"
+          className="fixed bottom-0 right-0 top-0 z-40 w-[420px] overflow-y-auto border-l border-white/10 bg-[#111627]/98 backdrop-blur-md lg:w-[480px]"
         >
-          <div className="flex items-center justify-between px-4 py-3 text-sm font-medium text-white">
-            <span>Debug panel</span>
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#111627] px-4 py-3">
+            <span className="text-sm font-semibold text-white">Tutor Debug</span>
             <div className="flex items-center gap-2">
               {!nudgesEnabled && (
                 <button
@@ -2193,13 +2308,13 @@ export default function SessionPage() {
               <button
                 type="button"
                 onClick={() => setShowCoachDebug(false)}
-                className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white transition-colors hover:bg-white/10"
+                className="rounded-full border border-white/15 bg-white/5 px-2 py-1 text-xs text-white transition-colors hover:bg-white/10"
               >
-                Hide
+                ✕
               </button>
             </div>
           </div>
-          <div className="grid gap-4 border-t border-gray-700 px-4 py-4 text-sm md:grid-cols-2">
+          <div className="flex flex-col gap-4 px-4 py-4 text-sm">
             <div className="space-y-2">
               <h3 className="font-semibold text-white">Connection + local state</h3>
               <div className="space-y-1 text-gray-300">
@@ -2276,7 +2391,7 @@ export default function SessionPage() {
               )}
             </div>
 
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <h3 className="font-semibold text-white">Recent events</h3>
               <div className="max-h-48 overflow-auto rounded bg-gray-900 p-3 text-xs text-gray-300 space-y-1">
                 {debugEvents.length > 0 ? (
@@ -2405,11 +2520,67 @@ export default function SessionPage() {
               </pre>
             </div>
 
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <h3 className="font-semibold text-white">History</h3>
               <p className="text-xs text-gray-400">
                 Metrics snapshots kept in memory: {metricsHistory.length}. Live nudge history: {nudgeHistory.length}.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm Leave modal ── */}
+      {showConfirmLeave && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-2xl border border-white/10 bg-[#1e2545] p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-white">Leave session?</h3>
+            <p className="mt-2 text-sm leading-6 text-[#8896b3]">
+              You can rejoin later with the same link. The session will stay active for other participants.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowConfirmLeave(false)}
+                className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+              >
+                Stay
+              </button>
+              <button
+                type="button"
+                onClick={confirmLeaveSession}
+                className="flex-1 rounded-xl bg-rose-600 py-2.5 text-sm font-medium text-white transition hover:bg-rose-500"
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm End Session modal ── */}
+      {showConfirmEnd && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-2xl border border-white/10 bg-[#1e2545] p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-white">End session for everyone?</h3>
+            <p className="mt-2 text-sm leading-6 text-[#8896b3]">
+              This will end the call for all participants and generate the analytics report. This cannot be undone.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowConfirmEnd(false)}
+                className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleEndSession()}
+                className="flex-1 rounded-xl bg-rose-600 py-2.5 text-sm font-medium text-white transition hover:bg-rose-500"
+              >
+                End Session
+              </button>
             </div>
           </div>
         </div>

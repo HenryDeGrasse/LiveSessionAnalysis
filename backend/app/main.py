@@ -220,6 +220,8 @@ async def session_info(session_id: str, token: str = ""):
     return {
         "session_id": room.session_id,
         "session_title": room.session_title,
+        "session_type": room.session_type,
+        "coaching_intensity": room.coaching_intensity,
         "tutor_connected": room.participants[Role.TUTOR].connected,
         "student_connected": any(
             participant.connected for _idx, participant in room.all_student_participants()

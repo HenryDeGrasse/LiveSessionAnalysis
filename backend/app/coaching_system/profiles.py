@@ -86,13 +86,13 @@ SOCRATIC = SessionProfile(
 )
 
 GENERAL = SessionProfile(
-    tutor_overtalk_threshold=0.80,       # current default
-    student_silence_threshold_seconds=180,
+    tutor_overtalk_threshold=0.75,       # fire sooner when tutor dominates
+    student_silence_threshold_seconds=120,
     interruption_spike_count=3,
-    off_task_persistence_seconds=75,
-    tech_check_silence_seconds=30,
-    mutual_silence_threshold_seconds=60,  # 60s mutual silence is unusual
-    student_long_silence_seconds=90,
+    off_task_persistence_seconds=45,     # 45s off-task is clearly an issue
+    tech_check_silence_seconds=25,
+    mutual_silence_threshold_seconds=35,  # 35s mutual silence → re-engage
+    student_long_silence_seconds=60,      # 60s student quiet → encourage
     low_engagement_score_threshold=50.0,
 )
 

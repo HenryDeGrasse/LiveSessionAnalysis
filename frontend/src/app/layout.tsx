@@ -16,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-slate-950 text-slate-100">
+      <body className="min-h-screen bg-[#1a1f3a] text-slate-100">
         <Providers>
           <SiteHeader />
           {children}

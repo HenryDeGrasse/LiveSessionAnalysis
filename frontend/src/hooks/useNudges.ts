@@ -48,21 +48,25 @@ export function useNudges() {
   const [nudgesEnabled, setNudgesEnabled] = useState(true)
   const [nudgeSoundEnabled, setNudgeSoundEnabled] = useState(true)
 
-  // Keep a stable ref so handleNudge always reads the current sound preference
-  // without needing it in its dependency array
+  // Keep stable refs so handleNudge always reads the current preferences
+  // without needing them in its dependency array (avoids cascade re-renders
+  // that would tear down the WebSocket connection).
   const nudgeSoundEnabledRef = useRef(nudgeSoundEnabled)
   nudgeSoundEnabledRef.current = nudgeSoundEnabled
+
+  const nudgesEnabledRef = useRef(nudgesEnabled)
+  nudgesEnabledRef.current = nudgesEnabled
 
   const handleNudge = useCallback(
     (data: Nudge) => {
       setNudgeHistory((prev) => [...prev, data])
-      if (!nudgesEnabled) return
+      if (!nudgesEnabledRef.current) return
       setNudges((prev) => [...prev, data])
       if (nudgeSoundEnabledRef.current) {
         playNudgeChime()
       }
     },
-    [nudgesEnabled]
+    [] // stable — reads from refs
   )
 
   const dismissNudge = useCallback((id: string) => {
