@@ -159,6 +159,10 @@ def _let_them_finish_severity(
     """
     # Echo affects overlap detection reliability; reduce severity instead of
     # hard-suppressing so strong interruption patterns can still surface.
+    # Suppress when both are silent — stale window data shouldn't fire
+    if snapshot.session.mutual_silence_duration_current > 10.0:
+        return 0.0
+
     echo_penalty = 0.75 if snapshot.session.echo_suspected else 1.0
     if snapshot.session.recent_tutor_talk_percent < 0.45:
         return 0.0
@@ -415,7 +419,15 @@ def _interruption_burst_severity(
     doesn't require high tutor talk share.  It fires when the tutor has
     produced 2+ hard interruptions recently OR there's an active hard
     overlap happening.  Designed to be easy to trigger in demos.
+
+    Suppressed when both participants are silent (mutual silence > 10s) —
+    this prevents stale interruption data from the start of the call from
+    triggering nudges after everyone has gone quiet/muted.
     """
+    # Don't fire on stale data when nobody is talking
+    if snapshot.session.mutual_silence_duration_current > 10.0:
+        return 0.0
+
     hard_recent = snapshot.session.recent_hard_interruptions
     cutoffs = snapshot.session.tutor_cutoffs
     active_hard = snapshot.session.active_overlap_state == "hard"

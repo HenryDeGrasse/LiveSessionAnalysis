@@ -539,11 +539,35 @@ function HomeContent() {
     if (isStudent) {
       clearStoredActiveSession()
       setActiveSession(null)
-    } else {
-      setActiveSession(getActiveSession())
+      return
     }
+    const stored = getActiveSession()
+    if (!stored) {
+      setActiveSession(null)
+      return
+    }
+    // Validate against server — clear if session is ended or gone
+    apiFetch(`/api/sessions/${stored.session_id}/info?token=${stored.tutor_token}`, { accessToken })
+      .then(async (r) => {
+        if (!r.ok) {
+          clearStoredActiveSession()
+          setActiveSession(null)
+          return
+        }
+        const info = await r.json()
+        if (info.ended) {
+          clearStoredActiveSession()
+          setActiveSession(null)
+        } else {
+          setActiveSession(stored)
+        }
+      })
+      .catch(() => {
+        // Network error — still show the banner (user may be offline)
+        setActiveSession(stored)
+      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isStudent])
+  }, [isStudent, accessToken])
 
   useEffect(() => {
     let cancelled = false

@@ -136,7 +136,7 @@ class Settings(BaseSettings):
     energy_drop_from_baseline_threshold: float = 0.25
     energy_drop_cooldown: int = 120
     interruption_spike_count: int = 3
-    interruption_spike_window: int = 120
+    interruption_spike_window: int = 60
     interruption_spike_cooldown: int = 60
 
     # Adaptive degradation thresholds (rolling avg of last 5 frames)

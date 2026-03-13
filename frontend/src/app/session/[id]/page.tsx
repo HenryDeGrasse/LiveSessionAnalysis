@@ -763,6 +763,14 @@ export default function SessionPage() {
     appendDebugEvent('cleared active session')
   }, [appendDebugEvent, sessionEnded])
 
+  // Clear active session when tutor leaves the session page (unmount)
+  useEffect(() => {
+    if (!isTutorRole) return
+    return () => {
+      clearActiveSession()
+    }
+  }, [isTutorRole])
+
   // Auto-redirect students to dashboard when session ends
   useEffect(() => {
     if (!sessionEnded || isTutorRole) return
@@ -2152,82 +2160,80 @@ export default function SessionPage() {
         </div>
       )}
 
-      {/* ── Nudge toasts (tutor only) — large & prominent ── */}
+      {/* ── Nudge toasts (tutor only) — positioned above PIP, inside call surface ── */}
       {isTutor && nudges.length > 0 && (
-        <div className="fixed bottom-28 right-6 z-50 w-[420px] max-w-[calc(100vw-2rem)] space-y-3">
-          {nudges.map((nudge) => {
-            const isHigh = nudge.priority === 'high'
-            const isMed = nudge.priority === 'medium'
-            return (
-              <div
-                key={nudge.id}
-                className={`animate-slide-in-right rounded-2xl border-2 p-5 shadow-2xl backdrop-blur-sm ${
-                  isHigh
-                    ? 'border-red-500/60 bg-red-950/95 shadow-red-900/40'
-                    : isMed
-                    ? 'border-amber-500/50 bg-amber-950/95 shadow-amber-900/30'
-                    : 'border-blue-500/40 bg-slate-900/95 shadow-blue-900/20'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  {/* Icon */}
-                  <div className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-lg ${
-                    isHigh ? 'bg-red-500/20 text-red-400' : isMed ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'
-                  }`}>
-                    {isHigh ? '⚠️' : isMed ? '💡' : 'ℹ️'}
-                  </div>
-                  <div className="flex-1">
-                    {/* Label */}
-                    <div className={`mb-1 text-[11px] font-bold uppercase tracking-wider ${
-                      isHigh ? 'text-red-400' : isMed ? 'text-amber-400' : 'text-blue-400'
-                    }`}>
-                      {isHigh ? 'Action needed' : isMed ? 'Coaching tip' : 'Suggestion'}
+        <div className="pointer-events-none absolute inset-0 z-20">
+          <div className="pointer-events-auto absolute bottom-[340px] right-4 w-[380px] max-w-[calc(100%-2rem)] space-y-3 sm:bottom-[420px] sm:w-[420px]">
+            {nudges.map((nudge) => {
+              const isHigh = nudge.priority === 'high'
+              const isMed = nudge.priority === 'medium'
+              return (
+                <div
+                  key={nudge.id}
+                  className={`animate-slide-in-right rounded-2xl border-2 p-4 shadow-2xl backdrop-blur-md ${
+                    isHigh
+                      ? 'border-red-500/60 bg-red-950/95 shadow-red-900/40'
+                      : isMed
+                      ? 'border-amber-500/50 bg-amber-950/95 shadow-amber-900/30'
+                      : 'border-blue-500/40 bg-slate-900/95 shadow-blue-900/20'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Icon dot */}
+                    <div className={`mt-1 h-3 w-3 flex-shrink-0 rounded-full ${
+                      isHigh ? 'bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.6)]' : isMed ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]' : 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]'
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      {/* Label */}
+                      <div className={`mb-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                        isHigh ? 'text-red-400' : isMed ? 'text-amber-400' : 'text-blue-400'
+                      }`}>
+                        {isHigh ? 'Action needed' : isMed ? 'Coaching tip' : 'Suggestion'}
+                      </div>
+                      {/* Message */}
+                      <p className="text-sm font-medium leading-snug text-white">{nudge.message}</p>
                     </div>
-                    {/* Message */}
-                    <p className="text-[15px] font-medium leading-snug text-white">{nudge.message}</p>
+                    {/* Close X */}
+                    <button
+                      type="button"
+                      onClick={() => dismissNudge(nudge.id)}
+                      className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-sm text-white/40 transition hover:bg-white/10 hover:text-white"
+                    >
+                      ✕
+                    </button>
                   </div>
-                  {/* Close X */}
-                  <button
-                    type="button"
-                    onClick={() => dismissNudge(nudge.id)}
-                    className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-white/40 transition hover:bg-white/10 hover:text-white"
-                  >
-                    ✕
-                  </button>
+                  <div className="mt-2.5 flex items-center gap-2 border-t border-white/10 pt-2.5">
+                    <button
+                      type="button"
+                      onClick={() => dismissNudge(nudge.id)}
+                      className="rounded-full bg-white/10 px-3.5 py-1 text-xs font-semibold text-white transition hover:bg-white/20"
+                    >
+                      Got it
+                    </button>
+                    <button
+                      type="button"
+                      onClick={disableAllNudges}
+                      className="ml-auto rounded-full px-3 py-1 text-[10px] text-white/30 transition hover:text-white/50"
+                    >
+                      Pause nudges
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => dismissNudge(nudge.id)}
-                    className="rounded-full bg-white/10 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20"
-                  >
-                    Got it
-                  </button>
-                  <button
-                    type="button"
-                    onClick={toggleNudgeSound}
-                    title={nudgeSoundEnabled ? 'Mute nudge chime' : 'Unmute nudge chime'}
-                    className="rounded-full bg-white/5 px-3 py-1.5 text-xs text-white/60 transition hover:bg-white/10 hover:text-white/80"
-                  >
-                    {nudgeSoundEnabled ? '🔔' : '🔕'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={disableAllNudges}
-                    className="ml-auto rounded-full px-3 py-1.5 text-[10px] text-white/30 transition hover:text-white/50"
-                  >
-                    Pause all nudges
-                  </button>
-                </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       )}
 
       {isTutor && !nudgesEnabled && (
-        <div className="fixed bottom-24 right-4 z-40 rounded-full border border-white/10 bg-gray-900/90 px-3 py-2 text-xs text-gray-200 shadow-lg">
-          Live nudges disabled for this session.
+        <div className="absolute bottom-[340px] right-4 z-20 sm:bottom-[420px]">
+          <button
+            type="button"
+            onClick={enableAllNudges}
+            className="rounded-full border border-white/10 bg-gray-900/90 px-3 py-2 text-xs text-gray-200 shadow-lg transition hover:bg-gray-800/90 hover:text-white"
+          >
+            Nudges paused · <span className="underline">Resume</span>
+          </button>
         </div>
       )}
 
