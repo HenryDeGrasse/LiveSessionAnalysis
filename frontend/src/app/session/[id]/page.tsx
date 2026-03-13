@@ -763,12 +763,15 @@ export default function SessionPage() {
     appendDebugEvent('cleared active session')
   }, [appendDebugEvent, sessionEnded])
 
-  // Clear active session when tutor leaves the session page (unmount)
+  // Clear active session when tutor explicitly leaves (via leave/end buttons).
+  // The leave handler already calls clearActiveSession via confirmLeaveSession,
+  // and session-end clears it above. We also clear on beforeunload (tab close)
+  // since the user won't return to this page.
   useEffect(() => {
     if (!isTutorRole) return
-    return () => {
-      clearActiveSession()
-    }
+    const handleBeforeUnload = () => clearActiveSession()
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [isTutorRole])
 
   // Auto-redirect students to dashboard when session ends
@@ -1267,6 +1270,7 @@ export default function SessionPage() {
   const handleEndedSessionNavigation = useCallback(
     (destination: string) => {
       appendDebugEvent(`leaving ended session view -> ${destination}`)
+      clearActiveSession()
       closeConnection('leaving ended session view')
       stopStream()
       router.push(destination)
@@ -1277,6 +1281,7 @@ export default function SessionPage() {
   const confirmLeaveSession = useCallback(() => {
     setShowConfirmLeave(false)
     appendDebugEvent('left session locally')
+    clearActiveSession()
     closeConnection('left session locally')
     stopStream()
     router.push('/')
