@@ -361,6 +361,8 @@ export default function SessionPage() {
   const [endSummaryLoading, setEndSummaryLoading] = useState(false)
   const [endSummaryFailed, setEndSummaryFailed] = useState(false)
   const [debugEvents, setDebugEvents] = useState<Array<{ at: string; message: string }>>([])
+  const [showConfirmLeave, setShowConfirmLeave] = useState(false)
+  const [showConfirmEnd, setShowConfirmEnd] = useState(false)
   const [showCoachDebug, setShowCoachDebug] = useState(
     searchParams.get('debug') === '1'
   )
@@ -759,6 +761,17 @@ export default function SessionPage() {
     clearActiveSession()
     appendDebugEvent('cleared active session')
   }, [appendDebugEvent, sessionEnded])
+
+  // Auto-redirect students to dashboard when session ends
+  useEffect(() => {
+    if (!sessionEnded || isTutorRole) return
+    const redirectTimer = setTimeout(() => {
+      closeConnection('session ended — student redirect')
+      stopStream()
+      router.push('/')
+    }, 3500)
+    return () => clearTimeout(redirectTimer)
+  }, [closeConnection, isTutorRole, router, sessionEnded, stopStream])
 
   useEffect(() => {
     if (!sessionEnded || !isTutorRole || !sessionId) return
@@ -1162,7 +1175,7 @@ export default function SessionPage() {
     ? 'Mute/camera toggles affect only this browser tab. Students never see your live coaching overlay or nudges.'
     : 'Mute/camera toggles affect only this browser tab. This student view stays call-first and does not show tutor coaching.'
   const secondaryHelperText = isTutor
-    ? 'Use Coach debug only when you want richer diagnostics during the session.'
+    ? 'Use Tutor Debug for richer diagnostics during the session.'
     : 'If you leave, the tutor will see that you disconnected and you can rejoin with the same link.'
   const callPlaceholderText =
     callStatus === 'connected'
@@ -1215,8 +1228,8 @@ export default function SessionPage() {
 
   const handleEndSession = useCallback(async () => {
     if (!sessionId || !token || endingSession || sessionEnded) return
-    if (!window.confirm('End this session for everyone?')) return
 
+    setShowConfirmEnd(false)
     setEndingSession(true)
     setEndSessionError(null)
     appendDebugEvent('manual end session requested')
@@ -1252,30 +1265,21 @@ export default function SessionPage() {
     [appendDebugEvent, closeConnection, router, stopStream]
   )
 
+  const confirmLeaveSession = useCallback(() => {
+    setShowConfirmLeave(false)
+    appendDebugEvent('left session locally')
+    closeConnection('left session locally')
+    stopStream()
+    router.push('/')
+  }, [appendDebugEvent, closeConnection, router, stopStream])
+
   const handleLeaveSession = useCallback(() => {
     if (sessionEnded) {
       handleEndedSessionNavigation(`/analytics/${sessionId}`)
       return
     }
-
-    if (!window.confirm('Leave this session? You can rejoin later with the same link.')) {
-      return
-    }
-
-    appendDebugEvent('left session locally')
-    closeConnection('left session locally')
-    stopStream()
-    router.push('/')
-  }, [
-    appendDebugEvent,
-    closeConnection,
-    handleEndedSessionNavigation,
-    isTutor,
-    router,
-    sessionEnded,
-    sessionId,
-    stopStream,
-  ])
+    setShowConfirmLeave(true)
+  }, [handleEndedSessionNavigation, sessionEnded, sessionId])
 
   // ── Camera preview stream: stop tracks on unmount ──
   useEffect(() => {
@@ -1573,7 +1577,9 @@ export default function SessionPage() {
   return (
     <div
       data-testid="call-surface"
-      className="fixed inset-0 overflow-hidden bg-black text-white"
+      className={`fixed inset-0 overflow-hidden bg-black text-white transition-all duration-300 ${
+        showCoachDebug ? 'right-[420px] lg:right-[480px]' : ''
+      }`}
       onMouseMove={showControlsTemporarily}
       onPointerMove={showControlsTemporarily}
       onTouchStart={showControlsTemporarily}
@@ -1853,7 +1859,7 @@ export default function SessionPage() {
                     : 'border-white/20 bg-black/40 text-gray-200 hover:bg-black/60'
                 }`}
               >
-                {showCoachDebug ? 'Hide debug' : isTutor ? 'Coach debug' : 'Debug panel'}
+                {showCoachDebug ? 'Hide debug' : isTutor ? 'Tutor Debug' : 'Debug'}
               </button>
             )}
           </div>
@@ -2040,7 +2046,7 @@ export default function SessionPage() {
               data-testid="end-session-button"
               type="button"
               aria-label={sessionEnded ? 'Session ended' : 'End session for everyone'}
-              onClick={handleEndSession}
+              onClick={() => setShowConfirmEnd(true)}
               disabled={endingSession || sessionEnded}
               title={sessionEnded ? 'Session ended' : 'End session for everyone'}
               className="flex h-12 w-12 items-center justify-center rounded-full border border-red-500/60 bg-red-600 text-white backdrop-blur-md transition-colors hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50"
@@ -2099,9 +2105,25 @@ export default function SessionPage() {
       {sessionEnded && !isTutor && (
         <div
           data-testid="session-ended-banner"
-          className="absolute left-4 right-4 top-16 z-30 rounded-2xl border border-blue-700 bg-blue-900/80 p-3 text-sm text-blue-100 backdrop-blur-md"
+          className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
         >
-          {sessionEndedMessage}
+          <div className="mx-4 w-full max-w-md rounded-2xl border border-white/10 bg-[#1e2545] p-8 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/20">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-6 w-6 text-blue-400">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-white">Session complete</h2>
+            <p className="mt-2 text-sm leading-6 text-[#8896b3]">{sessionEndedMessage}</p>
+            <p className="mt-4 text-xs text-[#556080]">Redirecting to your dashboard…</p>
+            <button
+              type="button"
+              onClick={() => { closeConnection('student left'); stopStream(); router.push('/') }}
+              className="mt-4 rounded-xl bg-gradient-to-r from-[#7b6ef6] to-[#4a90d9] px-6 py-2 text-sm font-medium text-white transition hover:shadow-lg"
+            >
+              Go now
+            </button>
+          </div>
         </div>
       )}
 
@@ -2165,14 +2187,14 @@ export default function SessionPage() {
         </div>
       )}
 
-      {/* ── Debug panel overlay (scrollable drawer from bottom) ── */}
+      {/* ── Tutor Debug — slide-in drawer from the right ── */}
       {showCoachDebug && (
         <div
           data-testid="coach-debug-panel"
-          className="fixed inset-x-0 bottom-0 z-40 max-h-[65vh] overflow-auto rounded-t-2xl border-t border-gray-700 bg-gray-900/97 backdrop-blur-md"
+          className="fixed bottom-0 right-0 top-0 z-40 w-[420px] overflow-y-auto border-l border-white/10 bg-[#111627]/98 backdrop-blur-md lg:w-[480px]"
         >
-          <div className="flex items-center justify-between px-4 py-3 text-sm font-medium text-white">
-            <span>Debug panel</span>
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#111627] px-4 py-3">
+            <span className="text-sm font-semibold text-white">Tutor Debug</span>
             <div className="flex items-center gap-2">
               {!nudgesEnabled && (
                 <button
@@ -2193,13 +2215,13 @@ export default function SessionPage() {
               <button
                 type="button"
                 onClick={() => setShowCoachDebug(false)}
-                className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white transition-colors hover:bg-white/10"
+                className="rounded-full border border-white/15 bg-white/5 px-2 py-1 text-xs text-white transition-colors hover:bg-white/10"
               >
-                Hide
+                ✕
               </button>
             </div>
           </div>
-          <div className="grid gap-4 border-t border-gray-700 px-4 py-4 text-sm md:grid-cols-2">
+          <div className="flex flex-col gap-4 px-4 py-4 text-sm">
             <div className="space-y-2">
               <h3 className="font-semibold text-white">Connection + local state</h3>
               <div className="space-y-1 text-gray-300">
@@ -2276,7 +2298,7 @@ export default function SessionPage() {
               )}
             </div>
 
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <h3 className="font-semibold text-white">Recent events</h3>
               <div className="max-h-48 overflow-auto rounded bg-gray-900 p-3 text-xs text-gray-300 space-y-1">
                 {debugEvents.length > 0 ? (
@@ -2405,11 +2427,67 @@ export default function SessionPage() {
               </pre>
             </div>
 
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <h3 className="font-semibold text-white">History</h3>
               <p className="text-xs text-gray-400">
                 Metrics snapshots kept in memory: {metricsHistory.length}. Live nudge history: {nudgeHistory.length}.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm Leave modal ── */}
+      {showConfirmLeave && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-2xl border border-white/10 bg-[#1e2545] p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-white">Leave session?</h3>
+            <p className="mt-2 text-sm leading-6 text-[#8896b3]">
+              You can rejoin later with the same link. The session will stay active for other participants.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowConfirmLeave(false)}
+                className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+              >
+                Stay
+              </button>
+              <button
+                type="button"
+                onClick={confirmLeaveSession}
+                className="flex-1 rounded-xl bg-rose-600 py-2.5 text-sm font-medium text-white transition hover:bg-rose-500"
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm End Session modal ── */}
+      {showConfirmEnd && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-2xl border border-white/10 bg-[#1e2545] p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-white">End session for everyone?</h3>
+            <p className="mt-2 text-sm leading-6 text-[#8896b3]">
+              This will end the call for all participants and generate the analytics report. This cannot be undone.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowConfirmEnd(false)}
+                className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleEndSession()}
+                className="flex-1 rounded-xl bg-rose-600 py-2.5 text-sm font-medium text-white transition hover:bg-rose-500"
+              >
+                End Session
+              </button>
             </div>
           </div>
         </div>

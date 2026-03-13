@@ -731,7 +731,7 @@ function HomeContent() {
               <p className="max-w-xl text-base leading-7 text-[#8896b3]">
                 {isStudent
                   ? 'Join your tutoring session using the link your tutor shared.'
-                  : 'Launch a new room, rejoin an active session, and review analytics — all from one dashboard.'}
+                  : 'Launch a new room, join an active session, and review analytics — all from one dashboard.'}
               </p>
             </div>
 
@@ -792,7 +792,7 @@ function HomeContent() {
                   Active Session
                 </div>
                 <h2 className="mt-3 text-2xl font-semibold text-white">
-                  Rejoin your tutor room
+                  Join your tutor room
                 </h2>
                 <p className="mt-1 text-sm text-emerald-100/80">
                   Ref {truncateSessionId(activeSession.session_id)} ·{' '}
@@ -811,7 +811,7 @@ function HomeContent() {
                   }
                   className="rounded-2xl bg-emerald-400 px-5 py-2.5 text-sm font-semibold text-[#1a1f3a] transition hover:bg-emerald-300"
                 >
-                  Rejoin
+                  Join
                 </button>
                 <button
                   onClick={dismissActiveSession}
