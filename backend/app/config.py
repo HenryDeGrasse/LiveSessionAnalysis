@@ -191,6 +191,41 @@ class Settings(BaseSettings):
     # Values: "local" (default, file/SQLite) | "postgres"
     storage_backend: str = "local"
 
+    # --- AI Conversational Intelligence: Transcription ---
+    enable_transcription: bool = False
+    transcription_provider: str = "assemblyai"  # "assemblyai" | "deepgram" | "mock"
+    transcription_roles: list[str] = ["student"]  # Student-only for pilot (halves cost + privacy)
+    assemblyai_api_key: str = ""
+    deepgram_api_key: str = ""
+    transcription_language: str = "en"
+    transcription_model: str = "nova-2"  # Deepgram model (ignored for AssemblyAI)
+    transcription_enable_sentiment: bool = False  # Gate behind language support
+    transcription_buffer_window_seconds: float = 120.0  # Rolling window for AI context
+    transcription_queue_max_size: int = 200  # ~6s buffer at 16kHz/480-sample chunks
+    transcription_keepalive_interval_seconds: float = 8.0
+    deepgram_endpointing_ms: int = 800  # Must match tail silence injection duration
+    deepgram_mip_opt_out: bool = True  # Opt out of Deepgram model training data
+
+    # --- AI Conversational Intelligence: Uncertainty Detection ---
+    enable_uncertainty_detection: bool = False
+    uncertainty_ui_threshold: float = 0.6
+    uncertainty_persistence_utterances: int = 2  # Must sustain 2+ utterances
+    uncertainty_persistence_window_seconds: float = 45.0
+
+    # --- AI Conversational Intelligence: AI Coaching Copilot ---
+    enable_ai_coaching: bool = False
+    ai_coaching_provider: str = "openrouter"  # "openrouter" | "anthropic"
+    ai_coaching_model: str = "anthropic/claude-3.5-haiku"  # OpenRouter model ID
+    openrouter_api_key: str = ""  # Get from https://openrouter.ai/
+    anthropic_api_key: str = ""  # Only needed if ai_coaching_provider = "anthropic"
+    ai_coaching_baseline_interval_seconds: float = 45.0  # Baseline check every 45s
+    ai_coaching_burst_interval_seconds: float = 15.0  # Burst on high uncertainty
+    ai_coaching_max_calls_per_hour: int = 60  # Hard budget cap
+
+    # --- AI Conversational Intelligence: Post-session ---
+    enable_transcript_storage: bool = False
+    enable_ai_session_summary: bool = False
+
     # Trace storage backend
     # Values: "local" (default, write to disk) | "s3" (S3-compatible, e.g. Cloudflare R2)
     trace_storage_backend: str = "local"

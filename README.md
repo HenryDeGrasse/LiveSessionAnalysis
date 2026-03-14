@@ -207,12 +207,80 @@ When `LSA_ENABLE_LIVEKIT_ANALYTICS_WORKER=true`, LiveKit sessions stop using bro
 - **Voice activity detection**: Per-participant webrtcvad for accurate speaking time and interruption tracking
 - **5 coaching rules**: Student silence, low eye contact, tutor overtalk, energy drop, interruption spike
 - **Adaptive degradation**: Automatically reduces processing load to stay under 500ms latency
+- **AI Conversational Intelligence**: Real-time transcription, tone/uncertainty detection, and AI coaching copilot (see section below)
 - **Redesigned post-session analytics**: Filterable tutor-centric review workspace with richer session cards, derived coaching lenses, recommendations, flagged moments, and comparison panels
 - **Cross-session trends**: Track improvement over multiple sessions with a portfolio trend view and review queue
 - **WebRTC peer media**: Tutor/student call UI using the existing authenticated websocket for signaling
 - **Minimal live coaching UI**: Tutor gets subtle live status pills by default with richer diagnostics behind debug
 - **Privacy-safe local traces**: optional per-session trace artifacts capture lifecycle events, compact signal traces, coaching decisions, and final summaries without raw media or SDP contents
 - **Offline eval harness**: fast + replay eval layers under `backend/tests/evals/` validate production trace models, fixture expectations, compact signal-trace accuracy cases, and recorded session replays
+
+## AI Conversational Intelligence
+
+The system includes an optional multi-tier conversational intelligence layer that adds speech-to-text, tone analysis, and AI-powered coaching to live sessions. **All features are disabled by default** for backward compatibility — enable each tier independently via environment variables.
+
+### Architecture
+
+```
+LiveKit Room Audio Tracks
+  │
+  ├─ VAD-gated audio ──→ DroppableAudioQueue ──→ STT Provider (Deepgram / AssemblyAI)
+  │                                                    │
+  │                                          TranscriptionStream
+  │                                                    │
+  │                            ┌───────────────────────┼──────────────────────┐
+  │                            ▼                       ▼                      ▼
+  │                   TranscriptBuffer     Uncertainty Detector      AI Coaching Copilot
+  │                   (live display)       (tone + hedging)          (LLM suggestions)
+  │                            │                       │                      │
+  │                            └───────────────────────┼──────────────────────┘
+  │                                                    ▼
+  │                                           Tutor UI (WebSocket)
+  │
+  └─ Post-session ──→ TranscriptStore ──→ AI Summary + Analytics
+```
+
+### Tiers
+
+| Tier | Feature | Config Flag | Requires |
+|------|---------|-------------|----------|
+| 1 | **Live Transcription** — real-time STT with per-speaker attribution | `LSA_ENABLE_TRANSCRIPTION=true` | STT API key |
+| 2 | **Uncertainty Detection** — hedging, hesitation, tonal analysis | `LSA_ENABLE_UNCERTAINTY_DETECTION=true` | Tier 1 |
+| 3 | **AI Coaching Copilot** — contextual LLM-powered suggestions | `LSA_ENABLE_AI_COACHING=true` | Tier 1 + LLM API key |
+| 4 | **Frontend UX** — transcript panel, suggestion cards, uncertainty badges | Automatic when backend tiers enabled | — |
+| 5 | **Post-Session Enrichment** — transcript storage + AI summaries | `LSA_ENABLE_TRANSCRIPT_STORAGE=true`, `LSA_ENABLE_AI_SESSION_SUMMARY=true` | Tier 1 + LLM API key |
+
+### Configuration
+
+All conversational intelligence settings use the `LSA_` prefix. Key variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LSA_ENABLE_TRANSCRIPTION` | `false` | Master switch for real-time STT |
+| `LSA_TRANSCRIPTION_PROVIDER` | `deepgram` | STT provider: `deepgram` or `assemblyai` |
+| `LSA_TRANSCRIPTION_ROLES` | `tutor,student` | Which roles to transcribe |
+| `LSA_DEEPGRAM_API_KEY` | *(empty)* | Deepgram API key |
+| `LSA_DEEPGRAM_MIP_OPT_OUT` | `true` | Opt out of Deepgram model improvement program |
+| `LSA_ASSEMBLYAI_API_KEY` | *(empty)* | AssemblyAI API key |
+| `LSA_ENABLE_UNCERTAINTY_DETECTION` | `false` | Enable tone/uncertainty analysis |
+| `LSA_UNCERTAINTY_UI_THRESHOLD` | `0.6` | UI threshold for surfacing uncertainty |
+| `LSA_ENABLE_AI_COACHING` | `false` | Enable AI coaching suggestions |
+| `LSA_AI_COACHING_PROVIDER` | `anthropic` | LLM provider currently supported in production |
+| `LSA_AI_COACHING_MODEL` | `claude-sonnet-4-20250514` | Default coaching/summary model |
+| `LSA_ANTHROPIC_API_KEY` | *(empty)* | Anthropic API key for coaching |
+| `LSA_AI_COACHING_MAX_CALLS_PER_HOUR` | `30` | Per-session hourly LLM call budget |
+| `LSA_ENABLE_TRANSCRIPT_STORAGE` | `false` | Persist transcripts after session ends |
+| `LSA_ENABLE_AI_SESSION_SUMMARY` | `false` | Generate AI summary post-session |
+
+See `.env.example` and `.env.production.example` for the full annotated list.
+
+### Privacy & Consent
+
+- All transcription features require explicit user consent via the in-session consent modal
+- PII scrubbing is applied before any data leaves the session context
+- `LSA_DEEPGRAM_MIP_OPT_OUT=true` (default) prevents audio from being used for provider model training
+- Transcript data can be deleted per-session via `DELETE /api/analytics/sessions/{id}/transcript`
+- No raw audio is stored — only derived text transcripts
 
 ## Project Structure
 
@@ -301,12 +369,13 @@ You can also trigger a deploy manually from the GitHub Actions tab
 ## Documentation
 
 - [Production Deployment Guide](docs/production-deployment-guide.md) - Full Fly.io + LiveKit Cloud + Postgres + R2 deployment walkthrough
+- [AI Conversational Intelligence Plan](docs/ai-conversational-intelligence-plan.md) - Deep implementation plan for STT, uncertainty detection, AI coaching, and post-session enrichment
 - [Decision Log](docs/decision-log.md) - Architecture choices and rationale
 - [Web Production MVP Plan](docs/web-production-mvp-plan.md) - Recommended production deployment posture for the web pilot
 - [LiveKit Cloud Setup](docs/livekit-cloud-setup.md) - Manual operator steps for LiveKit Cloud
 - [LiveKit Migration Plan](docs/livekit-migration-plan.md) - Test-first migration from custom WebRTC to LiveKit
 - [Privacy Analysis](docs/privacy-analysis.md) - Data handling and consent
-- [API Reference](docs/api-reference.md) - REST and WebSocket endpoints
+- [API Reference](docs/api-reference.md) - REST and WebSocket endpoints (includes AI Conversational Intelligence endpoints)
 - [Limitations](docs/limitations.md) - Known constraints and edge cases
 - [Calibration Guide](docs/calibration.md) - Threshold tuning and validation
 

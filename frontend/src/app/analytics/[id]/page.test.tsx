@@ -6,7 +6,7 @@
  *   - Student view hides those coaching-only sections.
  *   - Both views show the flagged moments section.
  */
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import SessionDetailPage from './page'
@@ -356,5 +356,239 @@ describe('SessionDetailPage — student view', () => {
       const title = screen.getByTestId('analytics-detail-title')
       expect(title).toHaveTextContent('Algebra review')
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Transcript tab tests
+// ---------------------------------------------------------------------------
+
+const MOCK_SESSION_WITH_TRANSCRIPT = {
+  ...MOCK_SESSION,
+  transcript_available: true,
+  transcript_word_count: 1500,
+  transcript_segments: [
+    {
+      utterance_id: 'utt-1',
+      role: 'tutor',
+      text: 'Let\'s review fractions before we switch to decimals.',
+      start_time: 0,
+      end_time: 8,
+      confidence: 0.98,
+    },
+    {
+      utterance_id: 'utt-2',
+      role: 'student',
+      text: 'I think I understand the numerator but the denominator still confuses me.',
+      start_time: 150,
+      end_time: 160,
+      confidence: 0.95,
+    },
+    {
+      utterance_id: 'utt-3',
+      role: 'tutor',
+      text: 'Great, now let\'s connect that to decimal conversion.',
+      start_time: 495,
+      end_time: 505,
+      confidence: 0.97,
+    },
+  ],
+  topics_covered: ['fractions', 'decimals'],
+  ai_summary: 'Good session focusing on fractions and decimals. Student showed steady improvement.',
+  student_understanding_map: { fractions: 0.8, decimals: 0.55 },
+  key_moments: [
+    { time: '2:30', description: 'Student had a breakthrough on fraction division', significance: 'Key conceptual shift' },
+    { time: '8:15', description: 'Tutor introduced decimal conversion', significance: 'New topic introduction' },
+  ],
+  follow_up_recommendations: ['Review decimal-to-fraction conversion', 'Practice mixed number operations'],
+}
+
+describe('SessionDetailPage — transcript tab', () => {
+  it('shows the tab bar when transcript data is available', async () => {
+    mockUserRole = 'tutor'
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path.includes('/recommendations')) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      if (path.includes('/student-insights')) {
+        return Promise.resolve(new Response(JSON.stringify(null), { status: 404 }))
+      }
+      if (path.includes('/sessions?')) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      return Promise.resolve(new Response(JSON.stringify(MOCK_SESSION_WITH_TRANSCRIPT), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    })
+
+    render(<SessionDetailPage />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('analytics-tab-bar')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('analytics-tab-overview')).toBeInTheDocument()
+    expect(screen.getByTestId('analytics-tab-transcript')).toBeInTheDocument()
+  })
+
+  it('does not show the tab bar when no transcript data', async () => {
+    mockUserRole = 'tutor'
+    render(<SessionDetailPage />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('analytics-detail-page')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByTestId('analytics-tab-bar')).not.toBeInTheDocument()
+  })
+
+  it('shows AI summary, topics, key moments, and follow-up recommendations when transcript tab is active', async () => {
+    mockUserRole = 'tutor'
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path.includes('/recommendations')) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      if (path.includes('/student-insights')) {
+        return Promise.resolve(new Response(JSON.stringify(null), { status: 404 }))
+      }
+      if (path.includes('/sessions?')) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      return Promise.resolve(new Response(JSON.stringify(MOCK_SESSION_WITH_TRANSCRIPT), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    })
+
+    render(<SessionDetailPage />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('analytics-tab-transcript')).toBeInTheDocument()
+    })
+
+    // Click transcript tab
+    fireEvent.click(screen.getByTestId('analytics-tab-transcript'))
+
+    // AI Summary
+    await waitFor(() => {
+      expect(screen.getByTestId('analytics-ai-summary')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('analytics-ai-summary-text')).toHaveTextContent(
+      'Good session focusing on fractions and decimals'
+    )
+    expect(screen.getByText(/1,500 words/)).toBeInTheDocument()
+
+    // Topics covered
+    expect(screen.getByTestId('analytics-topics-covered')).toBeInTheDocument()
+    expect(screen.getByTestId('analytics-topic-fractions')).toBeInTheDocument()
+    expect(screen.getByTestId('analytics-topic-decimals')).toBeInTheDocument()
+    // fractions understanding = 80%
+    expect(screen.getByTestId('analytics-topic-fractions')).toHaveTextContent('80%')
+    // decimals understanding = 55%
+    expect(screen.getByTestId('analytics-topic-decimals')).toHaveTextContent('55%')
+
+    // Key moments
+    expect(screen.getByTestId('analytics-key-moments')).toBeInTheDocument()
+    expect(screen.getByTestId('analytics-key-moment-0')).toHaveTextContent('breakthrough on fraction division')
+    expect(screen.getByTestId('analytics-key-moment-1')).toHaveTextContent('decimal conversion')
+
+    // Full transcript
+    expect(screen.getByTestId('analytics-full-transcript')).toBeInTheDocument()
+    expect(screen.getByText(/numerator but the denominator still confuses me/i)).toBeInTheDocument()
+
+    // Follow-up recommendations
+    expect(screen.getByTestId('analytics-follow-up-recommendations')).toBeInTheDocument()
+    expect(screen.getByText('Review decimal-to-fraction conversion')).toBeInTheDocument()
+
+    // Overview sections should be hidden
+    expect(screen.queryByTestId('analytics-detail-duration')).not.toBeInTheDocument()
+  })
+
+  it('hides transcript sections when overview tab is active', async () => {
+    mockUserRole = 'tutor'
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path.includes('/recommendations')) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      if (path.includes('/student-insights')) {
+        return Promise.resolve(new Response(JSON.stringify(null), { status: 404 }))
+      }
+      if (path.includes('/sessions?')) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      return Promise.resolve(new Response(JSON.stringify(MOCK_SESSION_WITH_TRANSCRIPT), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    })
+
+    render(<SessionDetailPage />)
+
+    await waitFor(() => {
+      // Overview tab is default
+      expect(screen.getByTestId('analytics-detail-duration')).toBeInTheDocument()
+    })
+
+    // Transcript sections should not be visible in overview
+    expect(screen.queryByTestId('analytics-ai-summary')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('analytics-topics-covered')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('analytics-key-moments')).not.toBeInTheDocument()
+  })
+
+  it('filters the full transcript with the search box', async () => {
+    mockUserRole = 'tutor'
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path.includes('/recommendations')) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      if (path.includes('/student-insights')) {
+        return Promise.resolve(new Response(JSON.stringify(null), { status: 404 }))
+      }
+      if (path.includes('/sessions?')) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      return Promise.resolve(new Response(JSON.stringify(MOCK_SESSION_WITH_TRANSCRIPT), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    })
+
+    render(<SessionDetailPage />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('analytics-tab-transcript')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByTestId('analytics-tab-transcript'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('analytics-full-transcript')).toBeInTheDocument()
+    })
+
+    fireEvent.change(screen.getByTestId('analytics-transcript-search'), {
+      target: { value: 'denominator' },
+    })
+
+    expect(screen.getByText(/denominator still confuses me/i)).toBeInTheDocument()
+    expect(
+      screen.queryByText(/great, now let's connect that to decimal conversion/i)
+    ).not.toBeInTheDocument()
+  })
+
+  it('hides follow-up recommendations for student view', async () => {
+    mockUserRole = 'student'
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path.includes('/student-insights')) {
+        return Promise.resolve(new Response(JSON.stringify({ engagement_percent: 70, talk_time_percent: 40, attention_score: 65, tips: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      if (path.includes('/sessions?')) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      return Promise.resolve(new Response(JSON.stringify(MOCK_SESSION_WITH_TRANSCRIPT), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    })
+
+    render(<SessionDetailPage />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('analytics-tab-transcript')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByTestId('analytics-tab-transcript'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('analytics-ai-summary')).toBeInTheDocument()
+    })
+
+    // Follow-up recommendations are tutor-only
+    expect(screen.queryByTestId('analytics-follow-up-recommendations')).not.toBeInTheDocument()
   })
 })

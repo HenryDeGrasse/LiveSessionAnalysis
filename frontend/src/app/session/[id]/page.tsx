@@ -10,7 +10,12 @@ import { useMediaStream } from '@/hooks/useMediaStream'
 import { useMetrics } from '@/hooks/useMetrics'
 import { useNudges } from '@/hooks/useNudges'
 import { useCallTransport } from '@/hooks/useCallTransport'
+import { useTranscript } from '@/hooks/useTranscript'
+import { useUncertainty } from '@/hooks/useUncertainty'
+import { useAISuggestion } from '@/hooks/useAISuggestion'
 import { MetricCard } from '@/components/charts'
+import { TranscriptPanel } from '@/components/transcript'
+import { AISuggestionCard, SuggestButton } from '@/components/coaching'
 import {
   MicIcon,
   MicOffIcon,
@@ -430,13 +435,37 @@ export default function SessionPage() {
     nudgeHistory,
     nudgesEnabled,
     nudgeSoundEnabled,
+    aiSuggestionFromNudge,
     handleNudge,
     dismissNudge,
     disableAllNudges,
     enableAllNudges,
     toggleNudgeSound,
+    clearAiSuggestionFromNudge,
   } = useNudges()
   const isTutorRole = role === 'tutor' || currentMetrics !== null
+  const transcriptionEnabled = sessionInfo?.enable_transcription === true
+
+  const {
+    messages: transcriptMessages,
+    handleTranscriptMessage,
+    handleTranscriptPacket,
+    clearTranscript,
+  } = useTranscript()
+
+  const { uncertainty, handleUncertaintyMetrics } = useUncertainty()
+
+  const {
+    suggestion: aiSuggestion,
+    loading: aiSuggestionLoading,
+    callsRemaining: aiCallsRemaining,
+    requestSuggestion,
+    submitFeedback: submitSuggestionFeedback,
+    clearSuggestion,
+  } = useAISuggestion({ sessionId, accessToken: userAccessToken })
+
+  const [transcriptPanelOpen, setTranscriptPanelOpen] = useState(false)
+  const activeAISuggestion = aiSuggestion ?? aiSuggestionFromNudge
 
   const appendDebugEvent = useCallback((message: string) => {
     const at = new Date().toLocaleTimeString()
@@ -598,6 +627,7 @@ export default function SessionPage() {
           setRole('tutor')
           const metrics = message.data as MetricsSnapshot
           handleMetrics(metrics)
+          handleUncertaintyMetrics(metrics)
           appendDebugEvent(
             `metrics: attention=${metrics.student.attention_state} talk=${(metrics.tutor.talk_time_percent * 100).toFixed(0)}/${(metrics.student.talk_time_percent * 100).toFixed(0)} silence=${metrics.session.silence_duration_current.toFixed(0)}s int=${metrics.session.interruption_count}`
           )
@@ -655,10 +685,14 @@ export default function SessionPage() {
           }
           appendDebugEvent('participant_reconnected received')
           break
+        case 'transcript_partial':
+        case 'transcript_final':
+          handleTranscriptMessage(message)
+          break
         // webrtc_signal messages are no longer used (LiveKit handles media transport)
       }
     },
-    [appendDebugEvent, handleMetrics, handleNudge, queuePeerEvent]
+    [appendDebugEvent, handleMetrics, handleNudge, handleTranscriptMessage, handleUncertaintyMetrics, queuePeerEvent]
   )
 
   const { connected, error: wsError, sendBinary, sendJson } = useWebSocket({
@@ -678,6 +712,7 @@ export default function SessionPage() {
           setRole('tutor')
           const metrics = message.data as MetricsSnapshot
           handleMetrics(metrics)
+          handleUncertaintyMetrics(metrics)
           appendDebugEvent(
             `[data-pkt] metrics: attention=${metrics.student.attention_state}`
           )
@@ -693,12 +728,17 @@ export default function SessionPage() {
           setRole('tutor')
           handleNudge(message.data as Nudge)
           appendDebugEvent(`[data-pkt] nudge: ${(message.data as Nudge).nudge_type}`)
+        } else if (
+          message.type === 'transcript_partial' ||
+          message.type === 'transcript_final'
+        ) {
+          handleTranscriptMessage(message as WSMessage)
         }
       } catch {
         // ignore malformed data packets
       }
     },
-    [appendDebugEvent, handleMetrics, handleNudge]
+    [appendDebugEvent, handleMetrics, handleNudge, handleTranscriptMessage, handleUncertaintyMetrics]
   )
 
   const mediaProvider = resolveMediaProvider(sessionInfo)
@@ -732,7 +772,13 @@ export default function SessionPage() {
     debug: searchParams.get('debug') === '1',
     sendSignal: () => {},
     onDebugEvent: appendDebugEvent,
-    onDataPacket: handleDataPacket,
+    onDataPacket: useCallback(
+      (topic: string, payload: Uint8Array) => {
+        handleDataPacket(topic, payload)
+        handleTranscriptPacket(topic, payload)
+      },
+      [handleDataPacket, handleTranscriptPacket]
+    ),
   })
 
   useEffect(() => {
@@ -1379,12 +1425,23 @@ export default function SessionPage() {
         showControlsTemporarily()
         toggleVideo()
         appendDebugEvent(isVideoEnabled ? 'camera off (V)' : 'camera on (V)')
+      } else if (
+        (e.key === 't' || e.key === 'T') &&
+        (e.ctrlKey || e.metaKey) &&
+        isTutor &&
+        transcriptionEnabled
+      ) {
+        e.preventDefault()
+        setTranscriptPanelOpen((prev) => !prev)
+        appendDebugEvent('transcript panel toggled (Ctrl/Cmd+T)')
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [
     showConsent,
+    transcriptionEnabled,
+    isTutor,
     toggleAudio,
     toggleVideo,
     isAudioEnabled,
@@ -1492,6 +1549,8 @@ export default function SessionPage() {
                   </p>
                   <p className="mt-3 text-sm leading-6 text-slate-200">
                     Raw video and audio are not stored. Only derived numeric metrics are saved for post-session analytics.
+                    {transcriptionEnabled &&
+                      ' Real-time transcripts are generated during the session but no raw audio is retained.'}
                   </p>
                 </div>
               </div>
@@ -1586,6 +1645,30 @@ export default function SessionPage() {
                         signals are processed in real time. No raw video or audio is stored — only
                         derived metrics are saved for post-session review.
                       </p>
+                      {transcriptionEnabled && (
+                        <div
+                          data-testid="transcription-disclosure"
+                          className="mt-2 space-y-1 text-xs leading-relaxed text-slate-400"
+                        >
+                          <p>
+                            Audio may be transcribed in real-time
+                            {sessionInfo?.enable_ai_coaching
+                              ? ' to provide AI-powered coaching suggestions'
+                              : ''}
+                            . Transcripts are visible to the tutor during the session
+                            {sessionInfo?.enable_post_session_storage
+                              ? ' and included in post-session analytics'
+                              : ''}
+                            . No raw audio is stored.
+                          </p>
+                          {sessionInfo?.enable_ai_coaching && (
+                            <p>
+                              AI coaching suggestions may be generated from the transcript to
+                              assist the tutor during the session.
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </label>
                 )}
@@ -1621,6 +1704,10 @@ export default function SessionPage() {
       data-testid="call-surface"
       className={`fixed inset-0 overflow-hidden bg-black text-white transition-all duration-300 ${
         showCoachDebug ? 'right-[420px] lg:right-[480px]' : ''
+      } ${
+        isTutor && transcriptionEnabled && transcriptPanelOpen
+          ? 'lg:left-[380px]'
+          : ''
       }`}
       onMouseMove={showControlsTemporarily}
       onPointerMove={showControlsTemporarily}
@@ -1787,6 +1874,16 @@ export default function SessionPage() {
                     DEGRADED ({currentMetrics.degradation_reason})
                   </span>
                 )}
+                {(currentMetrics.backpressure_level ?? 0) >= 3 && (
+                  <span className="ml-2 text-red-400">
+                    Transcription unavailable
+                  </span>
+                )}
+                {(currentMetrics.backpressure_level ?? 0) === 2 && (
+                  <span className="ml-2 text-yellow-400">
+                    Transcription degraded
+                  </span>
+                )}
               </span>
             )}
             {/* Invite student button — tutor only, only while session is live */}
@@ -1931,6 +2028,30 @@ export default function SessionPage() {
               <span>{pill.value}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Uncertainty indicator overlay (tutor-only, near student video) ── */}
+      {isTutor && transcriptionEnabled && uncertainty.visible && (
+        <div
+          data-testid="uncertainty-indicator"
+          className={`pointer-events-none absolute right-4 top-14 z-10 transition-opacity duration-500 ${
+            uncertainty.visible ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <div className="rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 text-[11px] font-medium tracking-[0.02em] text-amber-100 shadow-[0_0_22px_rgba(245,158,11,0.16)] backdrop-blur-md">
+            <span className="mr-2 text-[10px] uppercase tracking-[0.16em] text-white/55">
+              Uncertainty
+            </span>
+            <span>
+              {uncertainty.topic || 'Detected'}
+              {uncertainty.score !== null && (
+                <span className="ml-1.5 text-[10px] tabular-nums text-amber-300/70">
+                  {Math.round(uncertainty.score * 100)}%
+                </span>
+              )}
+            </span>
+          </div>
         </div>
       )}
 
@@ -2105,6 +2226,45 @@ export default function SessionPage() {
           >
             {isVideoEnabled ? <CameraIcon /> : <CameraOffIcon />}
           </button>
+
+          {/* Transcript toggle (tutor, transcription enabled) */}
+          {isTutor && transcriptionEnabled && (
+            <button
+              data-testid="transcript-toggle-button"
+              type="button"
+              aria-label={transcriptPanelOpen ? 'Hide transcript (Ctrl+T)' : 'Show transcript (Ctrl+T)'}
+              onClick={() => setTranscriptPanelOpen((prev) => !prev)}
+              title={transcriptPanelOpen ? 'Hide transcript (Ctrl+T)' : 'Show transcript (Ctrl+T)'}
+              className={`flex h-12 items-center justify-center rounded-full border backdrop-blur-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                transcriptPanelOpen
+                  ? 'border-sky-400/50 bg-sky-500/20 px-4 text-sky-100'
+                  : 'w-12 border-white/20 bg-white/10 text-white hover:bg-white/20'
+              }`}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-5 w-5"
+                aria-hidden="true"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M4.5 2A2.5 2.5 0 0 0 2 4.5v11A2.5 2.5 0 0 0 4.5 18h11a2.5 2.5 0 0 0 2.5-2.5v-11A2.5 2.5 0 0 0 15.5 2h-11ZM5 5.75A.75.75 0 0 1 5.75 5h8.5a.75.75 0 0 1 0 1.5h-8.5A.75.75 0 0 1 5 5.75Zm0 3A.75.75 0 0 1 5.75 8h8.5a.75.75 0 0 1 0 1.5h-8.5A.75.75 0 0 1 5 8.75Zm0 3A.75.75 0 0 1 5.75 11h5.5a.75.75 0 0 1 0 1.5h-5.5A.75.75 0 0 1 5 11.75Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+          )}
+
+          {/* AI Suggest button (tutor, transcription enabled) */}
+          {isTutor && transcriptionEnabled && !sessionEnded && (
+            <SuggestButton
+              loading={aiSuggestionLoading}
+              onClick={() => void requestSuggestion()}
+              callsRemaining={aiCallsRemaining}
+            />
+          )}
 
           {/* End session (tutor) — red circular button */}
           {isTutor && (
@@ -2527,6 +2687,38 @@ export default function SessionPage() {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Transcript panel sidebar (tutor only, left side) ── */}
+      {isTutor && transcriptionEnabled && transcriptPanelOpen && (
+        <div
+          data-testid="transcript-sidebar"
+          className="fixed inset-y-0 left-0 z-40 flex w-full max-w-[320px] flex-col border-r border-white/10 bg-[#111627]/98 backdrop-blur-md sm:w-[320px] lg:w-[380px] lg:max-w-none"
+        >
+          <TranscriptPanel
+            messages={transcriptMessages}
+            viewerRole="tutor"
+          />
+        </div>
+      )}
+
+      {/* ── AI Suggestion Card (tutor only, displayed above control bar) ── */}
+      {isTutor && transcriptionEnabled && activeAISuggestion && (
+        <div
+          data-testid="ai-suggestion-overlay"
+          className="pointer-events-auto absolute bottom-28 left-4 z-30 w-[400px] max-w-[calc(100%-2rem)]"
+        >
+          <AISuggestionCard
+            suggestion={activeAISuggestion}
+            onDismiss={() => {
+              clearSuggestion()
+              clearAiSuggestionFromNudge()
+            }}
+            onFeedback={(suggestionId, helpful) => {
+              void submitSuggestionFeedback(suggestionId, helpful)
+            }}
+          />
         </div>
       )}
 

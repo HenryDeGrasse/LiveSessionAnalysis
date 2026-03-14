@@ -29,10 +29,13 @@ from .models import (
 from .session_manager import SessionRoom
 from .session_manager import session_manager
 from .ws import router as ws_router
-from .analytics.router import router as analytics_router
+from .analytics.router import router as analytics_router, api_router as analytics_api_router
 from .auth.router import router as auth_router
 from .auth.dependencies import get_optional_user
 from .auth.models import User
+from .ai_coaching.on_demand import router as on_demand_router
+from .ai_coaching.feedback import router as feedback_router
+from .ai_coaching.summary_router import router as summary_router
 
 
 @asynccontextmanager
@@ -57,10 +60,13 @@ async def lifespan(app: FastAPI):
 
     app.state.db_connected = None
 
-    # Run retention cleanup on startup
+    # Run retention cleanup on startup using the configured session store so
+    # transcript/session retention applies consistently to local and Postgres
+    # backends.
     try:
-        from .analytics.session_store import SessionStore
-        store = SessionStore()
+        from .analytics import get_session_store
+
+        store = get_session_store()
         deleted = store.cleanup_expired()
         if deleted > 0:
             import logging
@@ -90,7 +96,11 @@ app.add_middleware(
 
 app.include_router(ws_router)
 app.include_router(analytics_router, prefix="/api/analytics")
+app.include_router(analytics_api_router, prefix="/api")
 app.include_router(auth_router, prefix="/api/auth")
+app.include_router(on_demand_router)
+app.include_router(feedback_router)
+app.include_router(summary_router)
 
 
 async def _check_db_connectivity() -> bool | None:
@@ -250,6 +260,13 @@ async def session_info(session_id: str, token: str = ""):
             "worker_connected": room.livekit_worker_connected_at is not None,
             "worker_last_error": room.livekit_worker_last_error,
         },
+        "enable_transcription": settings.enable_transcription,
+        "enable_ai_coaching": (
+            settings.enable_transcription and settings.enable_ai_coaching
+        ),
+        "enable_post_session_storage": (
+            settings.enable_transcription and settings.enable_transcript_storage
+        ),
         **(
             {"student_tokens": room.student_tokens}
             if resolved_role == Role.TUTOR

@@ -71,6 +71,12 @@ export interface MetricsSnapshot {
   latency_p95_ms: number
   degradation_reason: string
   target_fps: number
+  transcript_available?: boolean
+  student_uncertainty_score?: number | null
+  student_uncertainty_topic?: string | null
+  student_uncertainty_confidence?: number | null
+  ai_suggestion?: string | null
+  backpressure_level?: number
   coaching_decision?: {
     candidate_nudges: string[]
     candidate_rule_scores?: Record<string, number>
@@ -124,6 +130,32 @@ export interface WebRTCSignalData {
   payload: Record<string, unknown>
 }
 
+export interface TranscriptMessage {
+  utterance_id: string
+  revision: number
+  role: 'tutor' | 'student'
+  text: string
+  start_time: number
+  end_time: number
+  is_partial: boolean
+  uncertainty_score?: number
+  uncertainty_topic?: string
+  sentiment?: string
+}
+
+export interface AISuggestion {
+  id: string
+  topic: string
+  observation: string
+  suggestion: string
+  suggested_prompt: string
+  priority: 'low' | 'medium' | 'high'
+  confidence: number
+}
+
+export type TranscriptPartialData = TranscriptMessage & { is_partial: true }
+export type TranscriptFinalData = TranscriptMessage & { is_partial: false }
+
 export interface WSMessage {
   type:
     | 'metrics'
@@ -133,7 +165,15 @@ export interface WSMessage {
     | 'participant_disconnected'
     | 'participant_reconnected'
     | 'webrtc_signal'
-  data: MetricsSnapshot | Nudge | ParticipantPresenceData | WebRTCSignalData
+    | 'transcript_partial'
+    | 'transcript_final'
+  data:
+    | MetricsSnapshot
+    | Nudge
+    | ParticipantPresenceData
+    | WebRTCSignalData
+    | TranscriptPartialData
+    | TranscriptFinalData
 }
 
 export interface SessionInfo {
@@ -150,6 +190,12 @@ export interface SessionInfo {
   analytics_ingest_mode?: 'browser_upload' | 'livekit_worker'
   livekit_room_name?: string | null
   coaching_intensity?: string
+  /** Whether real-time transcription is enabled for this session. */
+  enable_transcription?: boolean
+  /** Whether AI coaching suggestions are enabled for this session. */
+  enable_ai_coaching?: boolean
+  /** Whether post-session transcript storage is enabled for this session. */
+  enable_post_session_storage?: boolean
   /** Student invite tokens — only present when the caller is the tutor. */
   student_tokens?: string[]
 }
@@ -160,6 +206,23 @@ export interface FlaggedMoment {
   value: number
   direction: 'above' | 'below'
   description: string
+}
+
+export interface KeyMoment {
+  time: string
+  description: string
+  significance: string
+}
+
+export interface TranscriptSegment {
+  utterance_id: string
+  role: 'tutor' | 'student'
+  text: string
+  start_time: number
+  end_time: number
+  confidence?: number
+  sentiment?: string | null
+  student_index?: number
 }
 
 export interface SessionSummary {
@@ -184,6 +247,15 @@ export interface SessionSummary {
   attention_state_distribution?: Record<string, Record<string, number>>
   nudge_details?: NudgeDetail[]
   turn_counts?: Record<string, number>
+  // AI Conversational Intelligence post-session fields
+  transcript_available?: boolean
+  transcript_word_count?: number
+  transcript_segments?: TranscriptSegment[]
+  topics_covered?: string[]
+  ai_summary?: string | null
+  student_understanding_map?: Record<string, number>
+  key_moments?: KeyMoment[]
+  follow_up_recommendations?: string[]
 }
 
 export interface StudentInsights {

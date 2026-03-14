@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
-import type { Nudge } from '@/lib/types'
+import type { AISuggestion, Nudge } from '@/lib/types'
 
 /**
  * Synthesizes a short, non-intrusive notification chime using the Web Audio API.
@@ -47,6 +47,7 @@ export function useNudges() {
   const [nudgeHistory, setNudgeHistory] = useState<Nudge[]>([])
   const [nudgesEnabled, setNudgesEnabled] = useState(true)
   const [nudgeSoundEnabled, setNudgeSoundEnabled] = useState(true)
+  const [aiSuggestionFromNudge, setAiSuggestionFromNudge] = useState<AISuggestion | null>(null)
 
   // Keep stable refs so handleNudge always reads the current preferences
   // without needing them in its dependency array (avoids cascade re-renders
@@ -61,6 +62,41 @@ export function useNudges() {
     (data: Nudge) => {
       setNudgeHistory((prev) => [...prev, data])
       if (!nudgesEnabledRef.current) return
+
+      // AI coaching suggestions are routed to a dedicated state instead of
+      // the standard nudge list, so they can be rendered via AISuggestionCard.
+      if (data.nudge_type === 'ai_coaching_suggestion') {
+        const metrics = data.trigger_metrics as Record<string, unknown>
+        const suggestionText =
+          typeof metrics.suggestion === 'string' && metrics.suggestion.trim().length > 0
+            ? metrics.suggestion
+            : data.message
+        const suggestion: AISuggestion = {
+          id:
+            typeof metrics.suggestion_id === 'string' && metrics.suggestion_id.length > 0
+              ? metrics.suggestion_id
+              : data.id,
+          topic: typeof metrics.topic === 'string' ? metrics.topic : '',
+          observation:
+            typeof metrics.observation === 'string' && metrics.observation.trim().length > 0
+              ? metrics.observation
+              : suggestionText,
+          suggestion: suggestionText,
+          suggested_prompt:
+            typeof metrics.suggested_prompt === 'string'
+              ? metrics.suggested_prompt
+              : '',
+          priority: data.priority as AISuggestion['priority'],
+          confidence:
+            typeof metrics.confidence === 'number' ? metrics.confidence : 0,
+        }
+        setAiSuggestionFromNudge(suggestion)
+        if (nudgeSoundEnabledRef.current) {
+          playNudgeChime()
+        }
+        return
+      }
+
       setNudges((prev) => [...prev, data])
       if (nudgeSoundEnabledRef.current) {
         playNudgeChime()
@@ -86,15 +122,21 @@ export function useNudges() {
     setNudgeSoundEnabled((prev) => !prev)
   }, [])
 
+  const clearAiSuggestionFromNudge = useCallback(() => {
+    setAiSuggestionFromNudge(null)
+  }, [])
+
   return {
     nudges,
     nudgeHistory,
     nudgesEnabled,
     nudgeSoundEnabled,
+    aiSuggestionFromNudge,
     handleNudge,
     dismissNudge,
     disableAllNudges,
     enableAllNudges,
     toggleNudgeSound,
+    clearAiSuggestionFromNudge,
   }
 }

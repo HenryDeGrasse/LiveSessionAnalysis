@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import {
@@ -15,7 +15,12 @@ import {
 } from 'recharts'
 import { useSession } from 'next-auth/react'
 import { apiFetch } from '@/lib/api-client'
-import type { SessionSummary, StudentInsights } from '@/lib/types'
+import type {
+  KeyMoment,
+  SessionSummary,
+  StudentInsights,
+  TranscriptSegment,
+} from '@/lib/types'
 import {
   ATTENTION_STATES,
   ATTENTION_STATE_COLORS,
@@ -98,6 +103,58 @@ function renderFlaggedDotShape(
       <title>{description}</title>
     </g>
   )
+}
+
+function renderKeyMomentDotShape(
+  dotColor: string,
+  description: string,
+  shapeProps: { cx?: number; cy?: number },
+  onClick: () => void
+) {
+  const x = shapeProps.cx ?? 0
+  const y = shapeProps.cy ?? 0
+  return (
+    <g
+      style={{ cursor: 'pointer' }}
+      onClick={onClick}
+      role="button"
+      aria-label={`Jump to key moment: ${description}`}
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onClick()
+        }
+      }}
+    >
+      <circle cx={x} cy={y} r={7} fill={dotColor} stroke="#020617" strokeWidth={2} />
+      <text x={x} y={y - 15} textAnchor="middle" fill={dotColor} fontSize={14}>
+        ◆
+      </text>
+      <title>{description}</title>
+    </g>
+  )
+}
+
+function parseClockLabelToSeconds(value: string): number | null {
+  if (!value) return null
+  const parts = value.split(':').map((part) => Number(part.trim()))
+  if (parts.some((part) => Number.isNaN(part) || part < 0)) return null
+  if (parts.length === 2) {
+    return parts[0] * 60 + parts[1]
+  }
+  if (parts.length === 3) {
+    return parts[0] * 3600 + parts[1] * 60 + parts[2]
+  }
+  return null
+}
+
+function formatTranscriptTimestamp(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return '0:00'
+  const wholeSeconds = Math.round(seconds)
+  const minutes = Math.floor(wholeSeconds / 60)
+  const remainingSeconds = wholeSeconds % 60
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
 function DetailStat({
@@ -193,6 +250,10 @@ export default function SessionDetailPage() {
     'studentEye',
     'studentEnergy',
   ])
+  const [activeTab, setActiveTab] = useState<'overview' | 'transcript'>('overview')
+  const [transcriptQuery, setTranscriptQuery] = useState('')
+  const [selectedKeyMomentIndex, setSelectedKeyMomentIndex] = useState<number | null>(null)
+  const transcriptMomentRefs = useRef<Record<number, HTMLDivElement | null>>({})
 
   const accessToken = authSession?.user?.accessToken
   const isStudentView = isStudentAnalyticsView(authSession?.user?.role)
@@ -423,6 +484,72 @@ export default function SessionDetailPage() {
     })
   }, [session, timelineData])
 
+  const transcriptAvailable = session?.transcript_available ?? (session?.transcript_word_count ?? 0) > 0
+
+  const transcriptSegments = useMemo(() => {
+    if (!session?.transcript_segments) return []
+    return session.transcript_segments.filter((segment) => segment.text?.trim())
+  }, [session])
+
+  const filteredTranscriptSegments = useMemo(() => {
+    const query = transcriptQuery.trim().toLowerCase()
+    if (!query) return transcriptSegments
+    return transcriptSegments.filter((segment) => {
+      const haystack = [segment.role, segment.text, formatTranscriptTimestamp(segment.start_time)]
+        .join(' ')
+        .toLowerCase()
+      return haystack.includes(query)
+    })
+  }, [transcriptQuery, transcriptSegments])
+
+  const keyMomentDots = useMemo(() => {
+    if (!session || timelineData.length === 0 || (session.key_moments?.length ?? 0) === 0) {
+      return []
+    }
+
+    const duration = session.duration_seconds
+    const totalPoints = timelineData.length
+    return session.key_moments!.map((moment, index) => {
+      const seconds = parseClockLabelToSeconds(moment.time)
+      if (seconds == null || duration <= 0) {
+        return {
+          ...moment,
+          timelineIndex: Math.min(index, totalPoints - 1),
+          timelineLabel: timelineData[Math.min(index, totalPoints - 1)]?.label ?? `#${index + 1}`,
+          yValue: timelineData[Math.min(index, totalPoints - 1)]?.engagement ?? 50,
+        }
+      }
+
+      const idx = Math.max(
+        0,
+        Math.min(Math.round((seconds / duration) * totalPoints), totalPoints - 1)
+      )
+      return {
+        ...moment,
+        timelineIndex: idx,
+        timelineLabel: timelineData[idx]?.label ?? `#${idx + 1}`,
+        yValue: timelineData[idx]?.engagement ?? 50,
+      }
+    })
+  }, [session, timelineData])
+
+  useEffect(() => {
+    setTranscriptQuery('')
+    setSelectedKeyMomentIndex(null)
+    setActiveTab('overview')
+  }, [sessionId])
+
+  const jumpToKeyMoment = (index: number) => {
+    setSelectedKeyMomentIndex(index)
+    setActiveTab('transcript')
+    window.requestAnimationFrame(() => {
+      transcriptMomentRefs.current[index]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      })
+    })
+  }
+
   const toggleSeries = (seriesKey: DetailSeriesKey) => {
     setSeriesVisible((current) => {
       if (current.includes(seriesKey)) {
@@ -593,6 +720,304 @@ export default function SessionDetailPage() {
           </div>
         </section>
 
+        {/* Tab switcher — only visible when transcript data exists */}
+        {transcriptAvailable && (
+          <section data-testid="analytics-tab-bar" className="flex gap-2">
+            <button
+              type="button"
+              data-testid="analytics-tab-overview"
+              onClick={() => setActiveTab('overview')}
+              className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                activeTab === 'overview'
+                  ? 'border-[#7b6ef6]/50 bg-[#7b6ef6]/20 text-white'
+                  : 'border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              type="button"
+              data-testid="analytics-tab-transcript"
+              onClick={() => setActiveTab('transcript')}
+              className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                activeTab === 'transcript'
+                  ? 'border-[#7b6ef6]/50 bg-[#7b6ef6]/20 text-white'
+                  : 'border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'
+              }`}
+            >
+              Transcript
+            </button>
+          </section>
+        )}
+
+        {/* --- Transcript Tab --- */}
+        {activeTab === 'transcript' && transcriptAvailable && session && (
+          <>
+            {session.ai_summary && (
+              <section
+                data-testid="analytics-ai-summary"
+                className="rounded-[28px] border border-violet-400/20 bg-[radial-gradient(circle_at_top_left,_rgba(139,92,246,0.12),_transparent_60%)] bg-[#1e2545]/80 p-6"
+              >
+                <p className="text-xs uppercase tracking-[0.22em] text-violet-400">
+                  AI Session Summary
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">
+                  Natural language recap
+                </h2>
+                <p
+                  data-testid="analytics-ai-summary-text"
+                  className="mt-4 text-base leading-7 text-slate-200"
+                >
+                  {session.ai_summary}
+                </p>
+                {session.transcript_word_count != null && (
+                  <p className="mt-3 text-sm text-slate-400">
+                    Based on {session.transcript_word_count.toLocaleString()} words of transcript.
+                  </p>
+                )}
+              </section>
+            )}
+
+            {(session.topics_covered?.length ?? 0) > 0 && (
+              <section
+                data-testid="analytics-topics-covered"
+                className="rounded-[28px] border border-white/10 bg-white/5 p-6"
+              >
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                  Topics Covered
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">
+                  Understanding levels by topic
+                </h2>
+                <div className="mt-6 grid gap-4">
+                  {session.topics_covered!.map((topic) => {
+                    const understanding = session.student_understanding_map?.[topic]
+                    const pct = understanding != null ? Math.round(understanding * 100) : null
+                    const tone = pct == null ? 'slate' : pct >= 70 ? 'emerald' : pct >= 45 ? 'amber' : 'rose'
+                    return (
+                      <div
+                        key={topic}
+                        data-testid={`analytics-topic-${topic}`}
+                        className="rounded-3xl border border-white/10 bg-[#1e2545]/60 p-4"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-white">{topic}</p>
+                          {pct != null ? (
+                            <span className={`rounded-full border px-3 py-1 text-sm ${toneClasses(tone as 'emerald' | 'amber' | 'rose' | 'slate' | 'violet')}`}>
+                              {pct}%
+                            </span>
+                          ) : (
+                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-slate-400">
+                              —
+                            </span>
+                          )}
+                        </div>
+                        {pct != null && (
+                          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                            <div
+                              className={`h-full rounded-full ${
+                                tone === 'emerald'
+                                  ? 'bg-emerald-400'
+                                  : tone === 'amber'
+                                    ? 'bg-amber-400'
+                                    : 'bg-rose-400'
+                              }`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            <section
+              data-testid="analytics-full-transcript"
+              className="rounded-[28px] border border-white/10 bg-white/5 p-6"
+            >
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                    Full Transcript
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold text-white">
+                    Search and review the full session transcript
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                    Scroll through the finalized utterances or filter by speaker, phrase, or timestamp.
+                  </p>
+                </div>
+                <label className="block">
+                  <span className="sr-only">Search transcript</span>
+                  <input
+                    data-testid="analytics-transcript-search"
+                    type="search"
+                    value={transcriptQuery}
+                    onChange={(event) => setTranscriptQuery(event.target.value)}
+                    placeholder="Search transcript…"
+                    className="w-full min-w-[260px] rounded-2xl border border-white/10 bg-[#1e2545]/80 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-violet-400/40 lg:w-[320px]"
+                  />
+                </label>
+              </div>
+
+              {transcriptSegments.length > 0 ? (
+                <div
+                  data-testid="analytics-transcript-scroll"
+                  className="mt-6 max-h-[420px] space-y-3 overflow-y-auto pr-2"
+                >
+                  {filteredTranscriptSegments.length > 0 ? (
+                    filteredTranscriptSegments.map((segment: TranscriptSegment, index) => {
+                      const segmentTime = formatTranscriptTimestamp(segment.start_time)
+                      const isHighlighted = selectedKeyMomentIndex != null && session.key_moments?.[selectedKeyMomentIndex]?.time === segmentTime
+                      return (
+                        <div
+                          key={segment.utterance_id || `${segment.role}-${segment.start_time}-${index}`}
+                          data-testid={`analytics-transcript-segment-${index}`}
+                          className={`rounded-3xl border p-4 transition ${
+                            isHighlighted
+                              ? 'border-violet-400/35 bg-violet-400/10'
+                              : 'border-white/10 bg-[#1e2545]/60'
+                          }`}
+                        >
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em] ${toneClasses(segment.role === 'tutor' ? 'violet' : 'emerald')}`}>
+                                {segment.role}
+                              </span>
+                              <span className="text-xs font-medium tabular-nums text-slate-400">
+                                {segmentTime}
+                              </span>
+                            </div>
+                            {segment.confidence != null && segment.confidence > 0 && (
+                              <span className="text-xs text-slate-500">
+                                Confidence {Math.round(segment.confidence * 100)}%
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-3 text-sm leading-6 text-slate-200">{segment.text}</p>
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <div
+                      data-testid="analytics-transcript-no-results"
+                      className="rounded-3xl border border-dashed border-white/10 bg-[#1e2545]/40 p-6 text-sm text-slate-300"
+                    >
+                      No transcript lines matched “{transcriptQuery.trim()}”.
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-6 rounded-3xl border border-dashed border-white/10 bg-[#1e2545]/40 p-6 text-sm text-slate-300">
+                  Transcript storage is enabled, but the finalized utterance list is not available yet.
+                </div>
+              )}
+            </section>
+
+            {(session.key_moments?.length ?? 0) > 0 && (
+              <section
+                data-testid="analytics-key-moments"
+                className="rounded-[28px] border border-white/10 bg-white/5 p-6"
+              >
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                  Key Moments
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">
+                  Notable events from the session
+                </h2>
+                <div className="mt-6 space-y-4">
+                  {session.key_moments!.map((moment: KeyMoment, idx: number) => (
+                    <div
+                      key={`key-moment-${idx}`}
+                      ref={(element) => {
+                        transcriptMomentRefs.current[idx] = element
+                      }}
+                      data-testid={`analytics-key-moment-${idx}`}
+                      className={`rounded-3xl border p-4 transition ${
+                        selectedKeyMomentIndex === idx
+                          ? 'border-sky-400/35 bg-sky-400/10'
+                          : 'border-white/10 bg-[#1e2545]/60'
+                      }`}
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-white">
+                            {moment.description}
+                          </p>
+                          {moment.significance && (
+                            <p className="mt-1 text-sm text-slate-400">
+                              {moment.significance}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => jumpToKeyMoment(idx)}
+                          className="rounded-full border border-sky-400/30 bg-sky-400/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-sky-100 transition hover:bg-sky-400/20"
+                        >
+                          {moment.time}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {!isStudentView && (session.follow_up_recommendations?.length ?? 0) > 0 && (
+              <section
+                data-testid="analytics-follow-up-recommendations"
+                className="rounded-[28px] border border-white/10 bg-white/5 p-6"
+              >
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                  Follow-up Recommendations
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">
+                  Suggested next steps for upcoming sessions
+                </h2>
+                <div className="mt-6 space-y-3">
+                  {session.follow_up_recommendations!.map((rec, idx) => (
+                    <div
+                      key={`follow-up-${idx}`}
+                      className="rounded-3xl border border-violet-400/20 bg-violet-400/10 p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 rounded-full border border-violet-300/30 px-2 py-1 text-xs uppercase tracking-[0.18em] text-violet-100">
+                          {idx + 1}
+                        </span>
+                        <p className="text-sm leading-6 text-violet-50">{rec}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {!session.ai_summary && transcriptSegments.length === 0 && (
+              <section
+                data-testid="analytics-transcript-placeholder"
+                className="rounded-[28px] border border-white/10 bg-white/5 p-6"
+              >
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                  Transcript
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">
+                  Transcript recorded
+                </h2>
+                <p className="mt-4 text-base leading-7 text-slate-300">
+                  This session recorded {(session.transcript_word_count ?? 0).toLocaleString()} words of transcript.
+                  AI summary and transcript enrichment are still being prepared.
+                </p>
+              </section>
+            )}
+          </>
+        )}
+
+        {/* --- Overview Tab (default) --- */}
+        {activeTab === 'overview' && (
+        <>
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           <DetailStat
             testId="analytics-detail-duration"
@@ -903,7 +1328,7 @@ export default function SessionDetailPage() {
                 Inspect the saved metric arc, not just the final summary score.
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-                Toggle the lines below to focus on attention, energy, or talk-share dynamics over the captured session timeline.
+                Toggle the lines below to focus on attention, energy, or talk-share dynamics over the captured session timeline. Diamond markers indicate AI-detected key moments and jump into the transcript tab when selected.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -978,6 +1403,22 @@ export default function SessionDetailPage() {
                     isFront
                     shape={(shapeProps: { cx?: number; cy?: number }) =>
                       renderFlaggedDotShape(dot.dotColor, dot.description, shapeProps)
+                    }
+                  />
+                ))}
+                {keyMomentDots.map((moment, momentIdx) => (
+                  <ReferenceDot
+                    key={`key-moment-${moment.time}-${momentIdx}`}
+                    x={moment.timelineLabel}
+                    y={moment.yValue}
+                    isFront
+                    shape={(shapeProps: { cx?: number; cy?: number }) =>
+                      renderKeyMomentDotShape(
+                        selectedKeyMomentIndex === momentIdx ? '#38BDF8' : '#A78BFA',
+                        `${moment.time} · ${moment.description}`,
+                        shapeProps,
+                        () => jumpToKeyMoment(momentIdx)
+                      )
                     }
                   />
                 ))}
@@ -1102,6 +1543,8 @@ export default function SessionDetailPage() {
             </div>
           )}
         </section>
+        )}
+        </>
         )}
 
         <section
