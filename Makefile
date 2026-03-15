@@ -4,6 +4,7 @@
 .PHONY: setup run dev dev-backend dev-frontend clean \
         test test-backend test-frontend-unit test-e2e test-e2e-livekit \
         eval eval-fast eval-replay test-all lint \
+        test-transcription test-ai-coaching test-ci \
         accuracy-report real-media-accuracy demo-setup
 
 # ── Infrastructure ───────────────────────────────────────────
@@ -52,6 +53,20 @@ test-e2e:
 
 test-e2e-livekit:
 	cd frontend && npm run test:e2e:livekit
+
+# ── Conversational Intelligence tests ────────────────────────
+test-transcription:
+	cd backend && uv run --python 3.11 --with-requirements requirements.txt \
+		pytest tests/test_transcription*.py tests/test_session_transcription*.py -q
+
+test-ai-coaching:
+	cd backend && uv run --python 3.11 --with-requirements requirements.txt \
+		pytest tests/test_ai_*.py tests/test_uncertainty*.py -q
+
+test-ci:
+	cd backend && uv run --python 3.11 --with-requirements requirements.txt \
+		pytest tests/ -q --ignore=tests/evals
+	cd frontend && npm run test:unit
 
 # ── Accuracy report ──────────────────────────────────────────
 accuracy-report:

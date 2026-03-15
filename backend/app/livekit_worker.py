@@ -36,6 +36,8 @@ async def _await_if_needed(result):
 
 TOPIC_METRICS = "lsa.metrics.v1"
 TOPIC_NUDGE = "lsa.nudge.v1"
+TOPIC_TRANSCRIPT_PARTIAL = "lsa.transcript.partial.v1"
+TOPIC_TRANSCRIPT_FINAL = "lsa.transcript.final.v1"
 
 _workers: dict[str, "LiveKitAnalyticsWorker"] = {}
 
@@ -47,6 +49,7 @@ class LiveKitAnalyticsWorker:
     task: asyncio.Task | None = None
     stop_event: asyncio.Event = field(default_factory=asyncio.Event)
     _track_tasks: dict[str, asyncio.Task] = field(default_factory=dict)
+    _transcription_streams: dict[str, Any] = field(default_factory=dict)
 
     def start(self) -> asyncio.Task:
         if self.task is None or self.task.done():
@@ -147,6 +150,19 @@ class LiveKitAnalyticsWorker:
                 pass
             except Exception:
                 pass
+
+        # Stop all transcription streams
+        for identity_key, ts in list(self._transcription_streams.items()):
+            try:
+                await ts.stop()
+            except Exception as exc:
+                logger.debug(
+                    "Session %s: error stopping transcription stream %s: %s",
+                    self.session.session_id,
+                    identity_key,
+                    exc,
+                )
+        self._transcription_streams.clear()
 
         room = self.room
         self.room = None
@@ -273,6 +289,46 @@ class LiveKitAnalyticsWorker:
             )
             return
 
+    def _get_or_create_transcription_stream(
+        self, role: Role, student_index: int = 0
+    ) -> Any:
+        """Return an existing TranscriptionStream or create one for the participant.
+
+        Streams are keyed by ``{identity}`` (role + student_index) so that
+        reconnects reuse the same stream.  Returns ``None`` when transcription
+        is disabled or the role is not in ``settings.transcription_roles``.
+        """
+        if not settings.enable_transcription:
+            return None
+        if role.value not in settings.transcription_roles:
+            return None
+
+        identity_key = f"{role.value}:{student_index}"
+        existing = self._transcription_streams.get(identity_key)
+        if existing is not None:
+            return existing
+
+        try:
+            from .session_runtime import get_or_create_transcription_stream
+
+            ts = get_or_create_transcription_stream(
+                self.session,
+                role,
+                student_index=student_index,
+                worker=self,
+            )
+            if ts is not None:
+                self._transcription_streams[identity_key] = ts
+            return ts
+        except Exception as exc:
+            logger.warning(
+                "Session %s: failed to create transcription stream for %s: %s",
+                self.session.session_id,
+                identity_key,
+                exc,
+            )
+            return None
+
     async def _consume_audio_track(
         self, *, track_sid: str, track, role: Role, student_index: int = 0
     ):
@@ -281,13 +337,31 @@ class LiveKitAnalyticsWorker:
             sample_rate=LIVEKIT_WORKER_AUDIO_SAMPLE_RATE,
             num_channels=LIVEKIT_WORKER_AUDIO_CHANNELS,
         )
+
+        # Lazily create transcription stream for this participant.
+        # Start it here, inside the active event loop used by the audio consumer,
+        # so tests and teardown do not inherit orphaned background tasks.
+        transcription_stream = self._get_or_create_transcription_stream(
+            role, student_index
+        )
+        if transcription_stream is not None:
+            await transcription_stream.start()
+
         try:
             async for event in stream:
                 pcm = pcm_bytes_from_audio_frame(event.frame)
                 if pcm:
-                    await process_audio_chunk(
+                    result = await process_audio_chunk(
                         self.session, role, pcm, student_index=student_index
                     )
+
+                    # Non-blocking transcription feed — send ALL audio (speech
+                    # + silence) so the provider's neural VAD can handle
+                    # endpointing properly.  Our local VAD result is passed
+                    # through for backpressure metrics only.
+                    if transcription_stream is not None:
+                        is_speech = getattr(result, "is_speech", False) if result is not None else False
+                        transcription_stream.try_send(pcm, is_speech)
         except asyncio.CancelledError:
             raise
         except Exception as exc:

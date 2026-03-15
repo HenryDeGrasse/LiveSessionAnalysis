@@ -50,6 +50,19 @@ def _client() -> TestClient:
 
 
 class TestHealthLiveness:
+    def test_lifespan_runs_retention_cleanup_on_configured_store(self):
+        mock_store = MagicMock()
+        mock_store.cleanup_expired.return_value = 0
+        mock_face_mesh = MagicMock()
+
+        with patch("app.analytics.get_session_store", return_value=mock_store), \
+             patch("app.main.mp.solutions.face_mesh.FaceMesh", return_value=mock_face_mesh):
+            with TestClient(app):
+                pass
+
+        mock_store.cleanup_expired.assert_called_once_with()
+        mock_face_mesh.close.assert_called_once_with()
+
     def test_returns_200(self):
         c = _client()
         resp = c.get("/health")

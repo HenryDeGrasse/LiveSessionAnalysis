@@ -7,15 +7,18 @@
 - **Audio**: Microphone input from both participants (16-bit PCM, 16kHz)
 
 ### What Is Processed
-All video and audio data is processed **in memory** and **immediately discarded** after analysis. The system extracts:
+All video and audio data is processed **in memory** and **immediately discarded** after analysis. Depending on feature flags, the system extracts:
 - Face landmarks (468+ points from MediaPipe FaceMesh)
 - Iris position for gaze estimation
 - Mouth/eyebrow distances for expression valence
 - Voice activity detection (speech/silence binary)
 - RMS energy and zero-crossing rate from audio
+- Real-time speech transcripts for tutor-visible live transcription and downstream AI coaching / post-session analytics features when transcription is enabled
 
 ### What Is Stored
-**Only derived numeric metrics and text summaries** are persisted as JSON files:
+Stored data depends on which conversational-intelligence features are enabled.
+
+**Baseline storage** persists only derived numeric metrics and text summaries as JSON files:
 - Per-participant averages (eye contact score, talk time percentage, energy score)
 - Session-level metrics (engagement score, interruption count, engagement trend)
 - Timeline arrays (numeric values over time)
@@ -23,20 +26,24 @@ All video and audio data is processed **in memory** and **immediately discarded*
 - Coaching nudges that were sent
 - Recommendations (text strings)
 
-**No video, audio, images, or recordings are ever stored.**
+**When transcript storage is enabled**, finalized transcript text may also be retained for post-session analytics and summaries.
+
+**No video, raw audio, images, or recordings are ever stored.**
 
 ## Consent Model
 Both tutor and student see a consent modal before camera/mic activation. The modal explains:
-- What is analyzed (facial engagement, voice activity)
-- What is stored (only numeric metrics, no recordings)
-- Who sees what (coaching nudges visible only to tutor)
+- What is analyzed (facial engagement, voice activity, and real-time transcription when enabled)
+- What is stored (numeric metrics by default; transcript text only when transcript storage is enabled; no recordings)
+- Who sees what (coaching nudges and live transcripts are visible only to the tutor)
+- Whether AI coaching suggestions may be generated from transcript text when AI coaching is enabled
 
 Camera and microphone access is only requested after explicit consent.
 
 ## Data Visibility
-- **Tutor sees**: Live call UI, minimal live coaching overlay, coaching nudges, optional debug panel with coaching decisions (candidates, suppressed reasons, trigger features), and post-session analytics
-- **Student sees**: Live call UI and their own local/remote media, but no tutor metrics, nudges, or coaching decisions
+- **Tutor sees**: Live call UI, minimal live coaching overlay, coaching nudges, optional live transcript panel when transcription is enabled, optional debug panel with coaching decisions (candidates, suppressed reasons, trigger features), and post-session analytics
+- **Student sees**: Live call UI and their own local/remote media, but no tutor metrics, nudges, live transcripts, or coaching decisions
 - **Coaching nudges**: Sent only to the tutor via targeted LiveKit data packets (`destination_identities`), with WebSocket fallback — never to the student
+- **Live transcripts**: Sent only to the tutor in real time; they are not shown to the student
 - **Coaching decisions**: The debug panel shows which rules were evaluated, which were suppressed and why, and what metric values triggered the evaluation. This is tutor-only and off by default.
 
 ## Deployment Considerations

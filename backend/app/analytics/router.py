@@ -15,6 +15,7 @@ from ..models import SessionTitleUpdateRequest
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+api_router = APIRouter()
 # Test-override hook: several existing backend tests patch this module-level
 # name directly. In normal runtime it stays ``None`` and the router resolves
 # the configured singleton lazily via ``get_session_store()`` on each request.
@@ -23,6 +24,42 @@ store = None
 
 def _session_store():
     return store or get_session_store()
+
+
+def _serialize_session_summary(summary, *, include_transcript: bool = False) -> dict:
+    """Convert a SessionSummary to an API payload.
+
+    ``transcript_compact`` remains backend-only storage data. For detail views we
+    expose a sanitized, UI-friendly ``transcript_segments`` array instead.
+    """
+    data = summary.model_dump()
+    transcript_compact = data.pop("transcript_compact", None)
+
+    utterances = []
+    if isinstance(transcript_compact, dict):
+        raw_utterances = transcript_compact.get("utterances")
+        if isinstance(raw_utterances, list):
+            utterances = [u for u in raw_utterances if isinstance(u, dict)]
+
+    data["transcript_available"] = bool(utterances) or bool(data.get("transcript_word_count", 0))
+
+    if include_transcript and utterances:
+        data["transcript_segments"] = [
+            {
+                "utterance_id": item.get("utterance_id", ""),
+                "role": item.get("role", "student"),
+                "text": item.get("text", ""),
+                "start_time": float(item.get("start_time", 0.0) or 0.0),
+                "end_time": float(item.get("end_time", 0.0) or 0.0),
+                "confidence": float(item.get("confidence", 0.0) or 0.0),
+                "sentiment": item.get("sentiment"),
+                "student_index": int(item.get("student_index", 0) or 0),
+            }
+            for item in utterances
+            if item.get("text")
+        ]
+
+    return data
 
 
 @router.get("/sessions")
@@ -63,7 +100,10 @@ async def list_sessions(
         student_user_id=resolved_student_id,
         last_n=last_n if last_n > 0 else None,
     )
-    return [s.model_dump() for s in sessions]
+    return [
+        _serialize_session_summary(summary, include_transcript=False)
+        for summary in sessions
+    ]
 
 
 @router.get("/sessions/{session_id}")
@@ -95,7 +135,7 @@ async def get_session(
     if not summary.is_owner(current_user.id):
         raise HTTPException(status_code=403, detail="Access denied")
 
-    data = summary.model_dump()
+    data = _serialize_session_summary(summary, include_transcript=True)
 
     # Strip tutor-only coaching fields for authenticated student owners.
     # nudge_details are the live coaching nudges sent to the tutor during the
@@ -135,7 +175,7 @@ async def update_session(
 
     summary.session_title = new_title
     _session_store().save(summary)
-    return summary.model_dump()
+    return _serialize_session_summary(summary, include_transcript=True)
 
 
 @router.get("/sessions/{session_id}/recommendations")
@@ -207,6 +247,113 @@ async def get_student_insights(
         raise HTTPException(status_code=403, detail="Access denied")
 
     return generate_student_insights(summary)
+
+
+async def _delete_transcript_impl(
+    session_id: str,
+    current_user: Optional[User],
+):
+    """Delete transcript data for a session (Postgres + S3)."""
+    if current_user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required to delete transcript data",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    summary = _session_store().load(session_id)
+    if summary is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if not summary.is_owner(current_user.id):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    store = _session_store()
+    pg_cleared = False
+    s3_key_deleted: str | None = None
+
+    # 1. Clear transcript/enrichment data from the configured session store.
+    if hasattr(store, "clear_transcript_data"):
+        pg_cleared = store.clear_transcript_data(session_id)
+    else:
+        summary.transcript_compact = None
+        summary.transcript_word_count = 0
+        summary.transcript_available = False
+        summary.ai_summary = None
+        summary.topics_covered = []
+        summary.student_understanding_map = {}
+        summary.key_moments = []
+        summary.uncertainty_timeline = []
+        summary.follow_up_recommendations = []
+        store.save(summary)
+        pg_cleared = True
+
+    # 2. Delete transcript artifact from S3/R2 when trace storage uses S3.
+    try:
+        from ..config import settings as _settings
+
+        if _settings.trace_storage_backend == "s3":
+            from ..observability import get_trace_store
+
+            trace_store = get_trace_store()
+            s3_key = f"{trace_store._prefix}transcripts/{session_id}.json"
+            try:
+                trace_store._client.delete_object(
+                    Bucket=trace_store._bucket,
+                    Key=s3_key,
+                )
+                s3_key_deleted = s3_key
+                logger.info(
+                    "Deleted S3 transcript artifact for session %s: %s",
+                    session_id,
+                    s3_key,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to delete S3 transcript for session %s: %s",
+                    session_id,
+                    exc,
+                )
+    except Exception as exc:
+        logger.warning(
+            "S3 transcript deletion skipped for session %s: %s",
+            session_id,
+            exc,
+        )
+
+    # 3. Audit log with who/when/what was deleted.
+    if hasattr(store, "log_transcript_deletion"):
+        store.log_transcript_deletion(
+            session_id,
+            current_user.id,
+            s3_key_deleted=s3_key_deleted,
+            pg_cleared=pg_cleared,
+        )
+    else:
+        logger.info(
+            "Transcript deletion audit: session=%s user=%s pg_cleared=%s s3_key=%s",
+            session_id,
+            current_user.id,
+            pg_cleared,
+            s3_key_deleted,
+        )
+
+    return None
+
+
+@router.delete("/sessions/{session_id}/transcript", status_code=204)
+@api_router.delete("/sessions/{session_id}/transcript", status_code=204)
+async def delete_transcript(
+    session_id: str,
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    """Delete transcript data for a session (Postgres + S3).
+
+    Exposed at both ``/api/analytics/sessions/{id}/transcript`` and
+    ``/api/sessions/{id}/transcript`` for compatibility with the step spec and
+    existing analytics routes.
+    """
+    return await _delete_transcript_impl(session_id, current_user)
 
 
 @router.delete("/sessions/{session_id}", status_code=204)

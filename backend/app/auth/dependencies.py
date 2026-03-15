@@ -59,12 +59,27 @@ def _resolve_user_from_credentials(
     try:
         payload = decode_access_token(token)
     except jwt.ExpiredSignatureError:
+        # Debug: decode without verification to see what's in the token
+        try:
+            raw = jwt.decode(token, options={"verify_signature": False, "verify_exp": False})
+            from datetime import datetime, timezone
+            iat = datetime.fromtimestamp(raw.get("iat", 0), tz=timezone.utc)
+            exp = datetime.fromtimestamp(raw.get("exp", 0), tz=timezone.utc)
+            now = datetime.now(timezone.utc)
+            logger.error(
+                "Token expired — iat=%s exp=%s now=%s sub=%s (delta=%s)",
+                iat.isoformat(), exp.isoformat(), now.isoformat(),
+                raw.get("sub", "?"), now - exp,
+            )
+        except Exception:
+            logger.error("Token expired (could not decode for debug)")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
     except jwt.InvalidTokenError as exc:
+        logger.error("Invalid token: %s — token[:50]=%s", exc, token[:50])
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",

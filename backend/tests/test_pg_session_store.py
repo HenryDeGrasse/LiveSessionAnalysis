@@ -66,6 +66,18 @@ def _make_summary(
     )
 
 
+def _row_from_summary(summary: SessionSummary):
+    return (
+        summary.model_dump_json(),
+        summary.transcript_compact,
+        summary.ai_summary,
+        summary.topics_covered,
+        summary.student_understanding_map,
+        summary.key_moments,
+        summary.uncertainty_timeline,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Factory / selection logic (no DB required)
 # ---------------------------------------------------------------------------
@@ -200,15 +212,17 @@ class TestPgSessionStoreMocked:
         # data param (index 8) should be valid JSON containing session_id
         data = json.loads(params[8])
         assert data["session_id"] == "pg-s1"
+        # Promoted transcript/enrichment columns are also written explicitly.
+        assert params[10] == (summary.ai_summary or "")
+        assert json.loads(params[11]) == summary.topics_covered
+        assert json.loads(params[12]) == summary.student_understanding_map
 
     # -- load -----------------------------------------------------------
 
     def test_load_returns_summary_when_row_found(self):
         summary = _make_summary()
-        raw_json = summary.model_dump_json()
-
         store = self._store()
-        mock_cur = _make_mock_cursor(rows=[(raw_json,)])
+        mock_cur = _make_mock_cursor(rows=[_row_from_summary(summary)])
         mock_conn = _make_mock_conn(mock_cur)
 
         with patch.object(store, "_connect", return_value=mock_conn):
@@ -235,7 +249,17 @@ class TestPgSessionStoreMocked:
         raw_dict = summary.model_dump()
 
         store = self._store()
-        mock_cur = _make_mock_cursor(rows=[(raw_dict,)])
+        mock_cur = _make_mock_cursor(rows=[
+            (
+                raw_dict,
+                summary.transcript_compact,
+                summary.ai_summary,
+                summary.topics_covered,
+                summary.student_understanding_map,
+                summary.key_moments,
+                summary.uncertainty_timeline,
+            )
+        ])
         mock_conn = _make_mock_conn(mock_cur)
 
         with patch.object(store, "_connect", return_value=mock_conn):
@@ -244,9 +268,39 @@ class TestPgSessionStoreMocked:
         assert result is not None
         assert result.session_id == "pg-s1"
 
+    def test_load_prefers_promoted_transcript_columns_when_present(self):
+        summary = _make_summary()
+        raw_dict = summary.model_dump()
+        raw_dict["ai_summary"] = None
+        raw_dict["topics_covered"] = []
+
+        store = self._store()
+        mock_cur = _make_mock_cursor(rows=[
+            (
+                raw_dict,
+                {"utterances": [{"utterance_id": "u9", "role": "student", "text": "new text"}]},
+                "Column summary",
+                ["fractions"],
+                {"fractions": 0.7},
+                [{"time": 10.0, "description": "moment"}],
+                [{"time": 10.0, "score": 0.8}],
+            )
+        ])
+        mock_conn = _make_mock_conn(mock_cur)
+
+        with patch.object(store, "_connect", return_value=mock_conn):
+            result = store.load("pg-s1")
+
+        assert result is not None
+        assert result.ai_summary == "Column summary"
+        assert result.topics_covered == ["fractions"]
+        assert result.transcript_compact == {
+            "utterances": [{"utterance_id": "u9", "role": "student", "text": "new text"}]
+        }
+
     def test_load_returns_none_on_corrupt_data(self, caplog):
         store = self._store()
-        mock_cur = _make_mock_cursor(rows=[("not-valid-json{{",)])
+        mock_cur = _make_mock_cursor(rows=[("not-valid-json{{", None, None, None, None, None, None)])
         mock_conn = _make_mock_conn(mock_cur)
 
         with patch.object(store, "_connect", return_value=mock_conn):
@@ -258,7 +312,7 @@ class TestPgSessionStoreMocked:
 
     def test_list_sessions_no_filters(self):
         summaries = [_make_summary(session_id=f"s{i}") for i in range(3)]
-        rows = [(s.model_dump_json(),) for s in summaries]
+        rows = [_row_from_summary(s) for s in summaries]
 
         store = self._store()
         mock_cur = _make_mock_cursor(rows=rows)
@@ -271,7 +325,7 @@ class TestPgSessionStoreMocked:
 
     def test_list_sessions_with_tutor_filter(self):
         summary = _make_summary(tutor_id="alice")
-        rows = [(summary.model_dump_json(),)]
+        rows = [_row_from_summary(summary)]
 
         store = self._store()
         mock_cur = _make_mock_cursor(rows=rows)
@@ -308,7 +362,10 @@ class TestPgSessionStoreMocked:
         assert "LIMIT" not in sql
 
     def test_list_sessions_skips_bad_rows(self, caplog):
-        rows = [("not-json{{",), (_make_summary(session_id="good").model_dump_json(),)]
+        rows = [
+            ("not-json{{", None, None, None, None, None, None),
+            _row_from_summary(_make_summary(session_id="good")),
+        ]
 
         store = self._store()
         mock_cur = _make_mock_cursor(rows=rows)

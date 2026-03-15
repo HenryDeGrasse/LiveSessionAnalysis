@@ -290,94 +290,71 @@ function SessionCreationCard({
             </button>
           </div>
         ) : (
-          /* ── Post-creation: links & enter ── */
+          /* ── Post-creation: student link + enter ── */
           <div data-testid="session-created-card" className="space-y-4">
-            <div className="rounded-2xl border border-emerald-400/25 bg-emerald-500/10 p-4">
-              <p className="text-sm font-semibold text-emerald-100">
-                Session created and ready to enter.
-              </p>
-              <p
-                data-testid="created-session-id"
-                className="mt-2 text-xs text-emerald-200/80"
-              >
-                Ref: {sessionInfo.session_id}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-emerald-50/85">
-                Share the student link below so the student joins the clean call
-                view.
-              </p>
-            </div>
+            <p data-testid="created-session-id" className="sr-only">
+              {sessionInfo.session_id}
+            </p>
 
-            <div className="rounded-2xl border border-white/8 bg-[#171d3a]/70 p-4">
-              {isMultiStudent ? (
-                <>
-                  <p className="mb-3 text-sm font-medium text-white">
-                    Student join links{' '}
-                    <span className="text-xs text-[#6b7ba0]">
-                      ({sessionInfo?.max_students ?? 1} students)
+            {isMultiStudent ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-white">
+                  Student links{' '}
+                  <span className="text-xs text-[#6b7ba0]">
+                    ({sessionInfo?.max_students ?? 1} students — each needs a different link)
+                  </span>
+                </p>
+                {studentJoinLinks.map((link, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-[#8896b3]">
+                      {i + 1}
                     </span>
-                  </p>
-                  <p className="mb-3 text-xs leading-5 text-[#6b7ba0]">
-                    Each student must use a{' '}
-                    <strong className="text-[#8896b3]">different</strong> link.
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    {studentJoinLinks.map((link, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-[#8896b3]">
-                          Student {i + 1}
-                        </span>
-                        <code className="min-w-0 flex-1 break-all rounded-xl bg-[#131832] px-3 py-2 text-xs text-[#a0b0d0]">
-                          {link}
-                        </code>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            try {
-                              await writeToClipboard(link)
-                              toast.success(
-                                `Student ${i + 1} link copied!`
-                              )
-                            } catch {
-                              toast.error('Failed to copy link')
-                            }
-                          }}
-                          className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-[#8896b3] transition hover:bg-white/10 hover:text-white"
-                        >
-                          Copy
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-white">
-                      Student join link
-                    </p>
+                    <code className="min-w-0 flex-1 break-all rounded-xl bg-[#131832] px-3 py-2 text-xs text-[#a0b0d0]">
+                      {link}
+                    </code>
                     <button
                       type="button"
-                      onClick={() => void onCopyStudentLink()}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-[#8896b3] transition hover:bg-white/10 hover:text-white"
+                      onClick={async () => {
+                        try {
+                          await writeToClipboard(link)
+                          toast.success(`Student ${i + 1} link copied`)
+                        } catch {
+                          toast.error('Failed to copy')
+                        }
+                      }}
+                      className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-[#8896b3] transition hover:bg-white/10 hover:text-white"
                     >
-                      {copiedStudentLink ? 'Copied ✓' : 'Copy link'}
+                      Copy
                     </button>
                   </div>
-                  <code
-                    data-testid="student-join-link"
-                    className="block break-all rounded-xl bg-[#131832] px-3 py-3 text-xs text-[#a0b0d0]"
-                  >
-                    {studentJoinLink}
-                  </code>
-                </>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <code
+                  data-testid="student-join-link"
+                  className="min-w-0 flex-1 break-all rounded-xl bg-[#131832] px-3 py-2.5 text-xs text-[#a0b0d0]"
+                >
+                  {studentJoinLink}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => void onCopyStudentLink()}
+                  className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#8896b3] transition hover:bg-white/10 hover:text-white"
+                >
+                  {copiedStudentLink ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            )}
+
+            <p className="text-xs text-[#6b7ba0]">
+              Send this link to your student, then enter the session.
+            </p>
 
             <button
               data-testid="join-as-tutor-button"
               onClick={onEnterSession}
-              className="w-full rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-[#1a1f3a] transition hover:bg-slate-100"
+              className="w-full rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-4 py-3 text-sm font-semibold text-[#1a1f3a] transition hover:from-emerald-300 hover:to-emerald-400"
             >
               Enter Session
             </button>
@@ -390,93 +367,9 @@ function SessionCreationCard({
   )
 }
 
-/* ─── Join session card ─────────────────────────────────────────── */
-
-function JoinSessionCard({
-  joinSessionId,
-  joinToken,
-  onJoinSessionIdChange,
-  onJoinTokenChange,
-  onJoin,
-}: {
-  joinSessionId: string
-  joinToken: string
-  onJoinSessionIdChange: (value: string) => void
-  onJoinTokenChange: (value: string) => void
-  onJoin: () => void
-}) {
-  return (
-    <section className="rounded-2xl border border-white/8 bg-[#1e2545]/60 p-6 backdrop-blur">
-      <p className="text-xs uppercase tracking-[0.24em] text-[#8896b3]">
-        Universal rejoin
-      </p>
-      <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
-        Join Session
-      </h2>
-      <p className="mt-2 text-sm leading-6 text-[#6b7ba0]">
-        Enter a session ID and token to join as tutor or student.
-      </p>
-
-      <div className="mt-5 space-y-4">
-        <div>
-          <label
-            htmlFor="join-session-id"
-            className="mb-2 block text-xs uppercase tracking-[0.18em] text-[#8896b3]"
-          >
-            Session ID
-          </label>
-          <input
-            id="join-session-id"
-            type="text"
-            placeholder="Session ID"
-            value={joinSessionId}
-            onChange={(e) => onJoinSessionIdChange(e.target.value)}
-            className={INPUT_CLASSES}
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="join-session-token"
-            className="mb-2 block text-xs uppercase tracking-[0.18em] text-[#8896b3]"
-          >
-            Token
-          </label>
-          <input
-            id="join-session-token"
-            type="text"
-            placeholder="Join token"
-            value={joinToken}
-            onChange={(e) => onJoinTokenChange(e.target.value)}
-            className={INPUT_CLASSES}
-          />
-        </div>
-        <button
-          onClick={onJoin}
-          disabled={!joinSessionId.trim() || !joinToken.trim()}
-          className="w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Join Session
-        </button>
-      </div>
-    </section>
-  )
-}
-
 /* ─── Student dashboard ─────────────────────────────────────────── */
 
-function StudentDashboard({
-  joinSessionId,
-  joinToken,
-  onJoinSessionIdChange,
-  onJoinTokenChange,
-  onJoin,
-}: {
-  joinSessionId: string
-  joinToken: string
-  onJoinSessionIdChange: (value: string) => void
-  onJoinTokenChange: (value: string) => void
-  onJoin: () => void
-}) {
+function StudentDashboard() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <section className="rounded-2xl border border-white/8 bg-[#1e2545]/60 p-6 text-center backdrop-blur md:p-8">
@@ -484,21 +377,12 @@ function StudentDashboard({
           Student workspace
         </p>
         <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">
-          Join a tutoring session
+          Waiting for invite
         </h2>
-        <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-[#6b7ba0]">
-          Ask your tutor for the session join link, or paste a session ID and
-          token below.
+        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#6b7ba0]">
+          Your tutor will share a join link with you. Click it to enter the session directly.
         </p>
       </section>
-
-      <JoinSessionCard
-        joinSessionId={joinSessionId}
-        joinToken={joinToken}
-        onJoinSessionIdChange={onJoinSessionIdChange}
-        onJoinTokenChange={onJoinTokenChange}
-        onJoin={onJoin}
-      />
     </div>
   )
 }
@@ -521,8 +405,6 @@ function HomeContent() {
   const [sessionType, setSessionType] = useState('general')
   const [sessionTitle, setSessionTitle] = useState('')
   const [coachingIntensity, setCoachingIntensity] = useState('normal')
-  const [joinToken, setJoinToken] = useState('')
-  const [joinSessionId, setJoinSessionId] = useState('')
   const [creating, setCreating] = useState(false)
   const [copiedStudentLink, setCopiedStudentLink] = useState(false)
   const [error, setError] = useState('')
@@ -699,13 +581,6 @@ function HomeContent() {
     }
   }
 
-  const joinSession = () => {
-    const sid = joinSessionId.trim()
-    const tok = joinToken.trim()
-    if (!sid || !tok) return
-    router.push(buildSessionHref(sid, tok))
-  }
-
   const roleLabel =
     userRole === 'student'
       ? 'Student'
@@ -754,57 +629,32 @@ function HomeContent() {
               </p>
               <p className="max-w-xl text-base leading-7 text-[#8896b3]">
                 {isStudent
-                  ? 'Join your tutoring session using the link your tutor shared.'
-                  : 'Launch a new room, join an active session, and review analytics — all from one dashboard.'}
+                  ? 'Use the link your tutor shared to join.'
+                  : 'Create a session, share the student link, and start teaching.'}
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              {/* Identity card */}
-              <div className="rounded-2xl border border-white/8 bg-[#1e2545]/70 px-5 py-5">
-                <p className="text-xs uppercase tracking-[0.22em] text-[#6b7ba0]">
-                  Signed in as
-                </p>
-                <p className="mt-3 text-xl font-semibold text-white">
-                  {userName || 'Guest'}
-                </p>
-                {userEmail ? (
-                  <p className="mt-1 truncate text-sm text-[#6b7ba0]">
-                    {userEmail}
-                  </p>
-                ) : null}
-                <span className="mt-2 inline-flex rounded-full border border-white/10 bg-[#2a3158] px-2 py-0.5 text-xs text-[#8896b3]">
-                  {roleLabel}
-                </span>
-              </div>
-
-              {!isStudent ? (
+            {!isStudent && (
+              <div>
                 <Link
                   href="/analytics"
                   onClick={handleAnalyticsNavigation}
-                  className="group rounded-2xl border border-white/8 bg-[#1e2545]/70 px-5 py-5 transition hover:border-[#7b6ef6]/30 hover:bg-[#252d55]/80"
+                  className="group inline-flex items-center gap-2 rounded-2xl border border-white/8 bg-[#1e2545]/70 px-5 py-3.5 transition hover:border-[#7b6ef6]/30 hover:bg-[#252d55]/80"
                 >
-                  <p className="text-xs uppercase tracking-[0.22em] text-[#6b7ba0]">
-                    Analytics
-                  </p>
-                  <p className="mt-3 text-xl font-semibold text-white">
+                  <span className="text-sm font-medium text-white">
                     Session portfolio
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-[#6b7ba0]">
-                    Compare sessions, inspect trends, and drill into flagged
-                    moments.
-                  </p>
-                  <span className="mt-3 inline-flex text-sm font-medium text-accent-gradient transition group-hover:translate-x-1">
-                    Browse analytics →
+                  </span>
+                  <span className="text-sm text-accent-gradient transition group-hover:translate-x-0.5">
+                    →
                   </span>
                 </Link>
-              ) : null}
-            </div>
+              </div>
+            )}
           </div>
         </section>
 
         {/* ── Active session banner ── */}
-        {activeSession && !isStudent ? (
+        {activeSession && !isStudent && !sessionInfo ? (
           <section
             data-testid="active-session-banner"
             className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.08] p-5"
@@ -850,13 +700,7 @@ function HomeContent() {
 
         {/* ── Body ── */}
         {isStudent ? (
-          <StudentDashboard
-            joinSessionId={joinSessionId}
-            joinToken={joinToken}
-            onJoinSessionIdChange={setJoinSessionId}
-            onJoinTokenChange={setJoinToken}
-            onJoin={joinSession}
-          />
+          <StudentDashboard />
         ) : showOnboarding ? (
           /* Onboarding — no sessions yet */
           <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -894,13 +738,13 @@ function HomeContent() {
               onCopyStudentLink={copyStudentLink}
             />
 
-            <JoinSessionCard
-              joinSessionId={joinSessionId}
-              joinToken={joinToken}
-              onJoinSessionIdChange={setJoinSessionId}
-              onJoinTokenChange={setJoinToken}
-              onJoin={joinSession}
-            />
+            {/* Join hint */}
+            <div className="rounded-2xl border border-white/8 bg-[#1e2545]/40 px-5 py-4">
+              <p className="text-sm text-[#6b7ba0]">
+                <span className="font-medium text-[#8896b3]">Joining a session?</span>{' '}
+                Use the invite link from your tutor to join directly.
+              </p>
+            </div>
           </div>
         ) : (
           /* ── Tutor main view ── */
@@ -1050,13 +894,13 @@ function HomeContent() {
                 onCopyStudentLink={copyStudentLink}
               />
 
-              <JoinSessionCard
-                joinSessionId={joinSessionId}
-                joinToken={joinToken}
-                onJoinSessionIdChange={setJoinSessionId}
-                onJoinTokenChange={setJoinToken}
-                onJoin={joinSession}
-              />
+              {/* Join hint */}
+              <div className="rounded-2xl border border-white/8 bg-[#1e2545]/40 px-5 py-4">
+                <p className="text-sm text-[#6b7ba0]">
+                  <span className="font-medium text-[#8896b3]">Joining a session?</span>{' '}
+                  Use the invite link from your tutor to join directly.
+                </p>
+              </div>
             </aside>
           </div>
         )}

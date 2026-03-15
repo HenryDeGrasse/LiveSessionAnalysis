@@ -69,9 +69,57 @@ CREATE INDEX IF NOT EXISTS idx_ss_start_time
 """
 
 # ---------------------------------------------------------------------------
+# Migration: AI Conversational Intelligence columns on session_summaries
+# ---------------------------------------------------------------------------
+# These columns store post-session enrichment data produced by the AI
+# Conversational Intelligence pipeline (transcript, AI summary, topics,
+# understanding map, key moments, uncertainty timeline).
+#
+# All statements use ``ALTER TABLE … ADD COLUMN IF NOT EXISTS`` (Postgres 9.6+)
+# so they are safe to run multiple times.
+MIGRATE_SESSION_SUMMARIES_AI_COLUMNS = """
+ALTER TABLE session_summaries
+    ADD COLUMN IF NOT EXISTS transcript_compact JSONB DEFAULT NULL;
+
+ALTER TABLE session_summaries
+    ADD COLUMN IF NOT EXISTS ai_summary TEXT DEFAULT '';
+
+ALTER TABLE session_summaries
+    ADD COLUMN IF NOT EXISTS topics_covered JSONB DEFAULT '[]';
+
+ALTER TABLE session_summaries
+    ADD COLUMN IF NOT EXISTS student_understanding_map JSONB DEFAULT '{}';
+
+ALTER TABLE session_summaries
+    ADD COLUMN IF NOT EXISTS key_moments JSONB DEFAULT '[]';
+
+ALTER TABLE session_summaries
+    ADD COLUMN IF NOT EXISTS uncertainty_timeline JSONB DEFAULT '[]';
+"""
+
+# ---------------------------------------------------------------------------
+# Audit log for transcript deletions
+# ---------------------------------------------------------------------------
+CREATE_TRANSCRIPT_DELETION_LOG_TABLE = """
+CREATE TABLE IF NOT EXISTS transcript_deletion_log (
+    id              SERIAL      PRIMARY KEY,
+    session_id      TEXT        NOT NULL,
+    deleted_by      TEXT        NOT NULL,
+    deleted_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    s3_key_deleted  TEXT,
+    pg_cleared      BOOLEAN     NOT NULL DEFAULT FALSE
+);
+
+CREATE INDEX IF NOT EXISTS idx_tdl_session_id
+    ON transcript_deletion_log (session_id);
+"""
+
+# ---------------------------------------------------------------------------
 # Combined schema — apply in dependency order
 # ---------------------------------------------------------------------------
 SCHEMA_SQL = "\n".join([
     CREATE_USERS_TABLE,
     CREATE_SESSION_SUMMARIES_TABLE,
+    MIGRATE_SESSION_SUMMARIES_AI_COLUMNS,
+    CREATE_TRANSCRIPT_DELETION_LOG_TABLE,
 ])

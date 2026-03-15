@@ -314,3 +314,130 @@ Notes:
   "trigger_metrics": {"student_talk_time_percent": 0.02}
 }
 ```
+
+---
+
+## AI Conversational Intelligence Endpoints
+
+These endpoints are part of the AI Conversational Intelligence system. They require the corresponding feature flags to be enabled (see `.env.example`).
+
+### On-Demand AI Coaching Suggestion
+```
+POST /api/sessions/{session_id}/suggest?token={tutor_token}
+```
+Tutor-initiated request for an AI coaching suggestion. Bypasses the normal interval gating but respects the hourly budget (`LSA_AI_COACHING_MAX_CALLS_PER_HOUR`).
+
+**Requires:** `LSA_ENABLE_TRANSCRIPTION=true`, `LSA_ENABLE_AI_COACHING=true`, valid LLM API key.
+
+**Auth:** Tutor session token or authenticated user with tutor role.
+
+**Response (200):**
+```json
+{
+  "status": "ok",
+  "suggestion": {
+    "id": "ai-sug-123456abcdef",
+    "action": "probe_understanding",
+    "topic": "integration",
+    "observation": "Student sounds uncertain about the relationship between derivatives and integrals",
+    "suggestion": "Ask the student to explain how an integral reverses differentiation in their own words.",
+    "suggested_prompt": "Can you walk me through how integrals and derivatives are connected?",
+    "priority": "medium",
+    "confidence": 0.85
+  },
+  "calls_remaining": 29
+}
+```
+
+**Error Responses:**
+- `404` — Session not found
+- `403` — Not authorized (non-tutor role)
+- `429` — Hourly budget exhausted
+- `503` — AI coaching not configured or provider unavailable
+
+### Suggestion Feedback
+```
+POST /api/sessions/{session_id}/suggestion-feedback?token={tutor_token}
+```
+Submit tutor feedback on a coaching suggestion for evaluation dataset construction.
+
+**Request Body:**
+```json
+{
+  "suggestion_id": "uuid",
+  "helpful": true,
+  "comment": "Good suggestion, student engaged more after I used it"
+}
+```
+
+**Auth:** Tutor session token or authenticated user.
+
+**Response (200):**
+```json
+{
+  "status": "ok",
+  "session_id": "abc123",
+  "suggestion_id": "ai-sug-123456abcdef",
+  "helpful": true
+}
+```
+
+**Error Responses:**
+- `404` — Session not found
+- `403` — Not authorized
+
+### Post-Session AI Summary
+```
+POST /api/sessions/{session_id}/ai-summary?token={token}
+```
+Generates a post-session AI summary from the stored transcript. Can be called after the session ends.
+
+**Requires:** `LSA_ENABLE_AI_SESSION_SUMMARY=true`, `LSA_ENABLE_TRANSCRIPT_STORAGE=true`, valid LLM API key.
+
+**Auth:** Tutor session token or authenticated user matching the tutor.
+
+**Response (200):**
+```json
+{
+  "status": "ok",
+  "summary": {
+    "topics_covered": ["integration", "u-substitution", "chain rule"],
+    "key_moments": [
+      {
+        "timestamp": 812.4,
+        "label": "student_breakthrough",
+        "description": "Student connected substitution to the chain rule"
+      }
+    ],
+    "student_understanding_map": {
+      "basic derivatives": 0.9,
+      "integration by parts": 0.4
+    },
+    "tutor_strengths": ["clear scaffolding"],
+    "tutor_growth_areas": ["check for understanding sooner"],
+    "recommended_follow_up": ["Review integration by parts with more practice problems"],
+    "session_narrative": "The tutor guided the student from uncertainty about substitution toward a clearer conceptual link with the chain rule."
+  }
+}
+```
+
+**Error Responses:**
+- `404` — Session not found or no transcript available
+- `403` — Not authorized
+- `503` — AI summary not configured or provider unavailable
+
+### Delete Transcript
+```
+DELETE /api/analytics/sessions/{session_id}/transcript
+DELETE /api/sessions/{session_id}/transcript
+```
+Deletes transcript data for a session from both Postgres and S3/R2 storage. Both paths resolve to the same handler.
+
+**Auth:** Authenticated owner of the session required.
+
+**Response:** `204 No Content` on success.
+
+**Error Responses:**
+- `401` — Authentication required
+- `403` — Not authorized for this session
+- `404` — Session not found

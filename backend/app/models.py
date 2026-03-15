@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field
 
@@ -103,6 +103,14 @@ class MetricsSnapshot(BaseModel):
     # Not populated for single-student sessions (max_students=1).
     per_student_metrics: Optional[dict] = None
 
+    # --- AI Conversational Intelligence fields ---
+    transcript_available: bool = False
+    student_uncertainty_score: Optional[float] = None
+    student_uncertainty_topic: Optional[str] = None
+    student_uncertainty_confidence: Optional[float] = None
+    ai_suggestion: Optional[str] = None
+    backpressure_level: int = 0
+
 
 class NudgePriority(str, Enum):
     LOW = "low"
@@ -156,6 +164,17 @@ class SessionSummary(BaseModel):
     )
     nudge_details: list[dict] = Field(default_factory=list)
     turn_counts: dict[str, int] = Field(default_factory=dict)
+
+    # --- AI Conversational Intelligence post-session fields ---
+    transcript_available: bool = False
+    transcript_word_count: int = 0
+    topics_covered: list[str] = Field(default_factory=list)
+    ai_summary: Optional[str] = None
+    student_understanding_map: dict[str, float] = Field(default_factory=dict)
+    key_moments: list[dict] = Field(default_factory=list)
+    follow_up_recommendations: list[str] = Field(default_factory=list)
+    uncertainty_timeline: list[dict] = Field(default_factory=list)
+    transcript_compact: Optional[dict[str, Any]] = None
 
     def is_owner(self, user_id: str) -> bool:
         """Return True if user_id matches the tutor or the student of this session."""
@@ -219,6 +238,8 @@ class WSMessage(BaseModel):
         "participant_disconnected",
         "participant_reconnected",
         "webrtc_signal",
+        "transcript_partial",
+        "transcript_final",
     ]
     data: dict
 
