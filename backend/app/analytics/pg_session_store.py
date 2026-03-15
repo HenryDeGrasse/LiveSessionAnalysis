@@ -126,10 +126,36 @@ class PgSessionStore:
                 "PgSessionStore requires a database URL "
                 "(settings.database_url / LSA_DATABASE_URL env var)"
             )
+        self._ensure_schema()
 
     # ------------------------------------------------------------------ #
     # Internal helpers                                                     #
     # ------------------------------------------------------------------ #
+
+    def _ensure_schema(self) -> None:
+        """Run idempotent schema migrations on first connect.
+
+        Creates the base table (if missing) and adds any new columns
+        introduced by the AI Conversational Intelligence feature.
+        """
+        try:
+            from ..db_schema import (
+                CREATE_SESSION_SUMMARIES_TABLE,
+                MIGRATE_SESSION_SUMMARIES_AI_COLUMNS,
+                CREATE_TRANSCRIPT_DELETION_LOG_TABLE,
+            )
+
+            with self._connect() as conn:
+                conn.execute(CREATE_SESSION_SUMMARIES_TABLE)
+                conn.execute(MIGRATE_SESSION_SUMMARIES_AI_COLUMNS)
+                conn.execute(CREATE_TRANSCRIPT_DELETION_LOG_TABLE)
+                conn.commit()
+            logger.info("PgSessionStore: schema migration complete")
+        except Exception:
+            logger.warning(
+                "PgSessionStore: schema migration failed (non-fatal, columns may already exist)",
+                exc_info=True,
+            )
 
     def _connect(self):
         """Open and return a new psycopg connection."""
