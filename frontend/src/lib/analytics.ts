@@ -436,7 +436,7 @@ export function deriveSessionRubric(session: SessionSummary): RubricScore[] {
     {
       label: 'Student presence',
       value: studentPresenceScore,
-      hint: `Derived from student camera-facing (${formatPercent(session.avg_eye_contact.student || 0)}) and student speaking energy during participation (${formatPercent(session.avg_energy.student || 0)}).`,
+      hint: `Derived from student camera-facing (${formatPercent(session.avg_eye_contact.student || 0)}) and vocal energy while speaking (${formatPercent(session.avg_energy.student || 0)}), combining pitch variation, loudness, and speech rate via prosody analysis.`,
     },
     {
       label: 'Turn-taking control',

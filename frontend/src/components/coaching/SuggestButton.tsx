@@ -1,21 +1,12 @@
 'use client'
 
 interface SuggestButtonProps {
-  /** Whether a suggestion request is currently in flight. */
   loading: boolean
-  /** Called when the button is clicked. */
   onClick: () => void
-  /** Remaining API calls in the budget window. Shown as a badge when non-null. */
   callsRemaining?: number | null
-  /** Whether the button should be disabled (e.g. budget exhausted). */
   disabled?: boolean
 }
 
-/**
- * Persistent button in the tutor control bar that requests an AI coaching
- * suggestion on demand. Shows a loading spinner when a request is in flight
- * and an optional budget-remaining badge.
- */
 export function SuggestButton({
   loading,
   onClick,
@@ -31,7 +22,7 @@ export function SuggestButton({
       onClick={onClick}
       disabled={isDisabled}
       className={[
-        'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
+        'inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
         isDisabled
           ? 'cursor-not-allowed border-white/5 bg-slate-900/50 text-slate-600'
           : 'border-violet-400/30 bg-violet-500/15 text-violet-200 hover:bg-violet-500/25 hover:text-white',
@@ -41,13 +32,15 @@ export function SuggestButton({
       {loading ? (
         <span
           data-testid="suggest-button-spinner"
-          className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400"
+          className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400"
           aria-hidden="true"
         />
       ) : (
-        <span aria-hidden="true">🤖</span>
+        <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <path d="M8 1a2.5 2.5 0 0 0-2.5 2.5c0 .86.43 1.62 1.1 2.07A4.5 4.5 0 0 0 3.5 10v1a.5.5 0 0 0 .5.5h2v2a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-2h2a.5.5 0 0 0 .5-.5v-1a4.5 4.5 0 0 0-3.1-4.43A2.5 2.5 0 0 0 10.5 3.5 2.5 2.5 0 0 0 8 1z"/>
+        </svg>
       )}
-      <span>{loading ? 'Thinking…' : 'Get AI Suggestion'}</span>
+      <span>{loading ? 'Thinking...' : 'AI Suggest'}</span>
       {callsRemaining !== null && callsRemaining !== undefined && (
         <span
           data-testid="calls-remaining-badge"

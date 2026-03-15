@@ -307,11 +307,27 @@ class AICoachingCopilot:
         self._call_timestamps.append(now)
         self._total_calls += 1
 
+    @staticmethod
+    def _extract_json(raw: str) -> str:
+        """Strip markdown code fences if present.
+
+        Gemini and some other models wrap JSON in ```json ... ```.
+        """
+        stripped = raw.strip()
+        # Strip ```json ... ``` or ``` ... ```
+        fence_match = re.match(
+            r"^```(?:json)?\s*\n?(.*?)\n?\s*```$", stripped, re.DOTALL
+        )
+        if fence_match:
+            return fence_match.group(1).strip()
+        return stripped
+
     def _parse_response(self, raw: str) -> Optional[AISuggestion]:
         """Parse a raw LLM JSON response into an ``AISuggestion``."""
         try:
-            data = json.loads(raw)
+            data = json.loads(self._extract_json(raw))
         except json.JSONDecodeError:
+            logger.debug("AI copilot: raw response not valid JSON: %s", raw[:200])
             return None
 
         if not isinstance(data, dict):

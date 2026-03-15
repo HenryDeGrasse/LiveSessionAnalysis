@@ -398,7 +398,7 @@ class TestStats:
             stream.try_send(CHUNK, is_speech=False)
 
         s = stream.stats
-        assert s["silence_chunks_skipped"] == 5
+        assert s["silence_chunks_sent"] == 5
         assert s["voiced_chunks_received"] == 0
         assert s["ever_spoken"] is False
 
@@ -462,7 +462,7 @@ class TestVADEdgeState:
         s = stream.stats
         # No tail injection should have been enqueued
         assert s["tail_silence_chunks_sent"] == 0
-        assert s["silence_chunks_skipped"] == 10
+        assert s["silence_chunks_sent"] == 10
 
         await stream.stop()
 
@@ -488,7 +488,7 @@ class TestVADEdgeState:
 
     @pytest.mark.asyncio
     async def test_continued_silence_no_extra_tails(self):
-        """Continued silence frames after edge should not add more tails."""
+        """Continued silence frames after edge should not add more tail injections."""
         provider = MockSTTProvider()
         stream = _make_stream(provider=provider, tail_silence_ms=60)
         await stream.start()
@@ -497,14 +497,14 @@ class TestVADEdgeState:
         stream.try_send(CHUNK, is_speech=True)
         # First silence (edge → tail injection enqueued)
         stream.try_send(CHUNK, is_speech=False)
-        # More silence (should be skipped)
+        # More silence — all enqueued (provider handles VAD)
         for _ in range(5):
             stream.try_send(CHUNK, is_speech=False)
 
         await asyncio.sleep(0.3)
         s = stream.stats
-        # Only 1 tail injection worth of chunks
-        assert s["silence_chunks_skipped"] == 5
+        # All 6 silence frames were sent through
+        assert s["silence_chunks_sent"] == 6
 
         await stream.stop()
 
@@ -572,6 +572,6 @@ class TestReconnect:
 
         # After reconnect, silence should not trigger tail (not in_speech)
         stream.try_send(CHUNK, is_speech=False)
-        assert stream.stats["silence_chunks_skipped"] >= 1
+        assert stream.stats["silence_chunks_sent"] >= 1
 
         await stream.stop()

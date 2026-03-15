@@ -224,7 +224,7 @@ class TestConfigNewFields:
         s = Settings()
         assert s.enable_transcription is False
         assert s.transcription_provider == "assemblyai"
-        assert s.transcription_roles == ["student"]
+        assert s.transcription_roles == ["tutor", "student"]
         assert s.deepgram_api_key == ""
         assert s.assemblyai_api_key == ""
         assert s.transcription_language == "en"

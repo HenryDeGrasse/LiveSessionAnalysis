@@ -355,9 +355,12 @@ class LiveKitAnalyticsWorker:
                         self.session, role, pcm, student_index=student_index
                     )
 
-                    # Non-blocking transcription feed
-                    if transcription_stream is not None and result is not None:
-                        is_speech = getattr(result, "is_speech", False)
+                    # Non-blocking transcription feed — send ALL audio (speech
+                    # + silence) so the provider's neural VAD can handle
+                    # endpointing properly.  Our local VAD result is passed
+                    # through for backpressure metrics only.
+                    if transcription_stream is not None:
+                        is_speech = getattr(result, "is_speech", False) if result is not None else False
                         transcription_stream.try_send(pcm, is_speech)
         except asyncio.CancelledError:
             raise

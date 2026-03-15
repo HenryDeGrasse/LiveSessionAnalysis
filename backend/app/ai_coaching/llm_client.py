@@ -16,7 +16,7 @@ OpenRouter is the recommended default because it provides:
 from __future__ import annotations
 
 import logging
-from typing import Optional, Protocol, runtime_checkable
+from typing import AsyncIterator, Optional, Protocol, runtime_checkable
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +56,9 @@ class OpenRouterLLMClient:
     gives access to Claude, GPT-4o, Gemini, Llama, and many other models
     through a single API key.
 
+    Supports both blocking and streaming modes.  Streaming is used by
+    default for on-demand requests to reduce perceived latency (TTFB).
+
     Sign up at https://openrouter.ai/ to get an API key.
     """
 
@@ -87,7 +90,7 @@ class OpenRouterLLMClient:
         *,
         max_tokens: int = 1024,
     ) -> Optional[str]:
-        """Call the OpenRouter API (OpenAI-compatible) and return text."""
+        """Call the OpenRouter API (blocking) and return the full text."""
         try:
             response = await self._client.chat.completions.create(
                 model=self._model,
@@ -103,6 +106,70 @@ class OpenRouterLLMClient:
         except Exception:
             logger.exception("OpenRouter API call failed (model=%s)", self._model)
             return None
+
+    async def generate_stream(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: int = 1024,
+    ) -> Optional[str]:
+        """Call the OpenRouter API with streaming and return the full text.
+
+        Streaming doesn't change the final result but reduces TTFB
+        on the HTTP connection, which helps when the caller is measuring
+        wall-clock time.  For true progressive display, use the
+        ``stream_chunks`` method instead.
+        """
+        try:
+            chunks: list[str] = []
+            stream = await self._client.chat.completions.create(
+                model=self._model,
+                max_tokens=max_tokens,
+                stream=True,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            )
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    chunks.append(chunk.choices[0].delta.content)
+            return "".join(chunks) if chunks else None
+        except Exception:
+            logger.exception(
+                "OpenRouter streaming call failed (model=%s)", self._model
+            )
+            return None
+
+    async def stream_chunks(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: int = 1024,
+    ) -> AsyncIterator[str]:
+        """Yield individual text chunks as they arrive from the LLM.
+
+        Used by SSE endpoints to stream tokens to the frontend in real time.
+        """
+        try:
+            stream = await self._client.chat.completions.create(
+                model=self._model,
+                max_tokens=max_tokens,
+                stream=True,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            )
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+        except Exception:
+            logger.exception(
+                "OpenRouter stream_chunks failed (model=%s)", self._model
+            )
 
 
 # --------------------------------------------------------------------------- #

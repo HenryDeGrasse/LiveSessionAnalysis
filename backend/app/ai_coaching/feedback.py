@@ -112,13 +112,14 @@ async def submit_suggestion_feedback(
     if room is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Auth: require tutor role via session token or authenticated user.
+    # Auth: require tutor role via session token OR authenticated user.
     authorized = False
     if token:
         resolved_role = room.get_role_for_token(token)
-        authorized = resolved_role == Role.TUTOR
-    elif current_user is not None:
-        authorized = room.tutor_id == current_user.id
+        if resolved_role == Role.TUTOR:
+            authorized = True
+    if not authorized and current_user is not None:
+        authorized = room.tutor_id == current_user.id or current_user.role == "tutor"
 
     if not authorized:
         raise HTTPException(status_code=403, detail="Only the tutor can submit feedback")

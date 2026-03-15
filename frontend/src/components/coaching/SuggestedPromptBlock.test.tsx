@@ -20,7 +20,7 @@ describe('SuggestedPromptBlock', () => {
   it('renders Copy button', () => {
     render(<SuggestedPromptBlock prompt="test prompt" />)
 
-    expect(screen.getByTestId('copy-prompt-btn')).toHaveTextContent('📋 Copy')
+    expect(screen.getByTestId('copy-prompt-btn')).toHaveTextContent('Copy')
   })
 
   it('does not render Use button when onUse is not provided', () => {
@@ -33,7 +33,7 @@ describe('SuggestedPromptBlock', () => {
     render(<SuggestedPromptBlock prompt="test prompt" onUse={vi.fn()} />)
 
     expect(screen.getByTestId('use-prompt-btn')).toBeInTheDocument()
-    expect(screen.getByTestId('use-prompt-btn')).toHaveTextContent('▶ Use')
+    expect(screen.getByTestId('use-prompt-btn')).toHaveTextContent('Use')
   })
 
   it('calls onUse with the prompt when Use is clicked', () => {

@@ -135,7 +135,7 @@ class TestInitialSilenceThenSpeech:
         assert utt.end_time > utt.start_time
 
         # Verify no spurious tail injection happened before speech
-        assert stream.stats["silence_chunks_skipped"] == 1000
+        assert stream.stats["silence_chunks_sent"] == 1000
 
 
 # ---------------------------------------------------------------------------

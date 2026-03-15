@@ -23,8 +23,7 @@ describe('AISuggestionCard', () => {
 
     const card = screen.getByTestId('ai-suggestion-card')
     expect(card).toBeInTheDocument()
-    expect(card).toHaveTextContent('AI Coaching Insight')
-    expect(card).toHaveTextContent('🤖')
+    expect(card).toHaveTextContent('AI Insight')
     expect(card).toHaveTextContent('fractions')
   })
 
@@ -104,7 +103,7 @@ describe('AISuggestionCard', () => {
 
     fireEvent.click(screen.getByTestId('feedback-helpful-btn'))
 
-    expect(screen.getByTestId('feedback-thanks')).toHaveTextContent('👍 Thanks!')
+    expect(screen.getByTestId('feedback-thanks')).toHaveTextContent('Thanks!')
     expect(screen.queryByTestId('feedback-helpful-btn')).not.toBeInTheDocument()
     expect(screen.queryByTestId('feedback-unhelpful-btn')).not.toBeInTheDocument()
   })
@@ -114,7 +113,7 @@ describe('AISuggestionCard', () => {
 
     fireEvent.click(screen.getByTestId('feedback-unhelpful-btn'))
 
-    expect(screen.getByTestId('feedback-thanks')).toHaveTextContent('👎 Noted')
+    expect(screen.getByTestId('feedback-thanks')).toHaveTextContent('Noted')
   })
 
   it('displays priority label', () => {
@@ -136,5 +135,17 @@ describe('AISuggestionCard', () => {
     expect(onUsePrompt).toHaveBeenCalledWith(
       'Can you draw what one-half looks like?'
     )
+  })
+
+  it('renders loading state', () => {
+    render(<AISuggestionCard loading={true} />)
+
+    const card = screen.getByTestId('ai-suggestion-card')
+    expect(card).toHaveTextContent('Generating insight...')
+  })
+
+  it('returns null when no suggestion and not loading', () => {
+    const { container } = render(<AISuggestionCard suggestion={null} />)
+    expect(container.firstChild).toBeNull()
   })
 })

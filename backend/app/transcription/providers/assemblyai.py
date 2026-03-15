@@ -47,10 +47,18 @@ class AssemblyAISTTClient:
 
     Implements the :class:`STTProviderClient` protocol.
 
+    Sets ``continuous_stream = True`` to signal that this provider
+    receives all audio continuously and handles VAD/endpointing
+    server-side — no tail-silence injection needed.
+
     Uses the ``websockets`` library directly (async) rather than the
     AssemblyAI SDK (which is sync/threaded) to stay consistent with
     the project's asyncio architecture.
     """
+
+    # Tells TranscriptionStream to send all audio (speech + silence)
+    # and skip tail-silence injection on speech→silence edges.
+    continuous_stream = True
 
     STREAMING_HOST = "streaming.assemblyai.com"
     STREAMING_URL = f"wss://{STREAMING_HOST}/v3/ws"
@@ -76,6 +84,12 @@ class AssemblyAISTTClient:
         self._connected = False
         self._result_queue: asyncio.Queue[Optional[ProviderResponse]] = asyncio.Queue()
         self._recv_task: Optional[asyncio.Task[None]] = None
+
+        # AssemblyAI v3 requires 50–1000ms per WebSocket message.
+        # LiveKit delivers 10ms frames (320 bytes at 16kHz/16-bit mono).
+        # We buffer chunks and flush when we reach the minimum duration.
+        self._MIN_SEND_BYTES = sample_rate * 2 * 100 // 1000  # 100ms = 3200 bytes
+        self._audio_buffer = bytearray()
 
     # -- Protocol methods -----------------------------------------------------
 
@@ -130,14 +144,31 @@ class AssemblyAISTTClient:
         )
 
     async def send_audio(self, pcm_chunk: bytes) -> None:
-        """Send a raw PCM audio chunk as a binary WebSocket frame.
+        """Buffer PCM audio and flush when ≥100ms accumulated.
 
-        AssemblyAI v3 accepts raw bytes directly (no base64 wrapping).
+        AssemblyAI v3 requires 50–1000ms per WebSocket message, but
+        LiveKit delivers 10ms frames.  We accumulate in an internal
+        buffer and send once we hit the minimum threshold.
         """
         if not self._connected or self._ws is None:
             raise RuntimeError("AssemblyAISTTClient is not connected")
 
-        await self._ws.send(pcm_chunk)
+        self._audio_buffer.extend(pcm_chunk)
+
+        if len(self._audio_buffer) >= self._MIN_SEND_BYTES:
+            await self._ws.send(bytes(self._audio_buffer))
+            self._audio_buffer.clear()
+
+    async def _flush_buffer(self) -> None:
+        """Send any buffered audio, padding to the minimum if needed."""
+        if not self._audio_buffer or not self._ws:
+            return
+        # Pad to minimum 50ms (1600 bytes) if we have a partial buffer
+        buf = bytes(self._audio_buffer)
+        if len(buf) < self._MIN_SEND_BYTES:
+            buf = buf + bytes(self._MIN_SEND_BYTES - len(buf))
+        await self._ws.send(buf)
+        self._audio_buffer.clear()
 
     async def send_keep_alive(self) -> None:
         """Not needed for AssemblyAI (no keepalive protocol).
@@ -146,23 +177,25 @@ class AssemblyAISTTClient:
         """
         if not self._connected or self._ws is None:
             return
-        # 10ms of silence at 16kHz 16-bit mono = 320 bytes
+        # 100ms of silence at 16kHz 16-bit mono = 3200 bytes (meets 50ms minimum)
         try:
-            await self._ws.send(bytes(320))
+            await self._ws.send(bytes(self._MIN_SEND_BYTES))
         except Exception:
             pass
 
     async def send_finalize(self) -> None:
-        """Force an endpoint (flush any buffered partial into a final)."""
+        """Flush buffered audio, then force an endpoint."""
         if not self._connected or self._ws is None:
             return
+        await self._flush_buffer()
         msg = json.dumps({"type": "ForceEndpoint"})
         await self._ws.send(msg)
 
     async def send_close_stream(self) -> None:
-        """Terminate the streaming session gracefully."""
+        """Flush buffered audio, then terminate the session gracefully."""
         if not self._connected or self._ws is None:
             return
+        await self._flush_buffer()
         msg = json.dumps({"type": "Terminate"})
         await self._ws.send(msg)
 

@@ -79,6 +79,11 @@ def get_or_create_resources(room: SessionRoom) -> dict:
         if ai_copilot is not None:
             resources["ai_copilot"] = ai_copilot
 
+        # Build a separate fast LLM client for on-demand suggestions
+        ondemand_llm = _build_ondemand_llm()
+        if ondemand_llm is not None:
+            resources["ondemand_llm"] = ondemand_llm
+
         _session_resources[sid] = resources
     else:
         # If extra students were added after initial resource creation,
@@ -221,6 +226,29 @@ def _build_ai_copilot(room: SessionRoom) -> Any:
             room.session_id,
             exc_info=True,
         )
+        return None
+
+
+def _build_ondemand_llm() -> Any:
+    """Create a fast LLM client for on-demand suggestions.
+
+    Uses ``ai_coaching_ondemand_model`` (default: gemini-2.0-flash) for
+    low-latency responses when the tutor clicks "AI Suggest".  Falls
+    back to the auto-suggest model if the on-demand model isn't configured.
+    """
+    if not settings.enable_ai_coaching:
+        return None
+    if settings.ai_coaching_provider != "openrouter":
+        return None
+    if not settings.openrouter_api_key:
+        return None
+    try:
+        from .ai_coaching.llm_client import OpenRouterLLMClient
+        return OpenRouterLLMClient(
+            api_key=settings.openrouter_api_key,
+            model=settings.ai_coaching_ondemand_model,
+        )
+    except Exception:
         return None
 
 

@@ -41,11 +41,22 @@ Respond with a JSON object matching this schema:
   "topic": "<topic area being discussed>",
   "observation": "<what you observed that prompted this suggestion>",
   "suggestion": "<coaching suggestion for the tutor, 1-2 sentences>",
-  "suggested_prompt": "<example phrase the tutor could say, optional>",
+  "suggested_prompt": "<a complete sentence the tutor can read word-for-word to the student — natural, conversational, ready to speak aloud as-is>",
   "priority": "<high | medium | low>",
   "confidence": <float 0-1>
 }}
 ```
+
+## Critical: suggested_prompt
+The `suggested_prompt` field is **required** and is the most important part. \
+The tutor will read it out loud verbatim to the student mid-session. It must:
+- Be a complete, natural-sounding sentence or question addressed directly to the student.
+- Sound like something a real tutor would actually say in conversation (not robotic or formal).
+- Never reveal an answer — only guide, probe, or encourage.
+- Be ready to speak with zero editing. The tutor should be able to glance at it and say it immediately.
+
+Good: "What if we tried drawing out what three-fourths looks like — could you sketch that for me?"
+Bad: "Ask the student to visualize fractions" (this is a coaching note, not speakable)
 
 Respond ONLY with the JSON object, no additional text.\
 """

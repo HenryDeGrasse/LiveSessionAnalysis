@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { AISuggestion } from '@/lib/types'
-import { apiFetch } from '@/lib/api-client'
+import { API_URL } from '@/lib/constants'
 
 export interface SuggestionHistoryEntry {
   suggestion: AISuggestion
@@ -22,6 +22,8 @@ export interface UseAISuggestionReturn {
   suggestion: AISuggestion | null
   /** True while a suggestion request is in flight. */
   loading: boolean
+  /** Streaming text as it arrives from the LLM. */
+  streamingText: string
   /** Error message from the last failed request, or null. */
   error: string | null
   /** Remaining API calls in the current budget window. */
@@ -36,12 +38,16 @@ export interface UseAISuggestionReturn {
   clearSuggestion: () => void
 }
 
+function getBaseUrl(): string {
+  return API_URL
+}
+
 /**
- * Manages on-demand AI coaching suggestions.
+ * Manages on-demand AI coaching suggestions with SSE streaming.
  *
- * - Fetches suggestions via `POST /api/sessions/{id}/suggest`
- * - Submits feedback via `POST /api/sessions/{id}/suggestion-feedback`
- * - Tracks loading/error states and suggestion history
+ * - Streams tokens via SSE for real-time display (~400ms to first token)
+ * - Falls back to JSON if SSE is unavailable
+ * - Submits feedback via POST
  */
 export function useAISuggestion({
   sessionId,
@@ -49,70 +55,97 @@ export function useAISuggestion({
 }: UseAISuggestionOptions): UseAISuggestionReturn {
   const [suggestion, setSuggestion] = useState<AISuggestion | null>(null)
   const [loading, setLoading] = useState(false)
+  const [streamingText, setStreamingText] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [callsRemaining, setCallsRemaining] = useState<number | null>(null)
   const [history, setHistory] = useState<SuggestionHistoryEntry[]>([])
+  const abortRef = useRef<AbortController | null>(null)
 
   const requestSuggestion = useCallback(async () => {
     if (loading) return
 
+    // Cancel any in-flight request
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
     setLoading(true)
     setError(null)
+    setStreamingText('')
+    setSuggestion(null)
+
+    const tokenParam = accessToken ? `?token=${encodeURIComponent(accessToken)}` : ''
+    const url = `${getBaseUrl()}/api/sessions/${sessionId}/suggest${tokenParam}`
 
     try {
-      const tokenParam = accessToken ? `?token=${encodeURIComponent(accessToken)}` : ''
-      const resp = await apiFetch(
-        `/api/sessions/${sessionId}/suggest${tokenParam}`,
-        { method: 'POST', accessToken }
-      )
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Accept: 'text/event-stream',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        credentials: 'include',
+        signal: controller.signal,
+      })
 
       if (resp.status === 429) {
-        setSuggestion(null)
-        setError('Suggestion budget exhausted. Please wait before requesting again.')
+        setError('Suggestion budget exhausted.')
+        setLoading(false)
         return
       }
 
       if (!resp.ok) {
         const body = await resp.json().catch(() => ({}))
-        setSuggestion(null)
         setError(body.detail || `Request failed (${resp.status})`)
+        setLoading(false)
         return
       }
 
-      const body = await resp.json()
+      const contentType = resp.headers.get('content-type') || ''
 
-      if (typeof body.calls_remaining === 'number') {
-        setCallsRemaining(body.calls_remaining)
-      }
-
-      if (body.status === 'no_suggestion') {
-        setSuggestion(null)
-        setError('No suggestion available at this time.')
-        return
-      }
-
-      if (body.suggestion) {
-        const sug: AISuggestion = {
-          id: body.suggestion.id ?? '',
-          topic: body.suggestion.topic ?? '',
-          observation: body.suggestion.observation ?? '',
-          suggestion: body.suggestion.suggestion ?? '',
-          suggested_prompt: body.suggestion.suggested_prompt ?? '',
-          priority: body.suggestion.priority ?? 'medium',
-          confidence: body.suggestion.confidence ?? 0,
+      if (contentType.includes('text/event-stream')) {
+        // SSE streaming path
+        await _consumeSSE(resp, controller.signal, {
+          onToken: (token) => {
+            setStreamingText((prev) => prev + token)
+          },
+          onSuggestion: (result) => {
+            if (typeof result.calls_remaining === 'number') {
+              setCallsRemaining(result.calls_remaining)
+            }
+            if (result.status === 'ok' && result.suggestion) {
+              const sug = _parseSuggestion(result.suggestion as Record<string, unknown>)
+              setSuggestion(sug)
+              setHistory((prev) => [...prev, { suggestion: sug, timestamp: Date.now() }])
+            } else {
+              setError((result.message as string) || 'No suggestion available.')
+            }
+          },
+          onError: (msg) => {
+            setError(msg)
+          },
+        })
+      } else {
+        // JSON fallback
+        const body = await resp.json()
+        if (typeof body.calls_remaining === 'number') {
+          setCallsRemaining(body.calls_remaining)
         }
-
-        setSuggestion(sug)
-        setHistory((prev) => [
-          ...prev,
-          { suggestion: sug, timestamp: Date.now() },
-        ])
+        if (body.status === 'ok' && body.suggestion) {
+          const sug = _parseSuggestion(body.suggestion as Record<string, unknown>)
+          setSuggestion(sug)
+          setHistory((prev) => [...prev, { suggestion: sug, timestamp: Date.now() }])
+        } else {
+          setError((body.message as string) || 'No suggestion available.')
+        }
       }
     } catch (err) {
-      setSuggestion(null)
-      setError(err instanceof Error ? err.message : 'Network error')
+      if ((err as Error).name !== 'AbortError') {
+        setError(err instanceof Error ? err.message : 'Network error')
+      }
     } finally {
       setLoading(false)
+      setStreamingText('')
     }
   }, [sessionId, accessToken, loading])
 
@@ -122,17 +155,20 @@ export function useAISuggestion({
         const tokenParam = accessToken
           ? `?token=${encodeURIComponent(accessToken)}`
           : ''
-        const resp = await apiFetch(
-          `/api/sessions/${sessionId}/suggestion-feedback${tokenParam}`,
+        const resp = await fetch(
+          `${getBaseUrl()}/api/sessions/${sessionId}/suggestion-feedback${tokenParam}`,
           {
             method: 'POST',
-            accessToken,
+            headers: {
+              'Content-Type': 'application/json',
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
+            credentials: 'include',
             body: JSON.stringify({ suggestion_id: suggestionId, helpful }),
           }
         )
 
         if (resp.ok) {
-          // Update history with feedback
           setHistory((prev) =>
             prev.map((entry) =>
               entry.suggestion.id === suggestionId
@@ -142,7 +178,7 @@ export function useAISuggestion({
           )
         }
       } catch {
-        // Feedback submission is best-effort; don't surface errors to the user
+        // Best-effort
       }
     },
     [sessionId, accessToken]
@@ -151,16 +187,115 @@ export function useAISuggestion({
   const clearSuggestion = useCallback(() => {
     setSuggestion(null)
     setError(null)
+    setStreamingText('')
   }, [])
 
   return {
     suggestion,
     loading,
+    streamingText,
     error,
     callsRemaining,
     history,
     requestSuggestion,
     submitFeedback,
     clearSuggestion,
+  }
+}
+
+
+// ---------------------------------------------------------------------------
+// SSE helpers
+// ---------------------------------------------------------------------------
+
+interface SSECallbacks {
+  onToken: (text: string) => void
+  onSuggestion: (result: Record<string, unknown>) => void
+  onError: (message: string) => void
+}
+
+async function _consumeSSE(
+  resp: Response,
+  signal: AbortSignal,
+  callbacks: SSECallbacks
+): Promise<void> {
+  const reader = resp.body?.getReader()
+  if (!reader) return
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  try {
+    while (!signal.aborted) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+
+      // Process complete SSE messages (double newline delimited)
+      const messages = buffer.split('\n\n')
+      buffer = messages.pop() || '' // Keep incomplete last message
+
+      for (const msg of messages) {
+        if (!msg.trim()) continue
+
+        let eventType = 'message'
+        let data = ''
+
+        for (const line of msg.split('\n')) {
+          if (line.startsWith('event: ')) {
+            eventType = line.slice(7).trim()
+          } else if (line.startsWith('data: ')) {
+            data = line.slice(6)
+          }
+        }
+
+        switch (eventType) {
+          case 'token':
+            try {
+              callbacks.onToken(JSON.parse(data))
+            } catch {
+              callbacks.onToken(data)
+            }
+            break
+          case 'suggestion':
+            try {
+              callbacks.onSuggestion(JSON.parse(data))
+            } catch {
+              callbacks.onError('Failed to parse suggestion')
+            }
+            break
+          case 'error':
+            try {
+              const err = JSON.parse(data)
+              callbacks.onError(err.message || 'Unknown error')
+            } catch {
+              callbacks.onError(data || 'Unknown error')
+            }
+            break
+          case 'done':
+            return
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}
+
+function _parsePriority(val: unknown): 'low' | 'medium' | 'high' {
+  if (val === 'low' || val === 'medium' || val === 'high') return val
+  return 'medium'
+}
+
+function _parseSuggestion(raw: Record<string, unknown>): AISuggestion {
+  return {
+    id: (raw.id as string) ?? '',
+    topic: (raw.topic as string) ?? '',
+    observation: (raw.observation as string) ?? '',
+    suggestion: (raw.suggestion as string) ?? '',
+    suggested_prompt: (raw.suggested_prompt as string) ?? '',
+    priority: _parsePriority(raw.priority),
+    confidence: (raw.confidence as number) ?? 0,
   }
 }

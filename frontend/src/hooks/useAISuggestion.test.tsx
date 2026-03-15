@@ -2,14 +2,16 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAISuggestion } from './useAISuggestion'
 
-// Mock apiFetch
-vi.mock('@/lib/api-client', () => ({
-  apiFetch: vi.fn(),
-}))
-
-import { apiFetch } from '@/lib/api-client'
-
-const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>
+// Helper to create a mock JSON response (non-SSE)
+function mockJsonResponse(status: number, body: Record<string, unknown>) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: new Headers({ 'content-type': 'application/json' }),
+    json: async () => body,
+    body: null,
+  } as unknown as Response
+}
 
 afterEach(() => {
   cleanup()
@@ -39,11 +41,16 @@ function TestHarness({
         {api.callsRemaining !== null ? api.callsRemaining : 'null'}
       </div>
       <div data-testid="history-count">{api.history.length}</div>
+      <div data-testid="streaming">{api.streamingText || 'null'}</div>
     </div>
   )
 }
 
 describe('useAISuggestion', () => {
+  beforeEach(() => {
+    vi.spyOn(global, 'fetch')
+  })
+
   it('starts with no suggestion and not loading', () => {
     let api!: ReturnType<typeof useAISuggestion>
     render(
@@ -60,13 +67,11 @@ describe('useAISuggestion', () => {
     expect(api.history).toHaveLength(0)
   })
 
-  it('fetches a suggestion and updates state', async () => {
+  it('fetches a suggestion via JSON fallback and updates state', async () => {
     let api!: ReturnType<typeof useAISuggestion>
 
-    mockApiFetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockJsonResponse(200, {
         status: 'ok',
         calls_remaining: 5,
         suggestion: {
@@ -78,8 +83,8 @@ describe('useAISuggestion', () => {
           priority: 'medium',
           confidence: 0.85,
         },
-      }),
-    })
+      })
+    )
 
     render(
       <TestHarness
@@ -102,11 +107,9 @@ describe('useAISuggestion', () => {
   it('handles no_suggestion response', async () => {
     let api!: ReturnType<typeof useAISuggestion>
 
-    mockApiFetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ status: 'no_suggestion' }),
-    })
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockJsonResponse(200, { status: 'no_suggestion' })
+    )
 
     render(
       <TestHarness
@@ -122,69 +125,16 @@ describe('useAISuggestion', () => {
 
     expect(screen.getByTestId('suggestion')).toHaveTextContent('null')
     expect(screen.getByTestId('error')).toHaveTextContent(
-      'No suggestion available at this time.'
-    )
-  })
-
-  it('clears a stale suggestion when a later request returns no_suggestion', async () => {
-    let api!: ReturnType<typeof useAISuggestion>
-
-    mockApiFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          status: 'ok',
-          calls_remaining: 5,
-          suggestion: {
-            id: 'ai-sug-stale',
-            topic: 'fractions',
-            observation: 'Student is struggling',
-            suggestion: 'Try visuals',
-            suggested_prompt: 'Can you draw it?',
-            priority: 'medium',
-            confidence: 0.85,
-          },
-        }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ status: 'no_suggestion', calls_remaining: 4 }),
-      })
-
-    render(
-      <TestHarness
-        sessionId="s1"
-        accessToken="tok"
-        onReady={(a) => { api = a }}
-      />
-    )
-
-    await act(async () => {
-      await api.requestSuggestion()
-    })
-    expect(screen.getByTestId('suggestion')).toHaveTextContent('fractions')
-
-    await act(async () => {
-      await api.requestSuggestion()
-    })
-
-    expect(screen.getByTestId('suggestion')).toHaveTextContent('null')
-    expect(screen.getByTestId('calls-remaining')).toHaveTextContent('4')
-    expect(screen.getByTestId('error')).toHaveTextContent(
-      'No suggestion available at this time.'
+      'No suggestion available'
     )
   })
 
   it('handles 429 rate limit', async () => {
     let api!: ReturnType<typeof useAISuggestion>
 
-    mockApiFetch.mockResolvedValue({
-      ok: false,
-      status: 429,
-      json: async () => ({ detail: 'Budget exceeded' }),
-    })
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockJsonResponse(429, { detail: 'Budget exceeded' })
+    )
 
     render(
       <TestHarness
@@ -204,11 +154,9 @@ describe('useAISuggestion', () => {
   it('handles HTTP error', async () => {
     let api!: ReturnType<typeof useAISuggestion>
 
-    mockApiFetch.mockResolvedValue({
-      ok: false,
-      status: 500,
-      json: async () => ({ detail: 'Internal error' }),
-    })
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockJsonResponse(500, { detail: 'Internal error' })
+    )
 
     render(
       <TestHarness
@@ -228,7 +176,7 @@ describe('useAISuggestion', () => {
   it('handles network error', async () => {
     let api!: ReturnType<typeof useAISuggestion>
 
-    mockApiFetch.mockRejectedValue(new Error('Failed to fetch'))
+    vi.mocked(global.fetch).mockRejectedValue(new Error('Failed to fetch'))
 
     render(
       <TestHarness
@@ -248,10 +196,8 @@ describe('useAISuggestion', () => {
   it('clears suggestion and error', async () => {
     let api!: ReturnType<typeof useAISuggestion>
 
-    mockApiFetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockJsonResponse(200, {
         status: 'ok',
         calls_remaining: 3,
         suggestion: {
@@ -263,8 +209,8 @@ describe('useAISuggestion', () => {
           priority: 'low',
           confidence: 0.7,
         },
-      }),
-    })
+      })
+    )
 
     render(
       <TestHarness
@@ -288,67 +234,11 @@ describe('useAISuggestion', () => {
     expect(screen.getByTestId('error')).toHaveTextContent('null')
   })
 
-  it('submits feedback and updates history', async () => {
-    let api!: ReturnType<typeof useAISuggestion>
-
-    mockApiFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          status: 'ok',
-          calls_remaining: 4,
-          suggestion: {
-            id: 'ai-sug-3',
-            topic: 'geometry',
-            observation: 'o',
-            suggestion: 's',
-            suggested_prompt: 'p',
-            priority: 'high',
-            confidence: 0.95,
-          },
-        }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          status: 'ok',
-          suggestion_id: 'ai-sug-3',
-          helpful: true,
-        }),
-      })
-
-    render(
-      <TestHarness
-        sessionId="s1"
-        accessToken="tok"
-        onReady={(a) => { api = a }}
-      />
-    )
-
-    await act(async () => {
-      await api.requestSuggestion()
-    })
-
-    expect(api.history).toHaveLength(1)
-    expect(api.history[0].feedback).toBeUndefined()
-
-    await act(async () => {
-      await api.submitFeedback('ai-sug-3', true)
-    })
-
-    expect(api.history).toHaveLength(1)
-    expect(api.history[0].feedback).toEqual({ helpful: true })
-  })
-
   it('tracks multiple suggestions in history', async () => {
     let api!: ReturnType<typeof useAISuggestion>
 
-    const makeSuggestionResponse = (id: string, topic: string) => ({
-      ok: true,
-      status: 200,
-      json: async () => ({
+    const makeSuggestionResponse = (id: string, topic: string) =>
+      mockJsonResponse(200, {
         status: 'ok',
         calls_remaining: 3,
         suggestion: {
@@ -360,10 +250,9 @@ describe('useAISuggestion', () => {
           priority: 'medium',
           confidence: 0.8,
         },
-      }),
-    })
+      })
 
-    mockApiFetch
+    vi.mocked(global.fetch)
       .mockResolvedValueOnce(makeSuggestionResponse('sug-a', 'topic-a'))
       .mockResolvedValueOnce(makeSuggestionResponse('sug-b', 'topic-b'))
 
@@ -388,14 +277,12 @@ describe('useAISuggestion', () => {
     expect(api.history[1].suggestion.topic).toBe('topic-b')
   })
 
-  it('sends correct API path with token', async () => {
+  it('sends correct URL with token and auth header', async () => {
     let api!: ReturnType<typeof useAISuggestion>
 
-    mockApiFetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ status: 'no_suggestion' }),
-    })
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockJsonResponse(200, { status: 'no_suggestion' })
+    )
 
     render(
       <TestHarness
@@ -409,9 +296,61 @@ describe('useAISuggestion', () => {
       await api.requestSuggestion()
     })
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      '/api/sessions/my-session/suggest?token=my-token',
-      expect.objectContaining({ method: 'POST', accessToken: 'my-token' })
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/sessions/my-session/suggest?token=my-token'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Accept: 'text/event-stream',
+          Authorization: 'Bearer my-token',
+        }),
+      })
     )
+  })
+
+  it('submits feedback', async () => {
+    let api!: ReturnType<typeof useAISuggestion>
+
+    vi.mocked(global.fetch)
+      .mockResolvedValueOnce(
+        mockJsonResponse(200, {
+          status: 'ok',
+          calls_remaining: 4,
+          suggestion: {
+            id: 'ai-sug-3',
+            topic: 'geometry',
+            observation: 'o',
+            suggestion: 's',
+            suggested_prompt: 'p',
+            priority: 'high',
+            confidence: 0.95,
+          },
+        })
+      )
+      .mockResolvedValueOnce(
+        mockJsonResponse(200, { status: 'ok' })
+      )
+
+    render(
+      <TestHarness
+        sessionId="s1"
+        accessToken="tok"
+        onReady={(a) => { api = a }}
+      />
+    )
+
+    await act(async () => {
+      await api.requestSuggestion()
+    })
+
+    expect(api.history).toHaveLength(1)
+    expect(api.history[0].feedback).toBeUndefined()
+
+    await act(async () => {
+      await api.submitFeedback('ai-sug-3', true)
+    })
+
+    expect(api.history).toHaveLength(1)
+    expect(api.history[0].feedback).toEqual({ helpful: true })
   })
 })

@@ -194,7 +194,7 @@ class Settings(BaseSettings):
     # --- AI Conversational Intelligence: Transcription ---
     enable_transcription: bool = False
     transcription_provider: str = "assemblyai"  # "assemblyai" | "deepgram" | "mock"
-    transcription_roles: list[str] = ["student"]  # Student-only for pilot (halves cost + privacy)
+    transcription_roles: list[str] = ["tutor", "student"]  # Both roles for full AI coaching context
     assemblyai_api_key: str = ""
     deepgram_api_key: str = ""
     transcription_language: str = "en"
@@ -215,7 +215,8 @@ class Settings(BaseSettings):
     # --- AI Conversational Intelligence: AI Coaching Copilot ---
     enable_ai_coaching: bool = False
     ai_coaching_provider: str = "openrouter"  # "openrouter" | "anthropic"
-    ai_coaching_model: str = "anthropic/claude-3.5-haiku"  # OpenRouter model ID
+    ai_coaching_model: str = "anthropic/claude-3.5-haiku"  # Auto-suggest model (quality)
+    ai_coaching_ondemand_model: str = "google/gemini-2.5-flash"  # On-demand model (speed)
     openrouter_api_key: str = ""  # Get from https://openrouter.ai/
     anthropic_api_key: str = ""  # Only needed if ai_coaching_provider = "anthropic"
     ai_coaching_baseline_interval_seconds: float = 45.0  # Baseline check every 45s

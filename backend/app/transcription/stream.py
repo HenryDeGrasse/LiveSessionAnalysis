@@ -31,6 +31,16 @@ from app.transcription.providers import STTProviderClient
 from app.transcription.queue import DroppableAudioQueue, _TailInjection
 
 
+def _provider_needs_tail_injection(provider: STTProviderClient) -> bool:
+    """Check if a provider needs explicit tail-silence injection.
+
+    Providers that handle VAD/endpointing server-side (e.g. AssemblyAI)
+    set ``continuous_stream = True``.  Providers that need the caller
+    to inject silence on speech→silence edges (e.g. Deepgram) don't.
+    """
+    return not getattr(provider, "continuous_stream", False)
+
+
 # --------------------------------------------------------------------------- #
 # Backpressure policy thresholds
 # --------------------------------------------------------------------------- #
@@ -122,7 +132,10 @@ class TranscriptionStream:
         self._in_speech: bool = False
         self._ever_spoken: bool = False
 
-        # Cancelable tail injection
+        # Cancelable tail injection — only needed for providers that require
+        # explicit silence padding (e.g. Deepgram).  AssemblyAI handles
+        # endpointing server-side since we send all audio continuously.
+        self._needs_tail_injection: bool = _provider_needs_tail_injection(provider)
         self._tail_token: int = 0
         self._tail_pending: bool = False
 
@@ -144,7 +157,7 @@ class TranscriptionStream:
         self._voiced_chunks_enqueued = 0
         self._dropped_audio_chunks = 0
         self._total_chunks_sent = 0
-        self._silence_chunks_skipped = 0
+        self._silence_chunks_sent = 0
         self._tail_silence_chunks_sent = 0
         self._tail_injections_canceled = 0
         self._reconnect_count = 0
@@ -193,12 +206,14 @@ class TranscriptionStream:
     def try_send(self, pcm_chunk: bytes, is_speech: bool) -> None:
         """Non-blocking enqueue. Called from ``_consume_audio_track()``.
 
-        NEVER blocks. Uses explicit ``_in_speech`` state to detect edges:
+        NEVER blocks. Sends ALL audio to the provider (speech + silence)
+        so the provider's neural VAD handles endpointing. The local
+        ``is_speech`` flag is used only for backpressure metrics and
+        edge detection (speech→silence transitions).
 
-        - Only speech→silence edge triggers tail injection
-        - Silence→speech edge cancels any pending tail injection
-        - Speech frames always enqueued
-        - Continued silence frames are skipped
+        The tail injection mechanism is still available for providers
+        that require explicit silence padding (e.g. Deepgram), but by
+        default all frames flow through.
         """
         if is_speech:
             self._voiced_chunks_received += 1
@@ -208,22 +223,24 @@ class TranscriptionStream:
                 self._tail_token += 1
                 self._tail_pending = False
             self._in_speech = True
-            self._enqueue_audio(pcm_chunk)
-            return
+        else:
+            # Track speech→silence edge for providers that need tail injection
+            if self._in_speech and not self._tail_pending:
+                self._in_speech = False
+                # Only inject tail silence for Deepgram-style providers that
+                # need explicit silence padding for endpointing.
+                # AssemblyAI handles this server-side since we send all audio.
+                if self._tail_silence_ms > 0 and self._needs_tail_injection:
+                    self._tail_pending = True
+                    self._queue.put_control(
+                        _TailInjection(token=self._tail_token),
+                        coalesce_token=self._tail_token,
+                    )
 
-        # Silence frame
-        if self._in_speech and not self._tail_pending:
-            # Speech→silence edge
-            self._in_speech = False
-            self._tail_pending = True
-            self._queue.put_control(
-                _TailInjection(token=self._tail_token),
-                coalesce_token=self._tail_token,
-            )
-            return
-
-        # Continued silence (or initial silence before any speech)
-        self._silence_chunks_skipped += 1
+        # Always enqueue audio — let the provider handle VAD/endpointing
+        if not is_speech:
+            self._silence_chunks_sent += 1
+        self._enqueue_audio(pcm_chunk)
 
     async def stop(self) -> List[FinalUtterance]:
         """Orderly shutdown.
@@ -306,7 +323,7 @@ class TranscriptionStream:
             "dropped_audio_chunks": self._dropped_audio_chunks,
             "drop_rate": self.drop_rate,
             "total_chunks_sent": self._total_chunks_sent,
-            "silence_chunks_skipped": self._silence_chunks_skipped,
+            "silence_chunks_sent": self._silence_chunks_sent,
             "tail_silence_chunks_sent": self._tail_silence_chunks_sent,
             "tail_injections_canceled": self._tail_injections_canceled,
             "queue_size": self._queue.qsize(),

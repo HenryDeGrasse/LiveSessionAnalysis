@@ -12,8 +12,7 @@ describe('SuggestButton', () => {
 
     const btn = screen.getByTestId('suggest-button')
     expect(btn).toBeInTheDocument()
-    expect(btn).toHaveTextContent('Get AI Suggestion')
-    expect(btn).toHaveTextContent('🤖')
+    expect(btn).toHaveTextContent('AI Suggest')
     expect(btn).not.toBeDisabled()
   })
 
@@ -21,7 +20,7 @@ describe('SuggestButton', () => {
     render(<SuggestButton loading={true} onClick={vi.fn()} />)
 
     const btn = screen.getByTestId('suggest-button')
-    expect(btn).toHaveTextContent('Thinking…')
+    expect(btn).toHaveTextContent('Thinking...')
     expect(btn).toBeDisabled()
     expect(screen.getByTestId('suggest-button-spinner')).toBeInTheDocument()
   })

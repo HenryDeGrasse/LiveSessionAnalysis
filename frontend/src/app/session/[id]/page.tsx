@@ -686,9 +686,13 @@ export default function SessionPage() {
           appendDebugEvent('participant_reconnected received')
           break
         case 'transcript_partial':
-        case 'transcript_final':
+        case 'transcript_final': {
           handleTranscriptMessage(message)
+          const td = message.data as unknown as Record<string, unknown>
+          const tp = typeof td?.text === 'string' ? td.text.slice(0, 40) : '?'
+          appendDebugEvent(`[ws] ${message.type}: "${tp}"`)
           break
+        }
         // webrtc_signal messages are no longer used (LiveKit handles media transport)
       }
     },
@@ -733,6 +737,9 @@ export default function SessionPage() {
           message.type === 'transcript_final'
         ) {
           handleTranscriptMessage(message as WSMessage)
+          const d = message.data as unknown as Record<string, unknown>
+          const preview = typeof d?.text === 'string' ? d.text.slice(0, 40) : '?'
+          appendDebugEvent(`[data-pkt] ${message.type}: "${preview}"`)
         }
       } catch {
         // ignore malformed data packets
@@ -1216,37 +1223,37 @@ export default function SessionPage() {
     ? 'Preparing join view'
     : 'Preparing session'
   const roleSummaryText = isTutor
-    ? 'You will see the live call plus private coaching cues that stay hidden from the student.'
+    ? 'Live call with private coaching — hidden from students.'
     : role === 'student'
-    ? 'This screen stays focused on the call. Tutor coaching, nudges, and analytics remain private to the tutor.'
-    : 'We are confirming your role and preparing the correct session view.'
+    ? 'Call-focused view. Coaching and analytics are tutor-only.'
+    : 'Preparing your session view.'
   const consentButtonLabel = sessionEnded
     ? isTutor
       ? 'View analytics'
-      : 'View your session'
+      : 'View session'
     : isTutor
     ? 'Join as Tutor'
     : role === 'student'
     ? 'Join as Student'
     : 'Join session'
-  const controlTitle = isTutor ? 'Tutor controls' : 'Student controls'
+  const controlTitle = isTutor ? 'Tutor controls' : 'Controls'
   const controlDescription = isTutor
-    ? 'Mute/camera toggles affect only this browser tab. Students never see your live coaching overlay or nudges.'
-    : 'Mute/camera toggles affect only this browser tab. This student view stays call-first and does not show tutor coaching.'
+    ? 'Students cannot see your coaching overlay or nudges.'
+    : 'Tutor coaching is not visible in student view.'
   const secondaryHelperText = isTutor
-    ? 'Use Tutor Debug for richer diagnostics during the session.'
-    : 'If you leave, the tutor will see that you disconnected and you can rejoin with the same link.'
+    ? 'Open Tutor Debug for session diagnostics.'
+    : 'You can rejoin with the same link if you leave.'
   const callPlaceholderText =
     callStatus === 'connected'
-      ? `Connected. Waiting for ${remoteLabel.toLowerCase()} video.`
+      ? `Waiting for ${remoteLabel.toLowerCase()} video.`
       : callStatus === 'connecting'
-      ? `Setting up ${isTutor ? 'your tutoring call' : 'the call'}...`
+      ? 'Connecting...'
       : callStatus === 'reconnecting'
-      ? `Trying to reconnect to the ${remoteLabel.toLowerCase()}...`
-      : `Waiting for the ${remoteLabel.toLowerCase()} to join.`
+      ? 'Reconnecting...'
+      : `Waiting for ${remoteLabel.toLowerCase()} to join.`
   const sessionEndedMessage = isTutor
-    ? 'The session has ended. Analytics are ready and you can review them now.'
-    : 'Session complete — your engagement insights are ready.'
+    ? 'Session ended. Analytics are ready.'
+    : 'Session complete.'
   const canShowDebugToggle = isTutor || showCoachDebug
   const endSummaryHealth = endSummary ? getSessionHealth(endSummary) : null
   const endSummaryRecommendationsToShow = (
@@ -1532,54 +1539,24 @@ export default function SessionPage() {
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    What is measured
-                  </p>
-                  <ul className="mt-3 space-y-2 text-sm text-slate-200">
-                    <li>• camera-facing / gaze direction</li>
-                    <li>• speaking time and turn-taking</li>
-                    <li>• speaking-energy and engagement signals</li>
-                  </ul>
-                </div>
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    Privacy posture
-                  </p>
-                  <p className="mt-3 text-sm leading-6 text-slate-200">
-                    Raw video and audio are not stored. Only derived numeric metrics are saved for post-session analytics.
-                    {transcriptionEnabled &&
-                      ' Real-time transcripts are generated during the session but no raw audio is retained.'}
-                  </p>
-                </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                <p className="text-xs leading-relaxed text-slate-400">
+                  Gaze, speaking time, and engagement are analyzed in real time. No raw audio or video is stored.
+                  {transcriptionEnabled && ' Transcripts are generated live but no audio is retained.'}
+                </p>
               </div>
             </div>
 
             <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 md:p-6">
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
-                    Before you join
-                  </p>
-                  <h2 className="mt-2 text-xl font-semibold text-white">
+                  <h2 className="text-lg font-semibold text-white">
                     {isTutor
-                      ? 'You will see a clean live call plus private tutor coaching.'
-                      : role === 'student'
-                      ? 'You will see only the live call and your local controls.'
-                      : 'Allow camera and microphone to enter the session.'}
+                      ? 'Ready to start'
+                      : 'Join session'}
                   </h2>
-                </div>
-
-                <div className="space-y-3 rounded-3xl border border-white/10 bg-slate-950/45 p-4 text-sm text-slate-300">
-                  <p>• Keep this tab open for the cleanest reconnect behavior.</p>
-                  <p>• You can mute or turn your camera off after joining.</p>
-                  <p>
-                    • {sessionInfoLoaded
-                      ? isTutor
-                        ? 'Students never see your live coaching pills, nudges, or analytics.'
-                        : 'If you leave, the tutor will see that you disconnected and you can return with the same invite link.'
-                      : 'We are still confirming the exact role view, but the same privacy rules apply.'}
+                  <p className="mt-1 text-sm text-slate-400">
+                    Allow camera and microphone access. You can mute after joining.
                   </p>
                 </div>
 
@@ -1641,34 +1618,13 @@ export default function SessionPage() {
                         I consent to session analysis
                       </p>
                       <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                        Tutors and students must consent to analysis. Camera, audio, and engagement
-                        signals are processed in real time. No raw video or audio is stored — only
-                        derived metrics are saved for post-session review.
+                        Real-time analysis of engagement signals. No raw audio or video is stored.
+                        {transcriptionEnabled && (
+                          <span data-testid="transcription-disclosure">
+                            {' '}Live transcription is enabled{sessionInfo?.enable_ai_coaching ? ' with AI coaching' : ''}.
+                          </span>
+                        )}
                       </p>
-                      {transcriptionEnabled && (
-                        <div
-                          data-testid="transcription-disclosure"
-                          className="mt-2 space-y-1 text-xs leading-relaxed text-slate-400"
-                        >
-                          <p>
-                            Audio may be transcribed in real-time
-                            {sessionInfo?.enable_ai_coaching
-                              ? ' to provide AI-powered coaching suggestions'
-                              : ''}
-                            . Transcripts are visible to the tutor during the session
-                            {sessionInfo?.enable_post_session_storage
-                              ? ' and included in post-session analytics'
-                              : ''}
-                            . No raw audio is stored.
-                          </p>
-                          {sessionInfo?.enable_ai_coaching && (
-                            <p>
-                              AI coaching suggestions may be generated from the transcript to
-                              assist the tutor during the session.
-                            </p>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </label>
                 )}
@@ -2257,13 +2213,34 @@ export default function SessionPage() {
             </button>
           )}
 
-          {/* AI Suggest button (tutor, transcription enabled) */}
+          {/* AI Suggest button + card anchor (tutor, transcription enabled) */}
           {isTutor && transcriptionEnabled && !sessionEnded && (
-            <SuggestButton
-              loading={aiSuggestionLoading}
-              onClick={() => void requestSuggestion()}
-              callsRemaining={aiCallsRemaining}
-            />
+            <div className="relative">
+              {/* Suggestion card anchored above the button */}
+              {(activeAISuggestion || aiSuggestionLoading) && (
+                <div
+                  data-testid="ai-suggestion-overlay"
+                  className="absolute bottom-full right-1/2 translate-x-1/2 mb-3 w-[360px] max-w-[calc(100vw-2rem)] z-30"
+                >
+                  <AISuggestionCard
+                    suggestion={activeAISuggestion}
+                    loading={aiSuggestionLoading}
+                    onDismiss={() => {
+                      clearSuggestion()
+                      clearAiSuggestionFromNudge()
+                    }}
+                    onFeedback={(suggestionId, helpful) => {
+                      void submitSuggestionFeedback(suggestionId, helpful)
+                    }}
+                  />
+                </div>
+              )}
+              <SuggestButton
+                loading={aiSuggestionLoading}
+                onClick={() => void requestSuggestion()}
+                callsRemaining={aiCallsRemaining}
+              />
+            </div>
           )}
 
           {/* End session (tutor) — red circular button */}
@@ -2703,24 +2680,7 @@ export default function SessionPage() {
         </div>
       )}
 
-      {/* ── AI Suggestion Card (tutor only, displayed above control bar) ── */}
-      {isTutor && transcriptionEnabled && activeAISuggestion && (
-        <div
-          data-testid="ai-suggestion-overlay"
-          className="pointer-events-auto absolute bottom-28 left-4 z-30 w-[400px] max-w-[calc(100%-2rem)]"
-        >
-          <AISuggestionCard
-            suggestion={activeAISuggestion}
-            onDismiss={() => {
-              clearSuggestion()
-              clearAiSuggestionFromNudge()
-            }}
-            onFeedback={(suggestionId, helpful) => {
-              void submitSuggestionFeedback(suggestionId, helpful)
-            }}
-          />
-        </div>
-      )}
+      {/* AI Suggestion Card is now anchored above the suggest button in the control bar */}
 
       {/* ── Confirm Leave modal ── */}
       {showConfirmLeave && (

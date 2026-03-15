@@ -1033,8 +1033,8 @@ export default function SessionDetailPage() {
           <DetailStat
             label="Student speaking energy"
             value={formatPercent(session.avg_energy.student || 0)}
-            detail="Average student speaking-energy score (while speaking / just after speaking)."
-            tooltip="Measured while the student is speaking or has just spoken, so silence does not count as low energy."
+            detail="Vocal energy from pitch variation, RMS loudness, and speech rate while actively speaking."
+            tooltip="Combines prosody signals (pitch via Praat, RMS loudness, speech rate) measured only during student speech. Silence is excluded so the score reflects active participation energy, not quiet periods."
           />
           <DetailStat
             label="Tutor talk share"

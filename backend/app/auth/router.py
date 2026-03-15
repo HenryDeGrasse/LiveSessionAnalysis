@@ -177,7 +177,7 @@ async def guest_auth(
     """
     guest_uuid = str(uuid.uuid4())
     guest_email = f"guest-{guest_uuid}@guest.local"
-    display_name = body.display_name.strip() or f"Guest {guest_uuid[:8]}"
+    display_name = body.display_name.strip() or "Guest"
     role = body.role
 
     user = store.create_user(
