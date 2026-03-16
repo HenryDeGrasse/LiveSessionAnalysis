@@ -459,6 +459,34 @@ export function useLiveKitTransport({
     [remoteStream, remoteTrackCount]
   )
 
+  const setMicEnabled = useCallback(
+    async (enabled: boolean) => {
+      const room = roomRef.current
+      if (!room || room.state !== ConnectionState.Connected) return
+      try {
+        await room.localParticipant.setMicrophoneEnabled(enabled)
+        log(enabled ? 'mic unmuted via LiveKit' : 'mic muted via LiveKit')
+      } catch (e) {
+        log(`setMicrophoneEnabled(${enabled}) failed: ${e instanceof Error ? e.message : 'unknown'}`)
+      }
+    },
+    [log]
+  )
+
+  const setCameraEnabled = useCallback(
+    async (enabled: boolean) => {
+      const room = roomRef.current
+      if (!room || room.state !== ConnectionState.Connected) return
+      try {
+        await room.localParticipant.setCameraEnabled(enabled)
+        log(enabled ? 'camera unmuted via LiveKit' : 'camera muted via LiveKit')
+      } catch (e) {
+        log(`setCameraEnabled(${enabled}) failed: ${e instanceof Error ? e.message : 'unknown'}`)
+      }
+    },
+    [log]
+  )
+
   return {
     remoteStream,
     remoteTrackCount,
@@ -477,5 +505,9 @@ export function useLiveKitTransport({
     handleParticipantDisconnected,
     handleParticipantReconnected,
     closeConnection,
+    /** Mute/unmute mic on the LiveKit published track. */
+    setMicEnabled,
+    /** Enable/disable camera on the LiveKit published track. */
+    setCameraEnabled,
   }
 }

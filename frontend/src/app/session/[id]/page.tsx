@@ -768,6 +768,8 @@ export default function SessionPage() {
     handleParticipantDisconnected,
     handleParticipantReconnected,
     closeConnection,
+    setMicEnabled,
+    setCameraEnabled,
   } = useCallTransport({
     provider: mediaProvider,
     enabled: ENABLE_WEBRTC_CALL_UI && !sessionEnded,
@@ -1425,13 +1427,17 @@ export default function SessionPage() {
       if (e.key === ' ') {
         e.preventDefault()
         showControlsTemporarily()
+        const willMute = isAudioEnabled
         toggleAudio()
-        appendDebugEvent(isAudioEnabled ? 'mic muted (Space)' : 'mic unmuted (Space)')
+        void setMicEnabled(!willMute)
+        appendDebugEvent(willMute ? 'mic muted (Space)' : 'mic unmuted (Space)')
       } else if (e.key === 'v' || e.key === 'V') {
         e.preventDefault()
         showControlsTemporarily()
+        const willDisable = isVideoEnabled
         toggleVideo()
-        appendDebugEvent(isVideoEnabled ? 'camera off (V)' : 'camera on (V)')
+        void setCameraEnabled(!willDisable)
+        appendDebugEvent(willDisable ? 'camera off (V)' : 'camera on (V)')
       } else if (
         (e.key === 't' || e.key === 'T') &&
         (e.ctrlKey || e.metaKey) &&
@@ -1451,6 +1457,8 @@ export default function SessionPage() {
     isTutor,
     toggleAudio,
     toggleVideo,
+    setMicEnabled,
+    setCameraEnabled,
     isAudioEnabled,
     isVideoEnabled,
     appendDebugEvent,
@@ -2149,8 +2157,10 @@ export default function SessionPage() {
             type="button"
             aria-label={isAudioEnabled ? 'Mute microphone' : 'Unmute microphone'}
             onClick={() => {
+              const willMute = isAudioEnabled
               toggleAudio()
-              appendDebugEvent(isAudioEnabled ? 'microphone muted locally' : 'microphone unmuted locally')
+              void setMicEnabled(!willMute)
+              appendDebugEvent(willMute ? 'microphone muted locally' : 'microphone unmuted locally')
             }}
             disabled={!hasAudioTrack}
             title={isAudioEnabled ? 'Mute microphone (Space)' : 'Unmute microphone (Space)'}
@@ -2169,8 +2179,10 @@ export default function SessionPage() {
             type="button"
             aria-label={isVideoEnabled ? 'Turn camera off' : 'Turn camera on'}
             onClick={() => {
+              const willDisable = isVideoEnabled
               toggleVideo()
-              appendDebugEvent(isVideoEnabled ? 'camera turned off locally' : 'camera turned on locally')
+              void setCameraEnabled(!willDisable)
+              appendDebugEvent(willDisable ? 'camera turned off locally' : 'camera turned on locally')
             }}
             disabled={!hasVideoTrack}
             title={isVideoEnabled ? 'Turn camera off (V)' : 'Turn camera on (V)'}
