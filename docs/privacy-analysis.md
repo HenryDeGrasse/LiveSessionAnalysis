@@ -123,3 +123,27 @@ No refresh token mechanism exists in the current implementation; users re-authen
 5. Add audit logging for sensitive data access (session analytics queries, auth events)
 6. Rotate `LSA_JWT_SECRET` and `AUTH_SECRET` (NextAuth) before any production deployment; use a secrets manager rather than env vars in plaintext compose files
 7. Consider adding refresh tokens if 24-hour JWT expiry is too short for tutors who run long sessions
+
+## Third-Party AI Services
+
+When AI Conversational Intelligence features are enabled, session data flows to external services:
+
+### Speech-to-Text (AssemblyAI)
+- **What is sent**: Raw PCM audio frames (16-bit, 16kHz mono) streamed over WebSocket
+- **What is returned**: Transcribed text with word timestamps and confidence scores
+- **Data retention**: AssemblyAI processes audio in real-time and does not retain audio after the session ends (per their streaming API terms)
+- **Opt-out**: AssemblyAI Universal Streaming v3 does not currently offer a model-improvement opt-out flag (unlike Deepgram's `mip_opt_out`)
+
+### LLM Coaching (OpenRouter → Anthropic / Google)
+- **What is sent**: PII-scrubbed transcript text, session metrics (talk ratios, uncertainty scores, engagement), and a system prompt. No raw audio or video.
+- **PII scrubbing**: Applied before every LLM call — regex-based removal of emails, phone numbers, names, addresses, and other PII patterns
+- **What is returned**: JSON coaching suggestions (action, observation, suggested prompt)
+- **Data retention**: OpenRouter is a pass-through router; data retention depends on the downstream model provider (Anthropic, Google). Neither retains API inputs for model training by default for API customers.
+
+### Mitigation Measures
+1. **Feature flags**: All AI features are disabled by default. Each tier can be enabled independently.
+2. **PII scrubbing**: Applied to all LLM prompts before transmission
+3. **Budget limits**: Hard ceiling of 60 LLM calls per session-hour
+4. **Consent**: Users see an updated consent modal when transcription is enabled, explaining that audio will be processed by an external speech-to-text service
+5. **Transcript deletion**: `DELETE /api/analytics/sessions/{id}/transcript` removes stored transcript data
+6. **No recording**: Raw audio is never stored — only derived text transcripts (when transcript storage is enabled)

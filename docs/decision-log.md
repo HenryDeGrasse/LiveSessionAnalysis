@@ -163,3 +163,43 @@
 **Decision**: The existing per-session `tutor_token` / `student_token` system is retained and operates independently of user-level auth. Session creation requires a valid user JWT; session joining (via the student token link) works with a guest JWT. The two token types serve different purposes and have different lifetimes.
 
 **Rationale**: Session tokens are short-lived, role-specific, and tied to a single session room. They are the right granularity for WebSocket auth and LiveKit room access. User JWTs are longer-lived, identity-scoped, and used for REST API calls (analytics listing, session creation). Merging the two would require session tokens to carry full identity claims, complicating the analytics query model and making token revocation harder. Keeping them separate also means the analytics worker can still join rooms with a server-side LiveKit token that carries no user identity.
+
+---
+
+## AI Conversational Intelligence Decisions
+
+### AssemblyAI Universal Streaming v3 as Primary STT
+**Decision**: Use AssemblyAI's Universal Streaming v3 (`wss://streaming.assemblyai.com/v3/ws`, model `u3-rt-pro`) instead of Deepgram.
+
+**Rationale**: Deepgram had login/account issues during integration. AssemblyAI v3 uses `TurnEvent` with `end_of_turn` semantics, raw PCM binary frames (no base64), and provides server-side VAD/endpointing — meaning we send all audio continuously and let the provider handle silence detection rather than filtering locally.
+
+**Trade-offs**: AssemblyAI requires 50-1000ms of audio per WebSocket message (we buffer to 100ms internally). The v2 endpoint was deprecated (HTTP 410) so v3 is the only option.
+
+### Continuous Audio Streaming (No Local VAD Gating)
+**Decision**: Send ALL audio frames to the STT provider, not just frames where local VAD detects speech.
+
+**Rationale**: Production STT systems (AssemblyAI, Deepgram, Google) expect continuous audio streams. Local VAD gating strips natural pauses and context, making the provider's built-in neural VAD perform worse. Quiet speech was being missed because `webrtcvad` at aggressiveness=3 classified it as silence before it reached AssemblyAI.
+
+**Trade-offs**: Slightly higher STT billing (~$0.36/session instead of $0.18) since silence audio is sent. The quality improvement is substantial.
+
+### Dual-Model LLM Architecture
+**Decision**: Use two different models for coaching — Gemini 2.5 Flash for on-demand suggestions and Claude 3.5 Haiku for auto-suggestions.
+
+**Rationale**: Benchmarked 6 models on OpenRouter. Gemini 2.5 Flash has ~540ms TTFB / ~1.4s total vs Haiku's ~980ms TTFB / ~2.8s total. When the tutor clicks "AI Suggest", they're waiting — speed matters. Auto-suggestions fire in the background every 35s, so quality matters more than speed. Both produce valid JSON output.
+
+**Trade-offs**: Two model configurations to maintain. Gemini wraps JSON in markdown fences (`\`\`\`json`), requiring fence-stripping in the parser.
+
+### SSE Streaming for On-Demand Suggestions
+**Decision**: The `/suggest` endpoint returns Server-Sent Events when the client sends `Accept: text/event-stream`, streaming LLM tokens as they arrive.
+
+**Rationale**: Reduces perceived latency for the tutor. The first tokens arrive in ~400ms even though total response takes ~1.4s. The frontend shows a loading indicator and pops the final parsed suggestion when complete.
+
+### Speakable Suggested Prompts
+**Decision**: The LLM prompt explicitly requires `suggested_prompt` to be a complete, natural sentence the tutor can read word-for-word to the student.
+
+**Rationale**: The most valuable AI output is something the tutor can glance at and say immediately. Generic coaching notes ("ask about fractions") are less useful than speakable prompts ("Can you tell me what the 3 and 4 in three-fourths represent?").
+
+### Sessions Are Invite-Link Only
+**Decision**: Removed the manual "Join Session" form (session ID + token input) from the dashboard. Students join only via invite links shared by the tutor.
+
+**Rationale**: The manual join form required a session token that users had no easy way to obtain. The invite link already embeds the token. Removing the form simplifies the UX and eliminates a confusing dead-end.

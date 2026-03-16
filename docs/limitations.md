@@ -75,3 +75,36 @@ The composite engagement score (`student_eye * 40 + min_energy * 30 + talk_balan
 - Designed for one session at a time per server instance
 - JSON file storage is not suitable for high-volume analytics
 - No built-in support for concurrent sessions sharing resources
+
+## AI Conversational Intelligence
+
+### Transcription Quality
+- Quiet speech may not be transcribed if the student speaks softly or far from the microphone
+- Background noise degrades STT accuracy significantly
+- AssemblyAI's streaming model has ~1-2s latency; transcripts are not instantaneous
+- Non-English speech is not supported (English-only model configured)
+- Overlapping speech (both participants talking) may produce garbled transcripts
+
+### Uncertainty Detection
+- Linguistic hedging detection uses keyword/pattern matching, not ML — may miss subtle uncertainty or flag normal conversational fillers
+- Paralinguistic signals (pitch variation, pause patterns) depend on Praat pitch extraction, which returns 0.0 when parselmouth is not installed (Docker ARM64 builds are slow)
+- Uncertainty scores are heuristic composites, not empirically validated against actual student understanding
+
+### AI Coaching Copilot
+- LLM suggestions depend on transcript quality — garbage-in, garbage-out
+- 35-second baseline interval means the first auto-suggestion takes ~35s minimum
+- Requires at least 20 words of transcript before any suggestion fires
+- Budget ceiling of 60 LLM calls/hour — can exhaust in intensive sessions
+- Output validation rejects domain answers but cannot guarantee pedagogical quality
+- Gemini 2.5 Flash occasionally wraps JSON in markdown fences (handled by fence-stripping parser, but novel formats could break parsing)
+- No feedback loop — the system does not learn from tutor feedback on suggestions
+
+### Cost
+- AssemblyAI streaming: ~$0.36/session (both roles, continuous audio)
+- OpenRouter LLM calls: ~$0.01-0.05/session depending on call count
+- No local/offline STT or LLM option — requires internet connectivity and API keys
+
+### Privacy
+- Transcript text is sent to AssemblyAI for processing (opt-out from model training not available in v3)
+- LLM prompts containing scrubbed transcript text are sent to OpenRouter → model provider
+- PII scrubbing is pattern-based (regex), not ML-based — may miss uncommon PII formats

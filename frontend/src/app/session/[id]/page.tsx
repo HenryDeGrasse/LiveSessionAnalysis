@@ -1979,11 +1979,9 @@ export default function SessionPage() {
             minimalAttentionSummary,
             minimalTalkSummary,
             minimalFlowSummary,
-            ...(minimalCoachingStatus ? [minimalCoachingStatus] : []),
           ].map((pill) => (
             <div
               key={pill.label}
-              data-testid={pill.label === 'Coaching' ? 'coaching-status-pill' : undefined}
               className={`rounded-full border px-3 py-1.5 text-[11px] font-medium tracking-[0.02em] backdrop-blur-md ${pill.className}`}
             >
               <span className="mr-2 text-[10px] uppercase tracking-[0.16em] text-white/55">
