@@ -138,6 +138,24 @@ class AICoachingCopilot:
         now: Optional[float] = None,
         backpressure_level: int = 0,
         on_demand: bool = False,
+        # --- Rich behavioral signals ---
+        student_attention_state: str = "",
+        student_time_in_attention_state: float = 0.0,
+        tutor_attention_state: str = "",
+        time_since_student_spoke: float = 0.0,
+        mutual_silence_seconds: float = 0.0,
+        tutor_monologue_seconds: float = 0.0,
+        tutor_turn_count: int = 0,
+        student_turn_count: int = 0,
+        student_response_latency: float = 0.0,
+        recent_hard_interruptions: int = 0,
+        tutor_cutoffs: int = 0,
+        active_overlap_state: str = "none",
+        student_energy_score: float = 0.0,
+        student_energy_drop: float = 0.0,
+        tutor_energy_score: float = 0.0,
+        active_rule_nudge: str = "",
+        active_rule_message: str = "",
     ) -> Optional[AISuggestion]:
         """Evaluate whether to call the LLM and return a suggestion if appropriate.
 
@@ -189,6 +207,7 @@ class AICoachingCopilot:
 
         # 4. Build context
         recent_utterances = transcript_buffer._within(self._context_window)
+        topic_keywords = transcript_buffer.last_topic_keywords(n=5)
 
         context = AICoachingContext(
             session_type=self._session_type,
@@ -200,6 +219,32 @@ class AICoachingCopilot:
             student_talk_ratio=student_talk_ratio,
             student_engagement_score=engagement_score,
             recent_suggestions=list(self._recent_suggestions[-5:]),
+            # Behavioral signals
+            student_attention_state=student_attention_state,
+            student_time_in_attention_state=student_time_in_attention_state,
+            tutor_attention_state=tutor_attention_state,
+            # Turn-taking & silence
+            time_since_student_spoke=time_since_student_spoke,
+            mutual_silence_seconds=mutual_silence_seconds,
+            tutor_monologue_seconds=tutor_monologue_seconds,
+            tutor_turn_count=tutor_turn_count,
+            student_turn_count=student_turn_count,
+            student_response_latency=student_response_latency,
+            # Interruptions
+            recent_hard_interruptions=recent_hard_interruptions,
+            tutor_cutoffs=tutor_cutoffs,
+            active_overlap_state=active_overlap_state,
+            # Energy
+            student_energy_score=student_energy_score,
+            student_energy_drop=student_energy_drop,
+            tutor_energy_score=tutor_energy_score,
+            # Engagement
+            engagement_trend=engagement_trend,
+            # Active coaching rule
+            active_rule_nudge=active_rule_nudge,
+            active_rule_message=active_rule_message,
+            # Topics
+            topic_keywords=topic_keywords,
         )
 
         # 5. PII-scrub the user prompt

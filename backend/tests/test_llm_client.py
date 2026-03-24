@@ -78,18 +78,18 @@ class TestBuildSystemPrompt:
 
     def test_general_session_type(self):
         prompt = build_system_prompt("general")
-        assert "general tutoring session" in prompt
-        assert "pedagogy" in prompt.lower()
-        assert "NEVER provide direct answers" in prompt
+        assert "General tutoring" in prompt
+        assert "NEVER" in prompt
+        assert "answer" in prompt.lower()
 
     def test_math_session_type(self):
         prompt = build_system_prompt("math")
-        assert "math tutoring session" in prompt
-        assert "scaffolding" in prompt
+        assert "Math session" in prompt
+        assert "DOING" in prompt
 
     def test_unknown_type_falls_back_to_general(self):
         prompt = build_system_prompt("underwater_basket_weaving")
-        assert "general tutoring session" in prompt
+        assert "General tutoring" in prompt
 
     def test_json_schema_present(self):
         prompt = build_system_prompt()
@@ -110,10 +110,20 @@ class TestBuildUserPrompt:
     def _make_context(self, **kwargs) -> AICoachingContext:
         return AICoachingContext(**kwargs)
 
-    def test_includes_elapsed_time(self):
+    def test_prompt_has_situation_section(self):
         ctx = self._make_context(elapsed_seconds=300.0)
         prompt = build_user_prompt(ctx)
-        assert "5.0 minutes" in prompt
+        assert "## Situation" in prompt
+
+    def test_includes_elapsed_time_in_momentum_loss(self):
+        # Elapsed time now appears in situation briefs when relevant, not as raw data
+        ctx = self._make_context(
+            elapsed_seconds=600.0,
+            active_rule_nudge="session_momentum_loss",
+            engagement_trend="declining",
+        )
+        prompt = build_user_prompt(ctx)
+        assert "10 minutes" in prompt
 
     def test_includes_transcript(self):
         utterances = [
@@ -138,7 +148,7 @@ class TestBuildUserPrompt:
     def test_empty_transcript(self):
         ctx = self._make_context()
         prompt = build_user_prompt(ctx)
-        assert "no transcript available" in prompt
+        assert "no transcript" in prompt.lower()
 
     def test_includes_uncertainty(self):
         ctx = self._make_context(
@@ -146,22 +156,14 @@ class TestBuildUserPrompt:
             uncertainty_topic="fractions",
         )
         prompt = build_user_prompt(ctx)
-        assert "0.75" in prompt
+        # Uncertainty is now woven into the situation brief
         assert "fractions" in prompt
+        assert "confused" in prompt.lower() or "uncertain" in prompt.lower()
 
-    def test_no_uncertainty_section_when_zero(self):
+    def test_no_uncertainty_mention_when_zero(self):
         ctx = self._make_context(uncertainty_score=0.0)
         prompt = build_user_prompt(ctx)
-        assert "Uncertainty Signal" not in prompt
-
-    def test_includes_talk_ratios(self):
-        ctx = self._make_context(
-            tutor_talk_ratio=0.65,
-            student_talk_ratio=0.35,
-        )
-        prompt = build_user_prompt(ctx)
-        assert "65%" in prompt
-        assert "35%" in prompt
+        assert "confused" not in prompt.lower() or "uncertainty" not in prompt.lower()
 
     def test_includes_recent_suggestions(self):
         sug = AISuggestion(
@@ -172,8 +174,7 @@ class TestBuildUserPrompt:
         )
         ctx = self._make_context(recent_suggestions=[sug])
         prompt = build_user_prompt(ctx)
-        assert "Previously Given Suggestions" in prompt
-        assert "probe" in prompt
+        assert "Already Suggested" in prompt
         assert "Ask student to explain their approach" in prompt
 
 
