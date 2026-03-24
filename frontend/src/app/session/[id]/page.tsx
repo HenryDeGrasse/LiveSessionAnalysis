@@ -307,6 +307,7 @@ function buildStudentInviteUrl(sessionId: string, studentToken: string) {
 /** Renders a single participant video tile for the multi-participant grid. */
 function ParticipantTile({ participant }: { participant: RemoteParticipant }) {
   const tileVideoRef = useRef<HTMLVideoElement>(null)
+  const trackCount = participant.stream?.getTracks().length ?? 0
 
   useEffect(() => {
     if (tileVideoRef.current) {
@@ -316,6 +317,13 @@ function ParticipantTile({ participant }: { participant: RemoteParticipant }) {
       })
     }
   }, [participant.stream])
+
+  // Re-trigger play when new tracks arrive on this participant's stream.
+  useEffect(() => {
+    if (tileVideoRef.current && participant.stream && trackCount > 0) {
+      void tileVideoRef.current.play().catch(() => {})
+    }
+  }, [participant.stream, trackCount])
 
   return (
     <div
@@ -380,6 +388,7 @@ export default function SessionPage() {
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
+  const remoteAudioRef = useRef<HTMLAudioElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const frameIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const targetFpsRef = useRef<number>(3)
@@ -954,6 +963,38 @@ export default function SessionPage() {
       }
     }
   }, [remoteStream])
+
+  // Re-trigger play when new remote tracks arrive (e.g. audio track added
+  // after video). Some browsers won't play a dynamically-added audio track
+  // on an existing <video> element without an explicit play() call.
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream && remoteTrackCount > 0) {
+      void remoteVideoRef.current.play().catch(() => {
+        // ignore autoplay issues
+      })
+    }
+  }, [remoteStream, remoteTrackCount])
+
+  // Dedicated audio element for remote audio playback. Ensures the remote
+  // participant's audio is always played even if the <video> element has
+  // issues with dynamically-added audio tracks (common in Safari/WebKit).
+  useEffect(() => {
+    if (!remoteAudioRef.current || !remoteStream) {
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = null
+      }
+      return
+    }
+    const audioTracks = remoteStream.getAudioTracks()
+    if (audioTracks.length === 0) return
+
+    // Create an audio-only stream to avoid double-rendering video
+    const audioOnlyStream = new MediaStream(audioTracks)
+    remoteAudioRef.current.srcObject = audioOnlyStream
+    void remoteAudioRef.current.play().catch(() => {
+      // ignore autoplay issues
+    })
+  }, [remoteStream, remoteTrackCount])
 
   // Send user_auth as the first text frame when the WebSocket connects so the
   // backend can associate this participant with their authenticated user account.
@@ -2117,6 +2158,11 @@ export default function SessionPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Hidden audio element ensures remote audio plays reliably across browsers */}
+      {ENABLE_WEBRTC_CALL_UI && (
+        <audio ref={remoteAudioRef} autoPlay playsInline style={{ display: 'none' }} />
       )}
 
       {/* ── Local video PIP (bottom-right, above bottom control bar) ── */}
