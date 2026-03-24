@@ -26,10 +26,12 @@ Your job is to write a natural, conversational sentence the tutor can say OUT LO
 to the student right now.
 
 ## Hard Rules
-1. NEVER give or hint at an academic answer.
-2. Sound like a real person — warm, natural, not robotic or formal.
-3. Reference what was actually said or the specific topic when possible.
-4. The tutor should be able to glance at your output and say it immediately.
+1. Sound like a real person — warm, natural, not robotic or formal.
+2. Reference what was actually said or the specific topic when possible.
+3. The tutor should be able to glance at your output and say it immediately.
+4. Use the FULL range of coaching actions — don't just ask questions. \
+Scaffold with concrete steps, give analogies, walk through examples, \
+offer encouragement, or redirect approach. Match the action to the moment.
 
 ## Session Context
 {session_type_guidance}
@@ -38,12 +40,36 @@ to the student right now.
 Your ENTIRE response must be a single JSON object. No text before or after it. \
 No explanation. No markdown headers. Just the JSON:
 
-{{"action": "<probe|scaffold|redirect|encourage|check_understanding|re_engage|wait>", "topic": "<specific topic>", "observation": "<1 sentence>", "suggestion": "<1-2 sentences>", "suggested_prompt": "<THE MAIN OUTPUT: complete sentence the tutor says to student>", "priority": "<high|medium|low>", "confidence": <0.0-1.0>}}
+{{"action": "<probe|scaffold|redirect|encourage|check_understanding|re_engage|wait>", "topic": "<specific topic>", "observation": "<1 sentence>", "suggestion": "<1-2 sentences explaining the coaching strategy>", "suggested_prompt": "<THE MAIN OUTPUT: complete sentence the tutor says to student>", "priority": "<high|medium|low>", "confidence": <0.0-1.0>}}
 
 The `suggested_prompt` is your primary deliverable — a natural sentence the tutor says out loud.
 
-Example response:
-{{"action": "probe", "topic": "fractions", "observation": "Student said they don't understand why both numbers get divided.", "suggestion": "Probe what part confuses them before re-explaining.", "suggested_prompt": "When I said we divide both the top and bottom by two, what part felt confusing — the dividing part, or why we pick the number two?", "priority": "high", "confidence": 0.85}}\
+## Action Guide
+- **probe**: Ask a targeted question to find out what the student is thinking or where they're stuck.
+- **scaffold**: Walk the student through a concrete step, technique, analogy, or worked example. \
+Give them a specific method they can follow — not just a question.
+- **redirect**: Steer the student away from a dead end or misconception toward a better approach.
+- **encourage**: Recognize effort or progress to build confidence and momentum.
+- **check_understanding**: Verify the student actually got it — ask them to explain back or apply it.
+- **re_engage**: Pull a distracted or silent student back into the conversation.
+- **wait**: Nothing needed right now — session is flowing well.
+
+## Example Responses
+
+Scaffold — giving a concrete method:
+{{"action": "scaffold", "topic": "adding fractions", "observation": "Student is trying to add one-third and one-fourth but adding the denominators.", "suggestion": "Walk through finding a common denominator step by step.", "suggested_prompt": "Okay so when we add fractions with different bottoms, we need to find a common denominator first — what's a number that both three and four go into evenly?", "priority": "high", "confidence": 0.9}}
+
+Scaffold — offering an analogy:
+{{"action": "scaffold", "topic": "variables in algebra", "observation": "Student doesn't understand what x represents in the equation.", "suggestion": "Use a concrete analogy to make variables tangible.", "suggested_prompt": "Think of x like a mystery box — there's a number hiding inside it, and our job is to figure out what number makes the equation balance. So if we have x plus three equals seven, what number would you put in the box?", "priority": "high", "confidence": 0.88}}
+
+Probe — finding the gap:
+{{"action": "probe", "topic": "fractions", "observation": "Student said they don't understand why both numbers get divided.", "suggestion": "Find out which part of simplification is confusing before re-explaining.", "suggested_prompt": "When I said we divide both the top and bottom by two, what part felt confusing — the dividing part, or why we pick the number two?", "priority": "high", "confidence": 0.85}}
+
+Redirect — steering away from a misconception:
+{{"action": "redirect", "topic": "photosynthesis", "observation": "Student thinks plants eat sunlight like food.", "suggestion": "Redirect with an analogy that separates energy source from food.", "suggested_prompt": "That's a cool way to think about it — but sunlight is more like the power outlet than the food itself. The plant uses that energy to build its own food from CO2 and water. So what do you think the actual 'food' the plant makes is?", "priority": "medium", "confidence": 0.82}}
+
+Encourage — building confidence:
+{{"action": "encourage", "topic": "essay structure", "observation": "Student just reorganized their paragraph order and it improved the flow.", "suggestion": "Reinforce the good instinct before moving on.", "suggested_prompt": "Nice — see how moving that paragraph up front makes the whole argument click? That was a really good call. Now let's look at your conclusion with that same eye.", "priority": "medium", "confidence": 0.8}}\
 """
 
 # --------------------------------------------------------------------------- #
@@ -53,42 +79,55 @@ Example response:
 SESSION_TYPE_GUIDANCE: Dict[str, str] = {
     "general": (
         "General tutoring. Student should talk 30-40%+ of the time. "
-        "Balance explanation with questions."
+        "Balance explanation with questions. When the student is stuck, "
+        "scaffold with concrete steps or analogies — don't just keep asking questions."
     ),
     "math": (
-        "Math session. Students learn by DOING, not watching. "
+        "Math session. Mix scaffolding with questions — when a student is stuck, "
+        "walk them through the METHOD, not just ask what they think. "
+        "For example: show how to find common denominators step by step, "
+        "explain why we invert and multiply for division, "
+        "or use real-world analogies (pizza slices for fractions, balance scales for equations). "
         "Push for think-alouds: 'Walk me through your thinking.' "
-        "Watch for students who say 'I get it' without demonstrating understanding."
+        "When they get a step right, name what they did well before moving on."
     ),
     "reading": (
         "Reading/literacy. Ask comprehension at multiple levels: "
         "what happened (literal), why (inferential), what do you think (evaluative). "
-        "Model think-alouds instead of just giving answers."
+        "Model think-alouds. When a student misreads a passage, scaffold by pointing to "
+        "context clues or key sentences — don't just ask them to re-read."
     ),
     "science": (
-        "Science session. Drive with hypothesis questions: "
-        "'What do you think would happen if...?' "
-        "Have students predict before revealing. Explain phenomena, don't memorize."
+        "Science session. Use concrete analogies to make abstract concepts click "
+        "(e.g. electrons like marbles in a track, cells like factories). "
+        "Drive with hypothesis questions: 'What do you think would happen if...?' "
+        "When confused, break the concept into a simpler example first, then build back up."
     ),
     "writing": (
         "Writing session. Guide the process (brainstorm → organize → draft → revise). "
-        "Ask 'What are you trying to say here?' — don't fix text directly."
+        "When a student's paragraph is unclear, help them find the core idea: "
+        "'What's the one thing you want the reader to take away from this paragraph?' "
+        "Offer structural scaffolds like topic-sentence patterns or transition phrases."
     ),
     "test_prep": (
         "Test prep. Focus on strategy/process, not just answers. "
-        "When wrong, explore WHY they chose that answer. Build confidence."
+        "When wrong, explore WHY they chose that answer, then scaffold the correct approach. "
+        "Teach elimination techniques, time management, and how to break complex problems into parts."
     ),
     "lecture": (
         "Lecture format (tutor-heavy is expected). "
-        "Still check comprehension every 3-5 minutes."
+        "Still check comprehension every 3-5 minutes. "
+        "Use quick scaffolding checks: 'So if I change this one thing, what would happen?'"
     ),
     "practice": (
         "Practice session — student does most of the work. "
-        "Guide with questions, not explanations. Let them struggle productively."
+        "When stuck, give a hint or the next step rather than the full solution. "
+        "Let them struggle productively but don't let them spin for too long."
     ),
     "socratic": (
         "Socratic method. Tutor asks questions, rarely makes statements. "
-        "Respond to wrong answers with questions that expose the flaw. Give wait time."
+        "Respond to wrong answers with questions that expose the flaw. "
+        "Give wait time. If student is truly stuck after 2+ attempts, offer a scaffold."
     ),
 }
 
@@ -162,9 +201,12 @@ def _build_situation_brief_for_rule(context: AICoachingContext) -> str:
                 f"{int(context.time_since_student_spoke)} seconds."
             )
         brief += (
-            "\n\nWrite a question the tutor can ask that checks whether "
-            "the student actually understood what was just explained. "
-            "Reference the specific topic, not a generic 'does that make sense.'"
+            "\n\nWrite something the tutor can say to check understanding. "
+            "Options (pick the best fit): "
+            "(a) Ask the student to explain back a specific part in their own words, "
+            "(b) Give a quick worked example and ask them to try the next step, "
+            "(c) Use an analogy that makes the concept more concrete, then check if it clicks. "
+            "Reference the specific topic — not a generic 'does that make sense.'"
         )
         return brief
 
@@ -179,7 +221,9 @@ def _build_situation_brief_for_rule(context: AICoachingContext) -> str:
         )
         brief += (
             "\n\nWrite something the tutor can say to gently re-engage "
-            f"the student. Pull them back to {topic} with a direct question."
+            f"the student. Pull them back to {topic} — try an interesting "
+            "hook, a quick example, or a low-stakes question rather than "
+            "just asking if they're still there."
         )
         return brief
 
@@ -250,8 +294,11 @@ def _build_situation_brief_for_rule(context: AICoachingContext) -> str:
             f"They've been at this for {elapsed_min:.0f} minutes."
         )
         brief += (
-            "\n\nWrite something the tutor can say to shift energy — "
-            "suggest a different approach, a break, or a new angle on the topic."
+            "\n\nWrite something the tutor can say to shift energy. Options: "
+            "(a) Propose a different approach or real-world example for the same topic, "
+            "(b) Acknowledge the grind and suggest a quick mental break, "
+            "(c) Switch to a more interactive exercise ('let me give you a quick challenge'). "
+            "Pick whatever best fits the moment."
         )
         return brief
 
@@ -286,8 +333,12 @@ def _build_ambient_situation_brief(context: AICoachingContext) -> str:
         if student_said:
             brief += f' They said: "{student_said}".'
         brief += (
-            "\n\nWrite a probing question that explores what specifically "
-            "the student doesn't understand — don't re-explain, find the gap."
+            "\n\nHelp the tutor address the confusion. Options (pick the best fit): "
+            "(a) Scaffold with a concrete example, analogy, or step-by-step walkthrough, "
+            "(b) Probe with a targeted question to pinpoint the specific gap, "
+            "(c) Redirect by reframing the concept from a different angle. "
+            "If the student's confusion is about a procedure (like how to solve something), "
+            "prefer scaffolding with a worked example over just asking more questions."
         )
         signals.append((urgency, brief))
 
@@ -314,9 +365,10 @@ def _build_ambient_situation_brief(context: AICoachingContext) -> str:
         if student_said:
             brief += f' The student last said: "{student_said}".'
         brief += (
-            "\n\nWrite a comprehension check the tutor can ask "
-            "that invites the student to engage with the material, "
-            f"not just confirm they're listening."
+            "\n\nBreak the monologue. Options: "
+            "(a) Give the student a quick hands-on task ('try this one'), "
+            "(b) Ask them to explain back the last thing in their own words, "
+            "(c) Offer a concrete example and ask them to predict the next step."
         )
         signals.append((urgency, brief))
 
@@ -350,8 +402,10 @@ def _build_ambient_situation_brief(context: AICoachingContext) -> str:
             f"tutor turns vs {context.student_turn_count} student turns."
         )
         brief += (
-            "\n\nWrite an open-ended question about "
-            f"{topic} that invites the student to share their thinking."
+            "\n\nGet the student doing something. Options: "
+            f"(a) Give them a small problem to try on {topic}, "
+            "(b) Ask them to walk through the last example in their own words, "
+            "(c) Ask an open-ended question that requires more than a yes/no."
         )
         signals.append((urgency, brief))
 
