@@ -79,13 +79,13 @@ class TestBuildSystemPrompt:
     def test_general_session_type(self):
         prompt = build_system_prompt("general")
         assert "General tutoring" in prompt
-        assert "NEVER" in prompt
-        assert "answer" in prompt.lower()
+        assert "student should talk 30-40%+ of the time" in prompt.lower()
+        assert "don't just keep asking questions" in prompt.lower()
 
     def test_math_session_type(self):
         prompt = build_system_prompt("math")
         assert "Math session" in prompt
-        assert "DOING" in prompt
+        assert "walk them through the method" in prompt.lower()
 
     def test_unknown_type_falls_back_to_general(self):
         prompt = build_system_prompt("underwater_basket_weaving")
