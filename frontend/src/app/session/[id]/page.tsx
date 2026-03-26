@@ -310,13 +310,24 @@ function ParticipantTile({ participant }: { participant: RemoteParticipant }) {
   const trackCount = participant.stream?.getTracks().length ?? 0
 
   useEffect(() => {
-    if (tileVideoRef.current) {
-      tileVideoRef.current.srcObject = participant.stream
-      void tileVideoRef.current.play().catch(() => {
+    const video = tileVideoRef.current
+    if (!video) return
+
+    if (participant.videoTrack) {
+      participant.videoTrack.attach(video)
+      void video.play().catch(() => {
         // Ignore autoplay policy errors during stream setup
       })
+      return () => {
+        participant.videoTrack?.detach(video)
+      }
     }
-  }, [participant.stream])
+
+    video.srcObject = participant.stream
+    void video.play().catch(() => {
+      // Ignore autoplay policy errors during stream setup
+    })
+  }, [participant.stream, participant.videoTrack])
 
   // Re-trigger play when new tracks arrive on this participant's stream.
   useEffect(() => {
@@ -385,9 +396,22 @@ export default function SessionPage() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [showInviteMenu, setShowInviteMenu] = useState(false)
   const inviteMenuRef = useRef<HTMLDivElement>(null)
+  const [audioDeviceMenuOpen, setAudioDeviceMenuOpen] = useState(false)
+  const [videoDeviceMenuOpen, setVideoDeviceMenuOpen] = useState(false)
+  const [switchingAudioInput, setSwitchingAudioInput] = useState(false)
+  const [switchingVideoInput, setSwitchingVideoInput] = useState(false)
+  const audioDeviceMenuRef = useRef<HTMLDivElement>(null)
+  const videoDeviceMenuRef = useRef<HTMLDivElement>(null)
+  const [remoteVideoDebug, setRemoteVideoDebug] = useState({
+    readyState: 0,
+    videoWidth: 0,
+    videoHeight: 0,
+    paused: true,
+    currentTime: 0,
+  })
 
   const videoRef = useRef<HTMLVideoElement>(null)
-  const remoteVideoRef = useRef<HTMLVideoElement>(null)
+  const [remoteVideoElement, setRemoteVideoElement] = useState<HTMLVideoElement | null>(null)
   const remoteAudioRef = useRef<HTMLAudioElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const frameIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -431,7 +455,14 @@ export default function SessionPage() {
   const {
     stream,
     error: mediaError,
+    audioInputs,
+    videoInputs,
+    selectedAudioInputId,
+    selectedVideoInputId,
+    refreshDevices,
     requestAccess,
+    selectAudioInput,
+    selectVideoInput,
     isAudioEnabled,
     isVideoEnabled,
     toggleAudio,
@@ -475,10 +506,11 @@ export default function SessionPage() {
 
   const [transcriptPanelOpen, setTranscriptPanelOpen] = useState(false)
   const activeAISuggestion = aiSuggestion ?? aiSuggestionFromNudge
+  const shouldPinControlsVisible = Boolean(activeAISuggestion || aiSuggestionLoading)
 
   const appendDebugEvent = useCallback((message: string) => {
     const at = new Date().toLocaleTimeString()
-    setDebugEvents((prev) => [...prev.slice(-24), { at, message }])
+    setDebugEvents((prev) => [...prev.slice(-99), { at, message }])
   }, [])
 
   const queuePeerEvent = useCallback(
@@ -637,9 +669,6 @@ export default function SessionPage() {
           const metrics = message.data as MetricsSnapshot
           handleMetrics(metrics)
           handleUncertaintyMetrics(metrics)
-          appendDebugEvent(
-            `metrics: attention=${metrics.student.attention_state} talk=${(metrics.tutor.talk_time_percent * 100).toFixed(0)}/${(metrics.student.talk_time_percent * 100).toFixed(0)} silence=${metrics.session.silence_duration_current.toFixed(0)}s int=${metrics.session.interruption_count}`
-          )
           // Adapt client-side capture FPS to match backend target
           const newFps = metrics.target_fps
           if (newFps && newFps !== targetFpsRef.current && newFps >= 1 && newFps <= 10) {
@@ -726,9 +755,6 @@ export default function SessionPage() {
           const metrics = message.data as MetricsSnapshot
           handleMetrics(metrics)
           handleUncertaintyMetrics(metrics)
-          appendDebugEvent(
-            `[data-pkt] metrics: attention=${metrics.student.attention_state}`
-          )
           const newFps = metrics.target_fps
           if (newFps && newFps !== targetFpsRef.current && newFps >= 1 && newFps <= 10) {
             targetFpsRef.current = newFps
@@ -779,6 +805,7 @@ export default function SessionPage() {
     closeConnection,
     setMicEnabled,
     setCameraEnabled,
+    replacePublishedTrack,
   } = useCallTransport({
     provider: mediaProvider,
     enabled: ENABLE_WEBRTC_CALL_UI && !sessionEnded,
@@ -798,6 +825,9 @@ export default function SessionPage() {
       [handleDataPacket, handleTranscriptPacket]
     ),
   })
+
+  const primaryRemoteParticipant = Array.from(remoteParticipants.values())
+    .sort(compareParticipantIdentity)[0] ?? null
 
   useEffect(() => {
     peerHandlersRef.current = {
@@ -948,53 +978,198 @@ export default function SessionPage() {
   }, [appendDebugEvent, mediaError])
 
   useEffect(() => {
+    if (!stream) {
+      appendDebugEvent('local stream unavailable')
+      return
+    }
+
+    const audioTracks = stream.getAudioTracks()
+    const videoTracks = stream.getVideoTracks()
+    appendDebugEvent(
+      `local stream ready audio=${audioTracks.length} video=${videoTracks.length}`
+    )
+
+    const cleanups: Array<() => void> = []
+    const bindTrack = (track: MediaStreamTrack) => {
+      const settings = track.getSettings?.() ?? {}
+      appendDebugEvent(
+        `local ${track.kind} track id=${track.id} enabled=${track.enabled} ready=${track.readyState}` +
+          (track.kind === 'audio'
+            ? ` label=${track.label || 'unknown'} sampleRate=${settings.sampleRate ?? '?'} channels=${settings.channelCount ?? '?'} device=${settings.deviceId ? 'present' : 'missing'}`
+            : ` ${settings.width ?? '?'}x${settings.height ?? '?'}@${settings.frameRate ?? '?'}fps`)
+      )
+
+      const onEnded = () => appendDebugEvent(`local ${track.kind} track ended (${track.id})`)
+      const onMute = () => appendDebugEvent(`local ${track.kind} track muted (${track.id})`)
+      const onUnmute = () => appendDebugEvent(`local ${track.kind} track unmuted (${track.id})`)
+      track.addEventListener('ended', onEnded)
+      track.addEventListener('mute', onMute)
+      track.addEventListener('unmute', onUnmute)
+      cleanups.push(() => {
+        track.removeEventListener('ended', onEnded)
+        track.removeEventListener('mute', onMute)
+        track.removeEventListener('unmute', onUnmute)
+      })
+    }
+
+    audioTracks.forEach(bindTrack)
+    videoTracks.forEach(bindTrack)
+
+    return () => {
+      cleanups.forEach((fn) => fn())
+    }
+  }, [appendDebugEvent, stream])
+
+  useEffect(() => {
     if (peerError) {
       appendDebugEvent(`webrtc error: ${peerError}`)
     }
   }, [appendDebugEvent, peerError])
 
   useEffect(() => {
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = remoteStream
-      if (remoteStream) {
-        void remoteVideoRef.current.play().catch(() => {
-          // ignore autoplay issues during early setup
-        })
+    const video = remoteVideoElement
+    if (!video) {
+      appendDebugEvent('remote video effect skipped: element missing')
+      return
+    }
+
+    appendDebugEvent(
+      `remote video effect start participant=${primaryRemoteParticipant?.identity ?? 'none'} hasTrack=${primaryRemoteParticipant?.videoTrack ? 'yes' : 'no'}`
+    )
+
+    if (!primaryRemoteParticipant) {
+      video.srcObject = null
+      setRemoteVideoDebug({
+        readyState: video.readyState,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+        paused: video.paused,
+        currentTime: video.currentTime,
+      })
+      appendDebugEvent('remote video srcObject cleared')
+      return
+    }
+
+    if (primaryRemoteParticipant.videoTrack) {
+      try {
+        primaryRemoteParticipant.videoTrack.attach(video)
+      } catch (error) {
+        appendDebugEvent(
+          `remote video attach failed: ${error instanceof Error ? error.message : 'unknown'}`
+        )
+      }
+      setRemoteVideoDebug({
+        readyState: video.readyState,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+        paused: video.paused,
+        currentTime: video.currentTime,
+      })
+      appendDebugEvent(`remote video attached via LiveKit track ${primaryRemoteParticipant.identity}`)
+      void video.play().catch(() => {
+        // ignore autoplay issues during early setup
+      })
+      return () => {
+        primaryRemoteParticipant.videoTrack?.detach(video)
       }
     }
-  }, [remoteStream])
 
-  // Re-trigger play when new remote tracks arrive (e.g. audio track added
-  // after video). Some browsers won't play a dynamically-added audio track
-  // on an existing <video> element without an explicit play() call.
-  useEffect(() => {
-    if (remoteVideoRef.current && remoteStream && remoteTrackCount > 0) {
-      void remoteVideoRef.current.play().catch(() => {
-        // ignore autoplay issues
+    const videoTracks = primaryRemoteParticipant.stream
+      .getVideoTracks()
+      .filter((track) => track.readyState === 'live')
+    const videoOnlyStream = videoTracks.length > 0 ? new MediaStream(videoTracks) : null
+    video.srcObject = videoOnlyStream
+    setRemoteVideoDebug({
+      readyState: video.readyState,
+      videoWidth: video.videoWidth,
+      videoHeight: video.videoHeight,
+      paused: video.paused,
+      currentTime: video.currentTime,
+    })
+    appendDebugEvent(
+      `remote video srcObject ${videoOnlyStream ? `attached videoTracks=${videoTracks.length}` : 'cleared (no live video tracks)'}`
+    )
+
+    if (videoOnlyStream) {
+      void video.play().catch(() => {
+        // ignore autoplay issues during early setup
       })
     }
-  }, [remoteStream, remoteTrackCount])
+  }, [appendDebugEvent, primaryRemoteParticipant, remoteTrackCount, remoteVideoElement])
+
+  useEffect(() => {
+    const video = remoteVideoElement
+    if (!video) return
+
+    const update = (label?: string) => {
+      setRemoteVideoDebug({
+        readyState: video.readyState,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+        paused: video.paused,
+        currentTime: video.currentTime,
+      })
+      if (label) {
+        appendDebugEvent(
+          `remote video ${label} ready=${video.readyState} size=${video.videoWidth}x${video.videoHeight} paused=${video.paused}`
+        )
+      }
+    }
+
+    update()
+    const onLoadedMetadata = () => update('loadedmetadata')
+    const onPlaying = () => update('playing')
+    const onPause = () => update('pause')
+    const onWaiting = () => update('waiting')
+    const onResize = () => update('resize')
+
+    video.addEventListener('loadedmetadata', onLoadedMetadata)
+    video.addEventListener('playing', onPlaying)
+    video.addEventListener('pause', onPause)
+    video.addEventListener('waiting', onWaiting)
+    video.addEventListener('resize', onResize)
+
+    return () => {
+      video.removeEventListener('loadedmetadata', onLoadedMetadata)
+      video.removeEventListener('playing', onPlaying)
+      video.removeEventListener('pause', onPause)
+      video.removeEventListener('waiting', onWaiting)
+      video.removeEventListener('resize', onResize)
+    }
+  }, [appendDebugEvent, remoteStream, remoteTrackCount, remoteVideoElement])
 
   // Dedicated audio element for remote audio playback. Ensures the remote
   // participant's audio is always played even if the <video> element has
   // issues with dynamically-added audio tracks (common in Safari/WebKit).
   useEffect(() => {
-    if (!remoteAudioRef.current || !remoteStream) {
-      if (remoteAudioRef.current) {
-        remoteAudioRef.current.srcObject = null
-      }
+    const audio = remoteAudioRef.current
+    if (!audio) return
+
+    if (!primaryRemoteParticipant) {
+      audio.srcObject = null
       return
     }
-    const audioTracks = remoteStream.getAudioTracks()
+
+    if (primaryRemoteParticipant.audioTrack) {
+      primaryRemoteParticipant.audioTrack.attach(audio)
+      void audio.play().catch(() => {
+        // ignore autoplay issues
+      })
+      return () => {
+        primaryRemoteParticipant.audioTrack?.detach(audio)
+      }
+    }
+
+    const audioTracks = primaryRemoteParticipant.stream.getAudioTracks()
     if (audioTracks.length === 0) return
 
     // Create an audio-only stream to avoid double-rendering video
     const audioOnlyStream = new MediaStream(audioTracks)
-    remoteAudioRef.current.srcObject = audioOnlyStream
-    void remoteAudioRef.current.play().catch(() => {
+    audio.srcObject = audioOnlyStream
+    void audio.play().catch(() => {
       // ignore autoplay issues
     })
-  }, [remoteStream, remoteTrackCount])
+  }, [primaryRemoteParticipant, remoteTrackCount])
 
   // Send user_auth as the first text frame when the WebSocket connects so the
   // backend can associate this participant with their authenticated user account.
@@ -1335,6 +1510,38 @@ export default function SessionPage() {
     setPreviewError(null)
   }, [stopPreviewTracks])
 
+  const handleSelectAudioInput = useCallback(async (deviceId: string) => {
+    setSwitchingAudioInput(true)
+    try {
+      const replacement = await selectAudioInput(deviceId)
+      await replacePublishedTrack('audio', replacement.previousTrack, replacement.newTrack)
+      appendDebugEvent(`audio input switched (${deviceId})`)
+      setAudioDeviceMenuOpen(false)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to switch microphone'
+      appendDebugEvent(`audio input switch failed: ${message}`)
+      toast.error(message)
+    } finally {
+      setSwitchingAudioInput(false)
+    }
+  }, [appendDebugEvent, replacePublishedTrack, selectAudioInput])
+
+  const handleSelectVideoInput = useCallback(async (deviceId: string) => {
+    setSwitchingVideoInput(true)
+    try {
+      const replacement = await selectVideoInput(deviceId)
+      await replacePublishedTrack('video', replacement.previousTrack, replacement.newTrack)
+      appendDebugEvent(`camera switched (${deviceId})`)
+      setVideoDeviceMenuOpen(false)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to switch camera'
+      appendDebugEvent(`camera switch failed: ${message}`)
+      toast.error(message)
+    } finally {
+      setSwitchingVideoInput(false)
+    }
+  }, [appendDebugEvent, replacePublishedTrack, selectVideoInput])
+
   const handleEndSession = useCallback(async () => {
     if (!sessionId || !token || endingSession || sessionEnded) return
 
@@ -1412,6 +1619,29 @@ export default function SessionPage() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showInviteMenu])
 
+  useEffect(() => {
+    if (!audioDeviceMenuOpen && !videoDeviceMenuOpen) return
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (audioDeviceMenuRef.current && !audioDeviceMenuRef.current.contains(target)) {
+        setAudioDeviceMenuOpen(false)
+      }
+      if (videoDeviceMenuRef.current && !videoDeviceMenuRef.current.contains(target)) {
+        setVideoDeviceMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [audioDeviceMenuOpen, videoDeviceMenuOpen])
+
+  useEffect(() => {
+    if (audioDeviceMenuOpen || videoDeviceMenuOpen) {
+      void refreshDevices()
+    }
+  }, [audioDeviceMenuOpen, videoDeviceMenuOpen, refreshDevices])
+
   // ── Session elapsed time counter ──
   useEffect(() => {
     if (sessionStartTime === null) {
@@ -1435,14 +1665,35 @@ export default function SessionPage() {
   // ── Fullscreen UI: auto-hide controls after inactivity ──
   const [controlsVisible, setControlsVisible] = useState(true)
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const shouldPinControlsVisibleRef = useRef(shouldPinControlsVisible)
+  shouldPinControlsVisibleRef.current = shouldPinControlsVisible
 
   const showControlsTemporarily = useCallback(() => {
     setControlsVisible(true)
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+    if (shouldPinControlsVisibleRef.current) {
+      hideTimerRef.current = null
+      return
+    }
     hideTimerRef.current = setTimeout(() => {
-      setControlsVisible(false)
+      if (!shouldPinControlsVisibleRef.current) {
+        setControlsVisible(false)
+      }
     }, 4000)
   }, [])
+
+  useEffect(() => {
+    if (shouldPinControlsVisible) {
+      setControlsVisible(true)
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current)
+        hideTimerRef.current = null
+      }
+      return
+    }
+
+    showControlsTemporarily()
+  }, [shouldPinControlsVisible, showControlsTemporarily])
 
   useEffect(() => {
     showControlsTemporarily()
@@ -1738,8 +1989,9 @@ export default function SessionPage() {
         <>
           <video
             data-testid="remote-video"
-            ref={remoteVideoRef}
+            ref={setRemoteVideoElement}
             autoPlay
+            muted
             playsInline
             className={`absolute inset-0 h-full w-full object-cover transition-opacity ${
               hasRemoteVideo ? 'opacity-100' : 'opacity-0'
@@ -2191,53 +2443,153 @@ export default function SessionPage() {
       <div
         data-testid="controls-overlay"
         className={`pointer-events-none absolute bottom-0 left-0 right-0 z-20 transition-opacity duration-500 ${
-          controlsVisible ? 'pointer-events-auto opacity-100' : 'opacity-0'
+          controlsVisible || shouldPinControlsVisible
+            ? 'pointer-events-auto opacity-100'
+            : 'opacity-0'
         }`}
       >
         <div className="flex items-center justify-center gap-4 bg-gradient-to-t from-black/70 to-transparent px-4 pb-6 pt-8">
-          {/* Mute mic — icon-based circular button */}
-          <button
-            data-testid="mute-button"
-            type="button"
-            aria-label={isAudioEnabled ? 'Mute microphone' : 'Unmute microphone'}
-            onClick={() => {
-              const willMute = isAudioEnabled
-              toggleAudio()
-              void setMicEnabled(!willMute)
-              appendDebugEvent(willMute ? 'microphone muted locally' : 'microphone unmuted locally')
-            }}
-            disabled={!hasAudioTrack}
-            title={isAudioEnabled ? 'Mute microphone (Space)' : 'Unmute microphone (Space)'}
-            className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50 ${
-              isAudioEnabled
-                ? 'border-white/20 bg-white/10 text-white hover:bg-white/20'
-                : 'border-red-500/60 bg-red-600/80 text-white hover:bg-red-500'
-            }`}
-          >
-            {isAudioEnabled ? <MicIcon /> : <MicOffIcon />}
-          </button>
+          {/* Microphone control + input picker */}
+          <div ref={audioDeviceMenuRef} className="relative flex items-center gap-1">
+            <button
+              data-testid="mute-button"
+              type="button"
+              aria-label={isAudioEnabled ? 'Mute microphone' : 'Unmute microphone'}
+              onClick={() => {
+                const willMute = isAudioEnabled
+                toggleAudio()
+                void setMicEnabled(!willMute)
+                appendDebugEvent(willMute ? 'microphone muted locally' : 'microphone unmuted locally')
+              }}
+              disabled={!hasAudioTrack}
+              title={isAudioEnabled ? 'Mute microphone (Space)' : 'Unmute microphone (Space)'}
+              className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50 ${
+                isAudioEnabled
+                  ? 'border-white/20 bg-white/10 text-white hover:bg-white/20'
+                  : 'border-red-500/60 bg-red-600/80 text-white hover:bg-red-500'
+              }`}
+            >
+              {isAudioEnabled ? <MicIcon /> : <MicOffIcon />}
+            </button>
+            <button
+              data-testid="audio-input-menu-button"
+              type="button"
+              aria-label="Choose microphone"
+              onClick={() => {
+                setVideoDeviceMenuOpen(false)
+                setAudioDeviceMenuOpen((prev) => !prev)
+              }}
+              title="Choose microphone"
+              className="flex h-12 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur-md transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
+              </svg>
+            </button>
+            {audioDeviceMenuOpen && (
+              <div className="absolute bottom-14 left-1/2 z-40 w-72 -translate-x-1/2 overflow-hidden rounded-2xl border border-white/10 bg-[#101827]/95 p-2 shadow-2xl backdrop-blur-md">
+                <div className="px-2 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-white/50">
+                  Microphone input
+                </div>
+                <div className="max-h-64 space-y-1 overflow-y-auto">
+                  {audioInputs.length > 0 ? (
+                    audioInputs.map((device) => {
+                      const selected = device.deviceId === selectedAudioInputId
+                      return (
+                        <button
+                          key={device.deviceId}
+                          type="button"
+                          disabled={switchingAudioInput}
+                          onClick={() => void handleSelectAudioInput(device.deviceId)}
+                          className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                            selected
+                              ? 'bg-sky-500/20 text-sky-100'
+                              : 'text-white hover:bg-white/10'
+                          } disabled:opacity-50`}
+                        >
+                          <span className="pr-3">{device.label || 'Microphone'}</span>
+                          {selected && <span className="text-xs text-sky-300">Selected</span>}
+                        </button>
+                      )
+                    })
+                  ) : (
+                    <p className="px-3 py-2 text-sm text-gray-400">No microphones found.</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
-          {/* Toggle camera — icon-based circular button */}
-          <button
-            data-testid="camera-button"
-            type="button"
-            aria-label={isVideoEnabled ? 'Turn camera off' : 'Turn camera on'}
-            onClick={() => {
-              const willDisable = isVideoEnabled
-              toggleVideo()
-              void setCameraEnabled(!willDisable)
-              appendDebugEvent(willDisable ? 'camera turned off locally' : 'camera turned on locally')
-            }}
-            disabled={!hasVideoTrack}
-            title={isVideoEnabled ? 'Turn camera off (V)' : 'Turn camera on (V)'}
-            className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50 ${
-              isVideoEnabled
-                ? 'border-white/20 bg-white/10 text-white hover:bg-white/20'
-                : 'border-red-500/60 bg-red-600/80 text-white hover:bg-red-500'
-            }`}
-          >
-            {isVideoEnabled ? <CameraIcon /> : <CameraOffIcon />}
-          </button>
+          {/* Camera control + input picker */}
+          <div ref={videoDeviceMenuRef} className="relative flex items-center gap-1">
+            <button
+              data-testid="camera-button"
+              type="button"
+              aria-label={isVideoEnabled ? 'Turn camera off' : 'Turn camera on'}
+              onClick={() => {
+                const willDisable = isVideoEnabled
+                toggleVideo()
+                void setCameraEnabled(!willDisable)
+                appendDebugEvent(willDisable ? 'camera turned off locally' : 'camera turned on locally')
+              }}
+              disabled={!hasVideoTrack}
+              title={isVideoEnabled ? 'Turn camera off (V)' : 'Turn camera on (V)'}
+              className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50 ${
+                isVideoEnabled
+                  ? 'border-white/20 bg-white/10 text-white hover:bg-white/20'
+                  : 'border-red-500/60 bg-red-600/80 text-white hover:bg-red-500'
+              }`}
+            >
+              {isVideoEnabled ? <CameraIcon /> : <CameraOffIcon />}
+            </button>
+            <button
+              data-testid="video-input-menu-button"
+              type="button"
+              aria-label="Choose camera"
+              onClick={() => {
+                setAudioDeviceMenuOpen(false)
+                setVideoDeviceMenuOpen((prev) => !prev)
+              }}
+              title="Choose camera"
+              className="flex h-12 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur-md transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
+              </svg>
+            </button>
+            {videoDeviceMenuOpen && (
+              <div className="absolute bottom-14 left-1/2 z-40 w-72 -translate-x-1/2 overflow-hidden rounded-2xl border border-white/10 bg-[#101827]/95 p-2 shadow-2xl backdrop-blur-md">
+                <div className="px-2 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-white/50">
+                  Camera input
+                </div>
+                <div className="max-h-64 space-y-1 overflow-y-auto">
+                  {videoInputs.length > 0 ? (
+                    videoInputs.map((device) => {
+                      const selected = device.deviceId === selectedVideoInputId
+                      return (
+                        <button
+                          key={device.deviceId}
+                          type="button"
+                          disabled={switchingVideoInput}
+                          onClick={() => void handleSelectVideoInput(device.deviceId)}
+                          className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                            selected
+                              ? 'bg-sky-500/20 text-sky-100'
+                              : 'text-white hover:bg-white/10'
+                          } disabled:opacity-50`}
+                        >
+                          <span className="pr-3">{device.label || 'Camera'}</span>
+                          {selected && <span className="text-xs text-sky-300">Selected</span>}
+                        </button>
+                      )
+                    })
+                  ) : (
+                    <p className="px-3 py-2 text-sm text-gray-400">No cameras found.</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Transcript toggle (tutor, transcription enabled) */}
           {isTutor && transcriptionEnabled && (
@@ -2293,7 +2645,11 @@ export default function SessionPage() {
               )}
               <SuggestButton
                 loading={aiSuggestionLoading}
-                onClick={() => void requestSuggestion()}
+                onClick={() => {
+                  clearAiSuggestionFromNudge()
+                  clearSuggestion()
+                  void requestSuggestion()
+                }}
                 callsRemaining={aiCallsRemaining}
               />
             </div>
@@ -2515,8 +2871,23 @@ export default function SessionPage() {
                 <p>Role: {role ?? 'unknown'}</p>
                 <p>Connected: {connected ? 'yes' : 'no'}</p>
                 <p>Token present: {token ? 'yes' : 'no'}</p>
+                <p>Local stream present: {stream ? 'yes' : 'no'}</p>
                 <p>Mic enabled: {isAudioEnabled ? 'yes' : 'no'}</p>
                 <p>Camera enabled: {isVideoEnabled ? 'yes' : 'no'}</p>
+                <p data-testid="debug-local-audio-track-count">Local audio tracks: {stream?.getAudioTracks().length ?? 0}</p>
+                <p data-testid="debug-local-video-track-count">Local video tracks: {stream?.getVideoTracks().length ?? 0}</p>
+                <p>
+                  Local audio detail:{' '}
+                  {(stream?.getAudioTracks() ?? [])
+                    .map((track) => `${track.readyState}/${track.enabled ? 'enabled' : 'disabled'}`)
+                    .join(', ') || 'none'}
+                </p>
+                <p>
+                  Local video detail:{' '}
+                  {(stream?.getVideoTracks() ?? [])
+                    .map((track) => `${track.readyState}/${track.enabled ? 'enabled' : 'disabled'}`)
+                    .join(', ') || 'none'}
+                </p>
                 <p>Session ended: {sessionEnded ? 'yes' : 'no'}</p>
                 <p>Live nudges enabled: {nudgesEnabled ? 'yes' : 'no'}</p>
                 <p>Nudge chime enabled: {nudgeSoundEnabled ? 'yes' : 'no'}</p>
@@ -2528,9 +2899,15 @@ export default function SessionPage() {
                 <p data-testid="debug-ice-connection-state">ICE connection state: {iceConnectionState}</p>
                 <p data-testid="debug-ice-gathering-state">ICE gathering state: {iceGatheringState}</p>
                 <p data-testid="debug-signaling-state">Signaling state: {signalingState}</p>
+                <p>Remote stream present: {remoteStream ? 'yes' : 'no'}</p>
                 <p data-testid="debug-remote-tracks">Remote tracks: {remoteTrackCount}</p>
+                <p data-testid="debug-remote-participant-count">Remote participants: {remoteParticipants.size}</p>
+                <p>Remote participant IDs: {Array.from(remoteParticipants.keys()).join(', ') || 'none'}</p>
+                <p>Remote stream audio tracks: {remoteStream?.getAudioTracks().length ?? 0}</p>
+                <p>Remote stream video tracks: {remoteStream?.getVideoTracks().length ?? 0}</p>
                 <p data-testid="debug-remote-video-present">Remote video present: {hasRemoteVideo ? 'yes' : 'no'}</p>
                 <p data-testid="debug-remote-audio-present">Remote audio present: {hasRemoteAudio ? 'yes' : 'no'}</p>
+                <p>Remote video element: ready={remoteVideoDebug.readyState} size={remoteVideoDebug.videoWidth}x{remoteVideoDebug.videoHeight} paused={remoteVideoDebug.paused ? 'yes' : 'no'} t={remoteVideoDebug.currentTime.toFixed(1)}</p>
               </div>
             </div>
 
