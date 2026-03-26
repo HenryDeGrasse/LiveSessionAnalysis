@@ -604,5 +604,8 @@ class TestMockLLMIntegration:
         llm.response = response2
         await copilot.maybe_evaluate(buf, elapsed_seconds=110, now=now + 1)
 
-        # The second call's user prompt should mention the first suggestion
-        assert "First suggestion" in (llm.last_user_prompt or "")
+        # The second call's user prompt should reference the first suggestion
+        # (dedup section shows suggested_prompt preferentially, falling back to suggestion text)
+        prompt = llm.last_user_prompt or ""
+        assert "Already Suggested" in prompt
+        assert ("First suggestion" in prompt or "Can you tell me what you think?" in prompt)

@@ -1,3 +1,5 @@
+import type { RemoteAudioTrack as LKRemoteAudioTrack, RemoteVideoTrack as LKRemoteVideoTrack } from 'livekit-client'
+
 export type MediaProvider = 'custom_webrtc' | 'livekit'
 
 export type AttentionState =
@@ -278,6 +280,10 @@ export interface RemoteParticipant {
   hasVideo: boolean
   /** True if the participant has at least one live audio track. */
   hasAudio: boolean
+  /** Latest subscribed LiveKit video track for direct attachment when needed. */
+  videoTrack?: LKRemoteVideoTrack
+  /** Latest subscribed LiveKit audio track for direct attachment when needed. */
+  audioTrack?: LKRemoteAudioTrack
 }
 
 export interface TrendData {

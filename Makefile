@@ -3,7 +3,7 @@
 # ──────────────────────────────────────────────────────────────
 .PHONY: setup run dev dev-backend dev-frontend clean \
         test test-backend test-frontend-unit test-e2e test-e2e-livekit \
-        eval eval-fast eval-replay test-all lint \
+        eval eval-fast eval-replay eval-ab test-all lint \
         test-transcription test-ai-coaching test-ci \
         accuracy-report real-media-accuracy demo-setup
 
@@ -39,6 +39,10 @@ eval-fast:
 eval-replay:
 	cd backend && uv run --python 3.11 --with-requirements requirements.txt \
 		pytest tests/evals/ -m eval_replay -q
+
+eval-ab:
+	cd backend && uv run --python 3.11 --with-requirements requirements.txt \
+		pytest tests/evals/ai_coaching/ -m eval_ab -v --tb=short -s
 
 eval:
 	cd backend && uv run --python 3.11 --with-requirements requirements.txt \

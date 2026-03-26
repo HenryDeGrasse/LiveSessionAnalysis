@@ -60,19 +60,60 @@ def _authorize_tutor(room: Any, token: str, current_user: Optional[User]) -> boo
 
 
 def _build_prompt_context(room: Any, copilot: Any):
-    """Build the system/user prompts and return (system, user, context, recent)."""
+    """Build the system/user prompts and return (system, user, context, recent).
+
+    Pulls the latest MetricsSnapshot from room.metrics_history to enrich the
+    context with behavioral signals (attention, silence, interruptions, etc.).
+    """
     transcript_buffer = _get_runtime_resource(room, "transcript_buffer")
     if transcript_buffer is None:
         return None
 
     recent_utterances = transcript_buffer._within(copilot._context_window)
-    context = AICoachingContext(
-        session_id=getattr(room, "session_id", ""),
-        session_type=copilot._session_type,
-        elapsed_seconds=room.elapsed_seconds() or 0.0,
-        recent_utterances=recent_utterances,
-        recent_suggestions=list(copilot.recent_suggestions[-5:]),
-    )
+    topic_keywords = transcript_buffer.last_topic_keywords(n=5)
+
+    # Pull latest metrics snapshot for behavioral signal enrichment
+    latest_snapshot = None
+    if hasattr(room, "metrics_history") and room.metrics_history:
+        latest_snapshot = room.metrics_history[-1]
+
+    context_kwargs: dict = {
+        "session_id": getattr(room, "session_id", ""),
+        "session_type": copilot._session_type,
+        "elapsed_seconds": room.elapsed_seconds() or 0.0,
+        "recent_utterances": recent_utterances,
+        "recent_suggestions": list(copilot.recent_suggestions[-5:]),
+        "topic_keywords": topic_keywords,
+    }
+
+    # Enrich with behavioral signals from the latest snapshot
+    if latest_snapshot is not None:
+        snap = latest_snapshot
+        context_kwargs.update({
+            "tutor_talk_ratio": float(snap.tutor.talk_time_percent),
+            "student_talk_ratio": float(snap.student.talk_time_percent),
+            "student_engagement_score": float(snap.session.engagement_score) / 100.0,
+            "uncertainty_score": float(snap.student_uncertainty_score or 0.0),
+            "uncertainty_topic": snap.student_uncertainty_topic or "",
+            "student_attention_state": snap.student.attention_state,
+            "student_time_in_attention_state": float(snap.student.time_in_attention_state_seconds),
+            "tutor_attention_state": snap.tutor.attention_state,
+            "time_since_student_spoke": float(snap.session.time_since_student_spoke),
+            "mutual_silence_seconds": float(snap.session.mutual_silence_duration_current),
+            "tutor_monologue_seconds": float(snap.session.tutor_monologue_duration_current),
+            "tutor_turn_count": int(snap.session.tutor_turn_count),
+            "student_turn_count": int(snap.session.student_turn_count),
+            "student_response_latency": float(snap.session.student_response_latency_last_seconds),
+            "recent_hard_interruptions": int(snap.session.recent_hard_interruptions),
+            "tutor_cutoffs": int(snap.session.tutor_cutoffs),
+            "active_overlap_state": snap.session.active_overlap_state,
+            "student_energy_score": float(snap.student.energy_score),
+            "student_energy_drop": float(snap.student.energy_drop_from_baseline),
+            "tutor_energy_score": float(snap.tutor.energy_score),
+            "engagement_trend": snap.session.engagement_trend,
+        })
+
+    context = AICoachingContext(**context_kwargs)
 
     system_prompt = build_system_prompt(copilot._session_type)
     user_prompt = f"{_ON_DEMAND_PROMPT_ADDITION}\n\n{build_user_prompt(context)}"

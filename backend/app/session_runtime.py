@@ -879,6 +879,14 @@ async def emit_metrics_snapshot(
             ai_copilot = resources.get("ai_copilot")
             transcript_buffer = resources.get("transcript_buffer")
             if ai_copilot is not None and transcript_buffer is not None:
+                # Determine active rule nudge info for LLM context
+                _active_rule_nudge = ""
+                _active_rule_message = ""
+                if evaluation.fired_rule:
+                    _active_rule_nudge = evaluation.fired_rule
+                    if evaluation.nudges:
+                        _active_rule_message = evaluation.nudges[0].message
+
                 ai_suggestion = await ai_copilot.maybe_evaluate(
                     transcript_buffer,
                     elapsed_seconds=room.elapsed_seconds(),
@@ -891,6 +899,24 @@ async def emit_metrics_snapshot(
                     rule_nudge_fired=bool(evaluation.nudges),
                     now=now,
                     backpressure_level=int(snapshot.backpressure_level),
+                    # --- Rich behavioral signals from MetricsSnapshot ---
+                    student_attention_state=snapshot.student.attention_state,
+                    student_time_in_attention_state=float(snapshot.student.time_in_attention_state_seconds),
+                    tutor_attention_state=snapshot.tutor.attention_state,
+                    time_since_student_spoke=float(snapshot.session.time_since_student_spoke),
+                    mutual_silence_seconds=float(snapshot.session.mutual_silence_duration_current),
+                    tutor_monologue_seconds=float(snapshot.session.tutor_monologue_duration_current),
+                    tutor_turn_count=int(snapshot.session.tutor_turn_count),
+                    student_turn_count=int(snapshot.session.student_turn_count),
+                    student_response_latency=float(snapshot.session.student_response_latency_last_seconds),
+                    recent_hard_interruptions=int(snapshot.session.recent_hard_interruptions),
+                    tutor_cutoffs=int(snapshot.session.tutor_cutoffs),
+                    active_overlap_state=snapshot.session.active_overlap_state,
+                    student_energy_score=float(snapshot.student.energy_score),
+                    student_energy_drop=float(snapshot.student.energy_drop_from_baseline),
+                    tutor_energy_score=float(snapshot.tutor.energy_score),
+                    active_rule_nudge=_active_rule_nudge,
+                    active_rule_message=_active_rule_message,
                 )
                 if ai_suggestion is not None:
                     snapshot.ai_suggestion = ai_suggestion.suggestion
