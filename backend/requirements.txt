@@ -3,6 +3,9 @@ uvicorn[standard]==0.27.0
 websockets==12.0
 mediapipe==0.10.9
 opencv-python-headless==4.9.0.80
+# webrtcvad imports pkg_resources at import time, which is provided by setuptools.
+# uv-managed ephemeral test environments don't include setuptools unless declared.
+setuptools>=68.0.0
 webrtcvad==2.0.10
 numpy==1.26.3
 pydantic==2.7.4
