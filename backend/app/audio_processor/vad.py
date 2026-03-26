@@ -1,6 +1,51 @@
 from __future__ import annotations
 
-import webrtcvad
+import importlib
+import sys
+import types
+
+
+def _install_pkg_resources_compat() -> None:
+    """Install a tiny pkg_resources shim for webrtcvad.
+
+    ``webrtcvad`` imports ``pkg_resources`` only to read its own distribution
+    version.  uv-managed ephemeral environments used in CI may omit
+    ``setuptools``, which normally provides ``pkg_resources``.  A minimal shim
+    is sufficient for webrtcvad's import-time usage.
+    """
+
+    if 'pkg_resources' in sys.modules:
+        return
+
+    try:
+        from importlib import metadata
+    except ImportError:  # pragma: no cover - Python < 3.8 fallback
+        import importlib_metadata as metadata  # type: ignore
+
+    module = types.ModuleType('pkg_resources')
+
+    class _Distribution:
+        def __init__(self, project_name: str):
+            self.project_name = project_name
+            try:
+                self.version = metadata.version(project_name)
+            except Exception:
+                self.version = '0'
+
+    def get_distribution(project_name: str):
+        return _Distribution(project_name)
+
+    module.get_distribution = get_distribution  # type: ignore[attr-defined]
+    sys.modules['pkg_resources'] = module
+
+
+try:
+    webrtcvad = importlib.import_module('webrtcvad')
+except ModuleNotFoundError as exc:
+    if exc.name != 'pkg_resources':
+        raise
+    _install_pkg_resources_compat()
+    webrtcvad = importlib.import_module('webrtcvad')
 
 
 class VoiceActivityDetector:
